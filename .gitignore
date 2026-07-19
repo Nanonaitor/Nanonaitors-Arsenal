@@ -1,0 +1,45 @@
+# Gradle and Forge outputs
+/.gradle/
+/build/
+/run/
+/eclipse/
+/reobf/
+/mcmodsrepo/
+
+# Minecraft development data
+/config/
+/crash-reports/
+/logs/
+/saves/
+
+# Local dependency JARs
+/libs/
+
+# IDE metadata
+/.idea/
+/.settings/
+/.vscode/
+/.classpath
+/.project
+/bin/
+/out/
+*.iml
+*.ipr
+*.iws
+*.launch
+
+# Logs, crash dumps, secrets, and temporary files
+*.log
+*.tmp
+*.bak
+*.class
+*.hprof
+hs_err_pid*
+.env
+.env.*
+.DS_Store
+Thumbs.db
+
+# Forge MDK downloads/reference files
+/forge*changelog.txt
+/forge-mdk.zip

@@ -1,0 +1,16 @@
+[
+  {
+    "modid": "nanonaitors_arsenal",
+    "name": "Nanonaitor's Arsenal",
+    "description": "Specialized weapons with distinct combat roles, counters, and active abilities.",
+    "version": "${version}",
+    "mcversion": "${mcversion}",
+    "url": "",
+    "updateUrl": "",
+    "authorList": ["Nanonaitor"],
+    "credits": "",
+    "logoFile": "",
+    "screenshots": [],
+    "dependencies": []
+  }
+]
