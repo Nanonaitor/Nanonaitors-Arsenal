@@ -1,6 +1,8 @@
 # Changelog
 
-## 0.1.0-dev
+## 1.0.0 - 2026-07-21
+
+- Initial public release for Minecraft 1.12.2 and Forge 14.23.5.2860.
 
 - Added deterministic Living/Sentient family procs using SRP's native potion effects.
 - Added Corrosion to Morning Stars, Bleeding to Claws, Immalleable to Flails,

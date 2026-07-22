@@ -3,8 +3,8 @@
 A Forge 1.12.2 weapon mod focused on specialized weapons with distinct combat
 roles, counters, and active abilities rather than interchangeable damage tiers.
 
-The initial development version is `0.1.0-dev`. Public releases will begin at
-`1.0.0` after the first weapon set is implemented and tested.
+The current release is `1.0.0` for Minecraft 1.12.2 and Forge
+14.23.5.2860.
 
 ## Design goals
 
@@ -14,10 +14,8 @@ The initial development version is `0.1.0-dev`. Public releases will begin at
 - Optional RLCraft-style integrations should activate only when their source mods exist.
 - Mechanics should be data-driven enough to port to newer Minecraft versions later.
 
-## Planned weapon families
+## Weapon families in 1.0.0
 
-- Anti-dragon shield
-- Heavy two-handed bulwark
 - Morning star
 - Scimitar
 - Flail
@@ -25,7 +23,14 @@ The initial development version is `0.1.0-dev`. Public releases will begin at
 - Battering ram
 - Ball and chain
 
-## Implemented in the current development build
+## Future content (planned)
+
+- Anti-Dragon Shield
+- Heavy two-handed Bulwark
+
+These shields are planned for a future release and are not included in 1.0.0.
+
+## Implemented in 1.0.0
 
 ### Morning Stars
 
@@ -150,7 +155,7 @@ Use Java 8 and the supplied Gradle wrapper:
 .\gradlew.bat clean build
 ```
 
-Development JARs are created under `build/libs/`.
+Release JARs are created under `build/libs/`.
 
 ## License
 
