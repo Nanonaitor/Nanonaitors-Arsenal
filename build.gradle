@@ -8,6 +8,10 @@ buildscript {
     }
 }
 
+repositories {
+    maven { url = 'https://maven.blamejared.com' }
+}
+
 apply plugin: 'net.minecraftforge.gradle'
 apply plugin: 'eclipse'
 
@@ -37,6 +41,7 @@ minecraft {
 
 dependencies {
     minecraft 'net.minecraftforge:forge:1.12.2-14.23.5.2860'
+    compileOnly fg.deobf('mezz.jei:jei_1.12.2:4.16.1.1012:api')
 }
 
 processResources {

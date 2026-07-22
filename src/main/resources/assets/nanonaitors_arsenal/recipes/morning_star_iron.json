@@ -1,0 +1,9 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": ["MMM", "MSM", " S "],
+  "key": {
+    "M": { "type": "forge:ore_dict", "ore": "ingotIron" },
+    "S": { "item": "minecraft:stick" }
+  },
+  "result": { "item": "nanonaitors_arsenal:morning_star_iron" }
+}

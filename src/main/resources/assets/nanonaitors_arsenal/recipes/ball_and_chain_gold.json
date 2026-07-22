@@ -1,0 +1,1 @@
+{"type":"forge:ore_shaped","pattern":[" MM"," IM","S  "],"key":{"M":{"type":"forge:ore_dict","ore":"ingotGold"},"I":{"type":"forge:ore_dict","ore":"ingotIron"},"S":{"type":"forge:ore_dict","ore":"stickWood"}},"result":{"item":"nanonaitors_arsenal:ball_and_chain_gold"}}

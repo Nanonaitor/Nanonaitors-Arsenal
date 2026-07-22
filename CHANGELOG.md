@@ -2,6 +2,82 @@
 
 ## 0.1.0-dev
 
+- Added deterministic Living/Sentient family procs using SRP's native potion effects.
+- Added Corrosion to Morning Stars, Bleeding to Claws, Immalleable to Flails,
+  held Rage to Battering Rams, and parasite-only Debar/adaptation bypass to
+  Balls and Chains.
+- Made Living Scimitars guarantee Weakness II and Sentient Scimitars guarantee
+  Weakness III.
+- Preserved SRP's native Sentient Prey drawback on the wielder.
 - Created the Forge 1.12.2 project foundation.
 - Reserved the `nanonaitors_arsenal` mod ID.
 - Established a specialized-weapon design direction.
+- Added wood, stone, gold, iron, and diamond Morning Stars.
+- Added fully charged, confirmed-hit Armor Fracture stacking.
+- Added tier-based Armor Fracture caps from 40% through 100%.
+- Added custom Morning Star item textures with wooden hafts and tiered heads.
+- Reworked Morning Star textures as readable diagonal 32x32 item sprites.
+- Added wood, stone, gold, iron, and diamond RuneScape-shaped Scimitars.
+- Replaced the original Sever concept with a 10% fully charged-hit chance to apply Weakness II for 2 seconds.
+- Lengthened Scimitar handles for better held-item proportions.
+- Enlarged and deepened the Scimitar blade curve and added Spartan Greatsword-style held transforms.
+- Added paired Claws with linked offhand items and alternating i-frame piercing.
+- Added alternating offhand attack animation and wrist-mounted Claw model transforms.
+- Added a real right-click offhand Claw attack with an independent cooldown.
+- Made linked Claws mirror the main Claw's enchantments, glint, and durability.
+- Exempted the paired Claw strike from RLCombat's generic 50% offhand penalty.
+- Replaced flat held Claw sprites with fitted 3D cuffs and forward-facing blades.
+- Reworked Claw recipes to use a wooden backing and stick instead of leather.
+- Made offhand Claw hit sounds reliably play for the attacker and observers.
+- Added five tiered Flails with continuous two-block circular attacks.
+- Added matching Flail sprites with wooden handles and iron-colored chains.
+- Reduced every Claw tier to half its equivalent vanilla sword's base damage.
+- Separated the Claw blades, knuckle plate, and wrist cuff to prevent model z-fighting.
+- Tightened the Claw model seams without reintroducing overlapping surfaces.
+- Made linked Claws sword-class items for correct weapon audio and added offhand whiff swings.
+- Reworked Flails into confirmed-hit, equal-damage three-block area weapons.
+- Converted Flails to server-authoritative held-left-click hitboxes with no required target.
+- Reduced Flail attack speed from 1.2 to 0.8 and preserved block mining.
+- Added optional Quality Tools detection and mirrored only its `Quality` tag when present.
+- Added automatic deletion for any linked Claw dropped into the world.
+- Changed Flail range to hitbox distance and allowed swings while mining blocks.
+- Allowed real offhand items at the cost of disabling all paired Claw abilities.
+- Reduced every Claw tier's base damage by 1 point.
+- Added recipes, models, tooltips, and 32x32 sprites for both new weapon families.
+- Added an explicit Arsenal creative tab with a Diamond Scimitar icon and grouped weapons.
+- Added shared vanilla and modded sword-enchantment compatibility to every weapon family.
+- Added a standalone circular Flail animation with no Mo' Bends dependency.
+- Added first-version wood, stone, gold, iron, and diamond Battering Rams.
+- Added held-left-click Ram charging, one hit per target per charge, and 3x3 wood/cobblestone breaking.
+- Added long 3D log Ram models with iron bands, two grips, tiered spikes, recipes, tooltips, and creative-tab entries.
+- Removed an isolated stray pixel from the Diamond Flail texture.
+- Added wood, stone, gold, iron, and diamond Ball and Chain weapons.
+- Added three-charge frontal wind-up sweeps with normal sword reach and a +/-1-block vertical area.
+- Added release throws with 4/8/12-block reach, scaling damage and knockback, multi-target line hits, and solid-block collision.
+- Added tiered maximum-charge armor piercing, permanent mob armor fracture, and temporary player Armor Fracture on throw hits.
+- Added a two-handed 3D grip, dynamic iron chain, faceted tiered ball, recipes, tooltips, and creative-tab entries.
+- Added a shared alternate Flail sprite that appears throughout continuous swinging and returns to the tier sprite on release.
+- Replaced shader-sensitive line/cube weapon effects with opaque textured 3D chain links and tier-colored balls.
+- Changed the Flail animation to orbit horizontally around the wielder at its full three-block reach.
+- Added tiered Battering Ram breaking: soft soil; then planks; then logs/cobblestone; then ordinary stone.
+- Changed the Battering Ram charge to a shield-style block animation with both arms braced in third person.
+- Moved the Ram's 3x3 breaking plane above the floor and gave Gold Stone-level breaking with faster attack speed.
+- Changed Ram recipes to use full material blocks and clamped the tier-colored front spike UVs.
+- Fixed MmmMmmMmmMmm dummy detection, disabled block breaking while spinning a Flail, and added a sharper air-cut sound.
+- Rebuilt animated balls with non-overlapping, explicitly mapped tier textures.
+- Added pitch-aware Ball and Chain aiming, outward and retrieval hits, and a launch/retrieval swing lock.
+- Added continuous and per-impact Battering Ram exhaustion, a three-hunger-icon cutoff, and explicit per-block durability loss.
+- Locked camera facing while charging a Battering Ram and lengthened its rear log model.
+- Reworked tier-specific Flail inventory/swing models and the Ball and Chain held model.
+- Removed the forced Ball and Chain arm-swing loop that caused held-item jitter.
+- Fixed Battering Ram block breaking at diagonal angles and synchronized durability loss.
+- Removed empty-air Flail attack sounds and kept only its handle visible during the external orbit animation.
+- Stabilized continuous Flail and Ball and Chain held-model states to prevent model flicker.
+- Restored flat Flail inventory sprites while keeping only the handle visible during orbiting.
+- Replaced fake vanilla Flail attacks with dedicated remote animation and Ball and Chain-style sweep sounds.
+- Added all-tier glass breaking and iron/diamond clay and terracotta breaking to Battering Rams.
+- Corrected out-of-range UVs on the extended Ram log and Ball and Chain head models.
+- Restored the Stone Battering Ram recipe using Forge's standard stone ingredient.
+- Hid internal Linked Claw items from JEI when JEI is installed.
+- Increased Flail attack and orbit reach from 3 to 4 blocks.
+- Removed the Ball and Chain's repeated vanilla third-person arm swing.

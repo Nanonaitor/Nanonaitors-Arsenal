@@ -1,0 +1,6 @@
+{
+  "type": "forge:ore_shaped",
+  "pattern": ["  M", "LLL", " S "],
+  "key": { "M": { "type": "forge:ore_dict", "ore": "logWood" }, "L": { "type": "forge:ore_dict", "ore": "logWood" }, "S": { "type": "forge:ore_dict", "ore": "stickWood" } },
+  "result": { "item": "nanonaitors_arsenal:battering_ram_wood" }
+}

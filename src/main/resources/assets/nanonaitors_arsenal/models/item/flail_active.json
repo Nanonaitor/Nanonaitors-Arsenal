@@ -1,0 +1,16 @@
+{
+  "textures":{"particle":"minecraft:blocks/planks_oak","grip":"minecraft:blocks/planks_oak","chain":"minecraft:blocks/iron_block"},
+  "elements":[
+    {"name":"wood_handle","from":[6,0,7],"to":[10,8,9],"rotation":{"origin":[8,4,8],"axis":"z","angle":-22.5},"faces":{"down":{"texture":"#grip"},"up":{"texture":"#grip"},"north":{"texture":"#grip"},"south":{"texture":"#grip"},"west":{"texture":"#grip"},"east":{"texture":"#grip"}}},
+    {"name":"iron_collar","from":[7,7,6.5],"to":[10.5,10,9.5],"rotation":{"origin":[8.75,8.5,8],"axis":"z","angle":-22.5},"faces":{"down":{"texture":"#chain"},"up":{"texture":"#chain"},"north":{"texture":"#chain"},"south":{"texture":"#chain"},"west":{"texture":"#chain"},"east":{"texture":"#chain"}}}
+  ],
+  "display":{
+    "thirdperson_righthand":{"rotation":[0,90,-25],"translation":[0,2,1],"scale":[0.72,0.72,0.72]},
+    "thirdperson_lefthand":{"rotation":[0,-90,25],"translation":[0,2,1],"scale":[0.72,0.72,0.72]},
+    "firstperson_righthand":{"rotation":[0,90,-20],"translation":[1,2,0],"scale":[0.68,0.68,0.68]},
+    "firstperson_lefthand":{"rotation":[0,-90,20],"translation":[1,2,0],"scale":[0.68,0.68,0.68]},
+    "gui":{"rotation":[25,225,0],"translation":[0,0,0],"scale":[0.7,0.7,0.7]},
+    "ground":{"rotation":[0,45,0],"translation":[0,2,0],"scale":[0.38,0.38,0.38]},
+    "fixed":{"rotation":[0,90,0],"translation":[0,0,0],"scale":[0.52,0.52,0.52]}
+  }
+}

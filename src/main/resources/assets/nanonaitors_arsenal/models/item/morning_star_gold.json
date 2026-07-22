@@ -1,0 +1,4 @@
+{
+  "parent": "item/handheld",
+  "textures": { "layer0": "nanonaitors_arsenal:items/morning_star_gold" }
+}
