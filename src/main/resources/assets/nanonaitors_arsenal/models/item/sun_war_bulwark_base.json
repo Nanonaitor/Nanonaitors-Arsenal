@@ -1,0 +1,37 @@
+{
+  "textures": {
+    "particle": "#core",
+    "core": "minecraft:block/dark_oak_planks",
+    "rim": "minecraft:block/gold_block",
+    "boss": "minecraft:block/obsidian",
+    "sun": "minecraft:block/redstone_block",
+    "grip": "minecraft:block/oak_planks"
+  },
+  "elements": [
+    {"name":"core","from":[3,-4,7],"to":[13,20,9],"faces":{"north":{"texture":"#core"},"south":{"texture":"#core"},"east":{"texture":"#core"},"west":{"texture":"#core"},"up":{"texture":"#core"},"down":{"texture":"#core"}}},
+    {"name":"left_wing","from":[1,0,7],"to":[3,17,9],"faces":{"north":{"texture":"#core"},"south":{"texture":"#core"},"east":{"texture":"#core"},"west":{"texture":"#core"},"up":{"texture":"#core"},"down":{"texture":"#core"}}},
+    {"name":"right_wing","from":[13,0,7],"to":[15,17,9],"faces":{"north":{"texture":"#core"},"south":{"texture":"#core"},"east":{"texture":"#core"},"west":{"texture":"#core"},"up":{"texture":"#core"},"down":{"texture":"#core"}}},
+    {"name":"bottom_point","from":[6,-8,7],"to":[10,-4,9],"faces":{"north":{"texture":"#core"},"south":{"texture":"#core"},"east":{"texture":"#core"},"west":{"texture":"#core"},"up":{"texture":"#core"},"down":{"texture":"#core"}}},
+    {"name":"top_rim","from":[2.5,18,6.5],"to":[13.5,20.5,9.5],"faces":{"north":{"texture":"#rim"},"south":{"texture":"#rim"},"east":{"texture":"#rim"},"west":{"texture":"#rim"},"up":{"texture":"#rim"},"down":{"texture":"#rim"}}},
+    {"name":"left_rim","from":[0.5,-0.5,6.5],"to":[3,18.5,9.5],"faces":{"north":{"texture":"#rim"},"south":{"texture":"#rim"},"east":{"texture":"#rim"},"west":{"texture":"#rim"},"up":{"texture":"#rim"},"down":{"texture":"#rim"}}},
+    {"name":"right_rim","from":[13, -0.5,6.5],"to":[15.5,18.5,9.5],"faces":{"north":{"texture":"#rim"},"south":{"texture":"#rim"},"east":{"texture":"#rim"},"west":{"texture":"#rim"},"up":{"texture":"#rim"},"down":{"texture":"#rim"}}},
+    {"name":"bottom_rim","from":[5.5,-8.5,6.5],"to":[10.5,-5.5,9.5],"faces":{"north":{"texture":"#rim"},"south":{"texture":"#rim"},"east":{"texture":"#rim"},"west":{"texture":"#rim"},"up":{"texture":"#rim"},"down":{"texture":"#rim"}}},
+    {"name":"boss","from":[5,5,5],"to":[11,11,7],"faces":{"north":{"texture":"#boss"},"south":{"texture":"#boss"},"east":{"texture":"#boss"},"west":{"texture":"#boss"},"up":{"texture":"#boss"},"down":{"texture":"#boss"}}},
+    {"name":"sun_center","from":[7,7,4.25],"to":[9,9,5],"faces":{"north":{"texture":"#sun"},"south":{"texture":"#sun"},"east":{"texture":"#sun"},"west":{"texture":"#sun"},"up":{"texture":"#sun"},"down":{"texture":"#sun"}}},
+    {"name":"sun_vertical","from":[7.5,1.5,4.5],"to":[8.5,14.5,5],"faces":{"north":{"texture":"#sun"},"south":{"texture":"#sun"},"east":{"texture":"#sun"},"west":{"texture":"#sun"},"up":{"texture":"#sun"},"down":{"texture":"#sun"}}},
+    {"name":"sun_horizontal","from":[2.5,7.5,4.5],"to":[13.5,8.5,5],"faces":{"north":{"texture":"#sun"},"south":{"texture":"#sun"},"east":{"texture":"#sun"},"west":{"texture":"#sun"},"up":{"texture":"#sun"},"down":{"texture":"#sun"}}},
+    {"name":"sun_ray_one","from":[3,7.5,4.5],"to":[13,8.5,5],"rotation":{"origin":[8,8,5],"axis":"z","angle":45},"faces":{"north":{"texture":"#sun"},"south":{"texture":"#sun"},"east":{"texture":"#sun"},"west":{"texture":"#sun"},"up":{"texture":"#sun"},"down":{"texture":"#sun"}}},
+    {"name":"sun_ray_two","from":[3,7.5,4.5],"to":[13,8.5,5],"rotation":{"origin":[8,8,5],"axis":"z","angle":-45},"faces":{"north":{"texture":"#sun"},"south":{"texture":"#sun"},"east":{"texture":"#sun"},"west":{"texture":"#sun"},"up":{"texture":"#sun"},"down":{"texture":"#sun"}}},
+    {"name":"upper_grip","from":[6.25,11,9],"to":[9.75,13,12],"faces":{"north":{"texture":"#grip"},"south":{"texture":"#grip"},"east":{"texture":"#grip"},"west":{"texture":"#grip"},"up":{"texture":"#grip"},"down":{"texture":"#grip"}}},
+    {"name":"lower_grip","from":[6.25,3,9],"to":[9.75,5,12],"faces":{"north":{"texture":"#grip"},"south":{"texture":"#grip"},"east":{"texture":"#grip"},"west":{"texture":"#grip"},"up":{"texture":"#grip"},"down":{"texture":"#grip"}}}
+  ],
+  "display": {
+    "thirdperson_righthand":{"rotation":[0,0,0],"translation":[-4,4,-4],"scale":[1.05,1.05,1.05]},
+    "thirdperson_lefthand":{"rotation":[0,0,0],"translation":[4,4,-4],"scale":[1.05,1.05,1.05]},
+    "firstperson_righthand":{"rotation":[0,105,0],"translation":[2,2,-1],"scale":[0.68,0.68,0.68]},
+    "firstperson_lefthand":{"rotation":[0,-105,0],"translation":[2,2,-1],"scale":[0.68,0.68,0.68]},
+    "gui":{"rotation":[25,225,0],"translation":[0,-1,0],"scale":[0.52,0.52,0.52]},
+    "ground":{"rotation":[0,45,0],"translation":[0,5,0],"scale":[0.3,0.3,0.3]},
+    "fixed":{"rotation":[0,180,0],"translation":[0,0,0],"scale":[0.45,0.45,0.45]}
+  }
+}

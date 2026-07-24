@@ -1,1 +1,1 @@
-{"parent": "nanonaitors_arsenal:item/claws_base", "textures": {"metal": "nanonaitors_arsenal:items/material_jungle_myrmex", "grip": "minecraft:blocks/planks_oak"}}
+{"parent": "nanonaitors_arsenal:item/claws_base", "textures": {"metal": "nanonaitors_arsenal:item/material_jungle_myrmex", "grip": "minecraft:block/oak_planks"}}

@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "G": "minecraft:gold_block",
+    "O": "minecraft:obsidian",
+    "D": "minecraft:diamond",
+    "S": "minecraft:shield"
+  },
+  "pattern": [
+    "GOG",
+    "DSD",
+    "GOG"
+  ],
+  "result": {
+    "id": "nanonaitors_arsenal:sun_war_bulwark"
+  }
+}

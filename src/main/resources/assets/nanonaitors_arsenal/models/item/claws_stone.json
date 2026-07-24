@@ -1,1 +1,1 @@
-{"parent":"nanonaitors_arsenal:item/claws_base","textures":{"metal":"minecraft:blocks/cobblestone","grip":"minecraft:blocks/planks_oak"}}
+{"parent":"nanonaitors_arsenal:item/claws_base","textures":{"metal":"minecraft:block/cobblestone","grip":"minecraft:block/oak_planks"}}

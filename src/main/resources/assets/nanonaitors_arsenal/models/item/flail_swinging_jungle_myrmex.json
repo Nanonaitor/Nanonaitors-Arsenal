@@ -1,1 +1,1 @@
-{"parent": "nanonaitors_arsenal:item/flail_swinging_base", "textures": {"grip": "minecraft:blocks/planks_oak", "chain": "minecraft:blocks/iron_block", "metal": "nanonaitors_arsenal:items/material_jungle_myrmex"}}
+{"parent": "nanonaitors_arsenal:item/flail_swinging_base", "textures": {"grip": "minecraft:block/oak_planks", "chain": "minecraft:block/iron_block", "metal": "nanonaitors_arsenal:item/material_jungle_myrmex"}}

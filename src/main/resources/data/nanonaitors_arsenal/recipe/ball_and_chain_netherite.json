@@ -1,0 +1,9 @@
+{
+    "type":  "minecraft:smithing_transform",
+    "template":  "minecraft:netherite_upgrade_smithing_template",
+    "base":  "nanonaitors_arsenal:ball_and_chain_diamond",
+    "addition":  "minecraft:netherite_ingot",
+    "result":  {
+                   "id":  "nanonaitors_arsenal:ball_and_chain_netherite"
+               }
+}

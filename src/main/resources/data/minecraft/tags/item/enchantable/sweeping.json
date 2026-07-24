@@ -1,0 +1,10 @@
+{
+  "replace": false,
+  "values": [
+    "nanonaitors_arsenal:scimitar_wood",
+    "nanonaitors_arsenal:scimitar_stone",
+    "nanonaitors_arsenal:scimitar_gold",
+    "nanonaitors_arsenal:scimitar_iron",
+    "nanonaitors_arsenal:scimitar_diamond"
+  ]
+}

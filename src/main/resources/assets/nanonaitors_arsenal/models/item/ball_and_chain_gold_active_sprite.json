@@ -1,0 +1,4 @@
+{
+  "parent": "minecraft:item/handheld",
+  "textures": {"layer0": "nanonaitors_arsenal:item/ball_and_chain_gold_active_sprite"}
+}

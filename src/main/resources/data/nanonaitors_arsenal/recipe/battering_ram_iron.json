@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "M": "minecraft:iron_block",
+    "L": "#minecraft:logs",
+    "S": "minecraft:stick"
+  },
+  "pattern": [
+    "  M",
+    "LLL",
+    " S "
+  ],
+  "result": {
+    "id": "nanonaitors_arsenal:battering_ram_iron"
+  }
+}

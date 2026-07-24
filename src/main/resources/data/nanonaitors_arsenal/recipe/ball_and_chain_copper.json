@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "M": "#minecraft:copper_tool_materials",
+    "C": "minecraft:iron_chain",
+    "S": "minecraft:stick"
+  },
+  "pattern": [
+    " MM",
+    " CM",
+    "S  "
+  ],
+  "result": {
+    "id": "nanonaitors_arsenal:ball_and_chain_copper"
+  }
+}

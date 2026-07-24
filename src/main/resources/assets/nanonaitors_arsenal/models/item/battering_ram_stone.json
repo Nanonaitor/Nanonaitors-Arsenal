@@ -1,4 +1,4 @@
 {
   "parent": "nanonaitors_arsenal:item/battering_ram_base",
-  "textures": { "log": "minecraft:blocks/log_oak", "log_end": "minecraft:blocks/log_oak_top", "band": "minecraft:blocks/iron_block", "grip": "minecraft:blocks/planks_oak", "metal": "minecraft:blocks/cobblestone" }
+  "textures": { "log": "minecraft:block/oak_log", "log_end": "minecraft:block/oak_log_top", "band": "minecraft:block/iron_block", "grip": "minecraft:block/oak_planks", "metal": "minecraft:block/cobblestone" }
 }

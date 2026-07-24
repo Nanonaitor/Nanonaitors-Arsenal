@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "M": "#minecraft:wooden_tool_materials",
+    "C": "minecraft:iron_chain",
+    "S": "minecraft:stick"
+  },
+  "pattern": [
+    "MM ",
+    " C ",
+    "  S"
+  ],
+  "result": {
+    "id": "nanonaitors_arsenal:flail_wood"
+  }
+}

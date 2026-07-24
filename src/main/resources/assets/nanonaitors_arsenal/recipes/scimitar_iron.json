@@ -1,1 +1,0 @@
-{"type":"minecraft:crafting_shaped","pattern":[" MM","MM ","S  "],"key":{"M":{"type":"forge:ore_dict","ore":"ingotIron"},"S":{"item":"minecraft:stick"}},"result":{"item":"nanonaitors_arsenal:scimitar_iron"}}

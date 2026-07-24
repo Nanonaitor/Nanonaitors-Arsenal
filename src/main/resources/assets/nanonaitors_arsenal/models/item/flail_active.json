@@ -1,5 +1,5 @@
 {
-  "textures":{"particle":"minecraft:blocks/planks_oak","grip":"minecraft:blocks/planks_oak","chain":"minecraft:blocks/iron_block"},
+  "textures":{"particle":"minecraft:block/oak_planks","grip":"minecraft:block/oak_planks","chain":"minecraft:block/iron_block"},
   "elements":[
     {"name":"wood_handle","from":[6,0,7],"to":[10,8,9],"rotation":{"origin":[8,4,8],"axis":"z","angle":-22.5},"faces":{"down":{"texture":"#grip"},"up":{"texture":"#grip"},"north":{"texture":"#grip"},"south":{"texture":"#grip"},"west":{"texture":"#grip"},"east":{"texture":"#grip"}}},
     {"name":"iron_collar","from":[7,7,6.5],"to":[10.5,10,9.5],"rotation":{"origin":[8.75,8.5,8],"axis":"z","angle":-22.5},"faces":{"down":{"texture":"#chain"},"up":{"texture":"#chain"},"north":{"texture":"#chain"},"south":{"texture":"#chain"},"west":{"texture":"#chain"},"east":{"texture":"#chain"}}}

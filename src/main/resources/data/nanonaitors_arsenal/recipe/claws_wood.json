@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "M": "#minecraft:wooden_tool_materials",
+    "W": "#minecraft:planks",
+    "S": "minecraft:stick"
+  },
+  "pattern": [
+    "M M",
+    "MWM",
+    " S "
+  ],
+  "result": {
+    "id": "nanonaitors_arsenal:claws_wood"
+  }
+}

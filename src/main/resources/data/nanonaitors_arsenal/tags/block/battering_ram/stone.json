@@ -1,0 +1,23 @@
+{
+  "replace": false,
+  "values": [
+    "#nanonaitors_arsenal:battering_ram/wood",
+    "#minecraft:planks",
+    "#minecraft:wooden_stairs",
+    "#minecraft:wooden_slabs",
+    "#minecraft:wooden_fences",
+    "#minecraft:wooden_doors",
+    "#minecraft:wooden_trapdoors",
+    "#minecraft:wooden_buttons",
+    "#minecraft:wooden_pressure_plates",
+    "#minecraft:wooden_shelves",
+    "minecraft:ladder",
+    "minecraft:bookshelf",
+    "minecraft:chiseled_bookshelf",
+    "minecraft:bamboo_block",
+    "minecraft:stripped_bamboo_block",
+    "minecraft:bamboo_mosaic",
+    "minecraft:bamboo_mosaic_stairs",
+    "minecraft:bamboo_mosaic_slab"
+  ]
+}
