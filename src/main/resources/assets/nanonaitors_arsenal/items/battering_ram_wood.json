@@ -1,3 +1,16 @@
 {
-  "model": {"type": "minecraft:model", "model": "nanonaitors_arsenal:item/battering_ram_wood"}
+  "model": {
+    "type": "minecraft:condition",
+    "property": "minecraft:using_item",
+    "on_false": {"type": "minecraft:model", "model": "nanonaitors_arsenal:item/battering_ram_wood"},
+    "on_true": {
+      "type": "minecraft:select",
+      "property": "minecraft:display_context",
+      "cases": [{
+        "when": ["thirdperson_lefthand", "thirdperson_righthand"],
+        "model": {"type": "minecraft:model", "model": "nanonaitors_arsenal:item/battering_ram_active_wood"}
+      }],
+      "fallback": {"type": "minecraft:model", "model": "nanonaitors_arsenal:item/battering_ram_wood"}
+    }
+  }
 }

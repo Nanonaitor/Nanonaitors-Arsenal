@@ -47,6 +47,8 @@ public final class ModItems {
                 RegistryObject<Item> object = ITEMS.register(id, () -> {
                     float damage = kind == WeaponKind.CLAWS || kind == WeaponKind.LINKED_CLAWS
                         ? tier.clawDamage() - 1.0F - tier.material.attackDamageBonus()
+                        : kind == WeaponKind.SCIMITAR
+                            ? roundedScimitarDamage(tier) - 1.0F - tier.material.attackDamageBonus()
                         : kind.damageBaseline;
                     float speed = kind == WeaponKind.BATTERING_RAM && tier == WeaponTier.GOLD ? -3.0F : kind.speedModifier;
                     Item.Properties properties = new Item.Properties().setId(ITEMS.key(id))
@@ -59,6 +61,12 @@ public final class ModItems {
                 if (kind != WeaponKind.LINKED_CLAWS) VISIBLE.put(id, object);
             }
         }
+    }
+
+    /** Ten percent below the old final value, rounded to the nearest half point. */
+    private static float roundedScimitarDamage(WeaponTier tier) {
+        float oldFinalDamage = 1.0F + tier.material.attackDamageBonus() + WeaponKind.SCIMITAR.damageBaseline;
+        return Math.round(oldFinalDamage * 0.90F * 2.0F) / 2.0F;
     }
 
     private static RegistryObject<Item> registerShield(String id, ArsenalShieldItem.Type type, Item.Properties properties) {

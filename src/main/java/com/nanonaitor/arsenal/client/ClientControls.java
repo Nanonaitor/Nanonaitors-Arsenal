@@ -7,9 +7,12 @@ import com.nanonaitor.arsenal.network.ModNetwork;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.client.event.InputEvent;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemUseAnimation;
 import net.minecraft.world.item.component.CustomModelData;
 import net.minecraft.world.phys.HitResult;
 
@@ -48,7 +51,8 @@ public final class ClientControls {
         }
         long now = player.level().getGameTime();
         boolean emptyOffhand = player.getOffhandItem().isEmpty();
-        boolean flailDown = weapon.kind() == WeaponKind.FLAIL && attack;
+        boolean flailDown = weapon.kind() == WeaponKind.FLAIL && attack
+            && !isBlockingConventionalShield(player);
         updateFlailSprite(player.getMainHandItem(), flailDown);
         if (flailDown && !player.isUsingItem()) player.startUsingItem(net.minecraft.world.InteractionHand.MAIN_HAND);
         if (flailDown && (lastFlailHeartbeat == Long.MIN_VALUE || now < lastFlailHeartbeat
@@ -86,11 +90,20 @@ public final class ClientControls {
             boolean charging = attack && emptyOffhand && (player.isCreative() || player.getFoodData().getFoodLevel() > 6);
             if (charging) {
                 if (!ramLocked) { ramLocked = true; lockedYaw = player.getYRot(); lockedPitch = player.getXRot(); }
+                // Keep one continuous use state for the custom two-handed pose. The
+                // server also owns this state, but starting it locally avoids a short
+                // carry/charge flicker while its heartbeat packet makes the round trip.
+                if (!player.isUsingItem()) player.startUsingItem(net.minecraft.world.InteractionHand.MAIN_HAND);
                 player.setYRot(lockedYaw); player.yRotO = lockedYaw; player.setXRot(lockedPitch); player.xRotO = lockedPitch;
                 if (lastHeartbeat == Long.MIN_VALUE || now < lastHeartbeat || now - lastHeartbeat >= 2) {
                     lastHeartbeat = now; ModNetwork.send(ModNetwork.RAM, true);
                 }
-            } else ramLocked = false;
+            } else {
+                if (ramLocked && player.isUsingItem()
+                    && player.getUseItem().getItem() instanceof ArsenalWeaponItem active
+                    && active.kind() == WeaponKind.BATTERING_RAM) player.stopUsingItem();
+                ramLocked = false;
+            }
         } else ramLocked = false;
     }
     private static boolean interaction(InputEvent.InteractionKeyMappingTriggered event) {
@@ -122,6 +135,8 @@ public final class ClientControls {
         return true;
     }
     static boolean flailVisual(long now) { return now <= flailVisualUntil; }
+    static boolean flailActive() { return flailWasDown; }
+    static boolean ramActive() { return ramLocked; }
     static boolean ballWindup(long now) { return ballWasDown && !within(now, ballReleaseStarted, 16L); }
     static long ballStarted() { return ballStarted; }
     static boolean ballRelease(long now) { return within(now, ballReleaseStarted, 16L); }
@@ -130,6 +145,13 @@ public final class ClientControls {
     static double releasedDistance() { return releasedDistance; }
     private static boolean within(long now, long started, long duration) {
         return started != Long.MIN_VALUE && now >= started && now - started < duration;
+    }
+    private static boolean isBlockingConventionalShield(LocalPlayer player) {
+        if (!player.isUsingItem()) return false;
+        ItemStack active = player.getUseItem();
+        if (active.isEmpty() || active.getItem().getUseAnimation(active) != ItemUseAnimation.BLOCK) return false;
+        Identifier id = BuiltInRegistries.ITEM.getKey(active.getItem());
+        return id == null || !"defenders".equals(id.getNamespace());
     }
     private static void updateFlailSprite(ItemStack stack, boolean active) {
         if (!active) { clearFlailSprite(); return; }

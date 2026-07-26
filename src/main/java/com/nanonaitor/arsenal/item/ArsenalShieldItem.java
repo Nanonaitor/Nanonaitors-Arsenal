@@ -38,7 +38,7 @@ public final class ArsenalShieldItem extends ShieldItem {
             TooltipDisplay display, Consumer<Component> lines, TooltipFlag flag) {
         lines.accept(Component.literal("Extremely durable, two-handed bulwark; 15% passive damage reduction.").withStyle(ChatFormatting.GOLD));
         lines.accept(Component.literal("Can shield all directed attacks from any direction.").withStyle(ChatFormatting.AQUA));
-        lines.accept(Component.literal("Damage: 1 + total armor points. Guard and attack for a 4-block area bash.").withStyle(ChatFormatting.RED));
+        lines.accept(Component.literal("Damage: 1 + armor points, scaled by attack charge. Guard and attack for a 4-block bash.").withStyle(ChatFormatting.RED));
         lines.accept(Component.literal("40% slower while carried; 75% slower while guarding.").withStyle(ChatFormatting.GRAY));
         lines.accept(Component.literal("Requires an empty offhand for every ability.").withStyle(ChatFormatting.DARK_RED));
         lines.accept(Component.literal("Does not stop environmental hazards.").withStyle(ChatFormatting.DARK_GRAY));

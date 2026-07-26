@@ -4,6 +4,7 @@ import com.nanonaitor.arsenal.item.WeaponTier;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
 
 public final class VisualEffects {
@@ -21,6 +22,19 @@ public final class VisualEffects {
         level.sendParticles(ParticleTypes.CRIT, player.getX() + look.x * 1.2D,
             player.getY() + 1.0D + Math.sin(player.tickCount * 0.5D) * 0.7D,
             player.getZ() + look.z * 1.2D, 3, 0.08D, 0.08D, 0.08D, 0.02D);
+    }
+    public static void armorFracture(ServerLevel level, LivingEntity target, int stacks) {
+        double y = target.getY() + target.getBbHeight() * 0.55D;
+        level.sendParticles(ParticleTypes.DAMAGE_INDICATOR, target.getX(), y, target.getZ(),
+            8 + stacks * 2, target.getBbWidth() * 0.35D, target.getBbHeight() * 0.25D,
+            target.getBbWidth() * 0.35D, 0.12D);
+        level.sendParticles(ParticleTypes.CRIT, target.getX(), y, target.getZ(),
+            12, target.getBbWidth() * 0.45D, target.getBbHeight() * 0.35D,
+            target.getBbWidth() * 0.45D, 0.18D);
+    }
+    public static void ballFullCharge(ServerLevel level, ServerPlayer player) {
+        level.sendParticles(ParticleTypes.ENCHANTED_HIT, player.getX(), player.getY() + 1.1D,
+            player.getZ(), 24, 0.65D, 0.55D, 0.65D, 0.16D);
     }
     public static void ballRelease(ServerLevel level, ServerPlayer player, WeaponTier tier,
             CombatEvents.BallState state, double progress) {

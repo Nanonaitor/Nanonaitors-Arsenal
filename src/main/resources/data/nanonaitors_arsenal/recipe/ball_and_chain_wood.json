@@ -2,14 +2,14 @@
   "type": "minecraft:crafting_shaped",
   "category": "equipment",
   "key": {
-    "M": "#minecraft:wooden_tool_materials",
+    "B": "minecraft:oak_planks",
     "C": "minecraft:iron_chain",
     "S": "minecraft:stick"
   },
   "pattern": [
-    " MM",
-    " CM",
-    "S  "
+    "  B",
+    " C ",
+    "SC "
   ],
   "result": {
     "id": "nanonaitors_arsenal:ball_and_chain_wood"

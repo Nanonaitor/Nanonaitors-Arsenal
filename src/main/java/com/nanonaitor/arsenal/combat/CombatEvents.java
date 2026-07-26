@@ -7,8 +7,10 @@ import com.nanonaitor.arsenal.registry.ModEffects;
 import com.nanonaitor.arsenal.registry.ModItems;
 import java.util.*;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -28,6 +30,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.Display;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemUseAnimation;
 import net.minecraft.world.item.component.CustomModelData;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.level.block.state.BlockState;
@@ -60,7 +63,8 @@ public final class CombatEvents {
     private static final Map<UUID, Long> LAST_CLAW_OFFHAND = new HashMap<>();
     private static final Map<UUID, PendingMeleeAttack> PENDING_MELEE = new HashMap<>();
     private static final Identifier PERMANENT_FRACTURE = Identifier.fromNamespaceAndPath(ArsenalMod.MOD_ID, "ball_chain_fracture");
-    private static final String CLAW_LAST_HAND = "ArsenalClawLastHand", CLAW_LAST_TARGET = "ArsenalClawLastTarget";
+    private static final String CLAW_LAST_HAND = "ArsenalClawLastHand", CLAW_LAST_TARGET = "ArsenalClawLastTarget",
+        CLAW_CRIT_CHAIN = "ArsenalClawCritChain";
 
     public static boolean onLivingAttack(LivingAttackEvent event) {
         if (!(event.getEntity() instanceof Player player)) return false;
@@ -91,7 +95,7 @@ public final class CombatEvents {
                 event.setAmount(0.0F);
                 return;
             }
-            event.setAmount(bulwarkDamage(attacker));
+            event.setAmount(bulwarkDamage(attacker) * attackChargeMultiplier(attacker));
             return;
         }
         ItemStack weapon = attacker.getMainHandItem();
@@ -107,14 +111,12 @@ public final class CombatEvents {
             int duration = target instanceof Player ? 200 : 600;
             target.addEffect(new MobEffectInstance(ModEffects.ARMOR_FRACTURE.getHolder().orElseThrow(),
                 duration, next - 1, false, true, true));
+            if (attacker.level() instanceof ServerLevel level) VisualEffects.armorFracture(level, target, next);
         }
-        if (arsenal.kind() == WeaponKind.SCIMITAR && fullyCharged && attacker.getRandom().nextInt(100) < 10) {
-            target.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 40, 1, false, true, true));
+        if (arsenal.kind() == WeaponKind.SCIMITAR) {
+            target.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 200, 1, false, true, true));
         }
-        if (arsenal.kind() == WeaponKind.CLAWS) {
-            attacker.getPersistentData().putInt(CLAW_LAST_HAND, 0);
-            attacker.getPersistentData().putInt(CLAW_LAST_TARGET, target.getId());
-        }
+        if (arsenal.kind() == WeaponKind.CLAWS) updateClawChain(event, attacker, target, pending);
     }
 
     public static boolean onAttackEntity(AttackEntityEvent event) {
@@ -123,10 +125,10 @@ public final class CombatEvents {
             && shield.shieldType() == ArsenalShieldItem.Type.SUN_WAR && !player.getOffhandItem().isEmpty()) return true;
         if (!(player.getMainHandItem().getItem() instanceof ArsenalWeaponItem weapon)) return false;
         if (weapon.kind() == WeaponKind.FLAIL || weapon.kind() == WeaponKind.BALL_AND_CHAIN) return true;
-        if (!player.level().isClientSide()
-            && (weapon.kind() == WeaponKind.MORNING_STAR || weapon.kind() == WeaponKind.SCIMITAR)) {
+        if (!player.level().isClientSide() && (weapon.kind() == WeaponKind.MORNING_STAR
+            || weapon.kind() == WeaponKind.CLAWS)) {
             PENDING_MELEE.put(player.getUUID(), new PendingMeleeAttack(event.getTarget().getId(),
-                player.level().getGameTime(), weapon.kind(), player.getAttackStrengthScale(0.5F) >= 0.9F));
+                player.level().getGameTime(), weapon.kind(), player.getAttackStrengthScale(0.5F) >= 0.9F, 0));
         }
         if (weapon.kind() == WeaponKind.CLAWS && event.getTarget() instanceof LivingEntity target
             && !player.level().isClientSide() && player.getAttackStrengthScale(0.5F) >= 0.9F
@@ -141,7 +143,7 @@ public final class CombatEvents {
     }
 
     public static boolean onEntityJoin(EntityJoinLevelEvent event) {
-        if (event.loadedFromDisk() && event.getEntity() instanceof Display.ItemDisplay display
+        if (event.getEntity() instanceof Display.ItemDisplay display
             && display.getPersistentData().getBooleanOr(ServerWeaponVisuals.VISUAL_TAG, false)) return true;
         return event.getEntity() instanceof ItemEntity item
             && item.getItem().getItem() instanceof ArsenalWeaponItem weapon
@@ -186,14 +188,14 @@ public final class CombatEvents {
         DamageSource source = player.damageSources().playerAttack(player);
         damage = EnchantmentHelper.modifyDamage(level, linkedStack, target, source, damage);
         float enchantedKnockback = EnchantmentHelper.modifyKnockback(level, linkedStack, target, source, 0.0F);
+        PENDING_MELEE.put(player.getUUID(), new PendingMeleeAttack(target.getId(), now,
+            WeaponKind.CLAWS, strength >= 0.9F, 1));
         if (target.hurtServer(level, source, damage)) {
             if (enchantedKnockback > 0.0F) {
                 double yaw = Math.toRadians(player.getYRot());
                 target.knockback(enchantedKnockback, Math.sin(yaw), -Math.cos(yaw));
             }
             EnchantmentHelper.doPostAttackEffectsWithItemSource(level, target, source, linkedStack);
-            player.getPersistentData().putInt(CLAW_LAST_HAND, 1);
-            player.getPersistentData().putInt(CLAW_LAST_TARGET, target.getId());
             player.getMainHandItem().hurtAndBreak(1, player, EquipmentSlot.MAINHAND);
             syncClawPair(player);
             level.playSound(null, player.blockPosition(), SoundEvents.PLAYER_ATTACK_STRONG, SoundSource.PLAYERS, 1.0F, 1.15F);
@@ -219,6 +221,10 @@ public final class CombatEvents {
             return;
         }
         if (!(player.getMainHandItem().getItem() instanceof ArsenalWeaponItem weapon) || weapon.kind() != WeaponKind.FLAIL) return;
+        if (isBlockingConventionalShield(player)) {
+            setServerFlailSprite(player, ItemStack.EMPTY);
+            return;
+        }
         setServerFlailSprite(player, player.getMainHandItem());
         if (!player.isUsingItem()) player.startUsingItem(InteractionHand.MAIN_HAND);
         long now = player.level().getGameTime(), previous = LAST_FLAIL.getOrDefault(player.getUUID(), Long.MIN_VALUE / 2);
@@ -239,6 +245,14 @@ public final class CombatEvents {
         level.playSound(null, player.blockPosition(), hit ? SoundEvents.PLAYER_ATTACK_SWEEP : SoundEvents.PLAYER_ATTACK_NODAMAGE,
             SoundSource.PLAYERS, hit ? 1.0F : 0.65F, 0.82F);
         VisualEffects.flail(level, player, weapon.tier());
+    }
+
+    private static boolean isBlockingConventionalShield(Player player) {
+        if (!player.isUsingItem()) return false;
+        ItemStack active = player.getUseItem();
+        if (active.isEmpty() || active.getItem().getUseAnimation(active) != ItemUseAnimation.BLOCK) return false;
+        Identifier id = BuiltInRegistries.ITEM.getKey(active.getItem());
+        return id == null || !"defenders".equals(id.getNamespace());
     }
 
     private static float effectiveMeleeDamage(ServerPlayer player, LivingEntity target,
@@ -294,12 +308,13 @@ public final class CombatEvents {
             int previousCharge = state.charge;
             state.lastSwing = index;
             state.charge = Math.min(maxCharges, state.charge + 1);
-            lineAttack(player, 3.0D, 1.0F, 0.3F, false, weapon.tier());
+            lineAttack(player, 3.0D, 0.5F, 0.3F, false, false, weapon.tier());
             ((ServerLevel)player.level()).playSound(null, player.blockPosition(), SoundEvents.PLAYER_ATTACK_SWEEP,
                 SoundSource.PLAYERS, 0.65F, 0.72F);
             if (previousCharge < maxCharges && state.charge == maxCharges) {
                 ((ServerLevel)player.level()).playSound(null, player.blockPosition(), SoundEvents.PLAYER_LEVELUP,
                     SoundSource.PLAYERS, 0.55F, 1.55F);
+                VisualEffects.ballFullCharge((ServerLevel)player.level(), player);
             }
         }
         VisualEffects.ballWindup((ServerLevel)player.level(), player, weapon.tier(), state.charge);
@@ -317,7 +332,7 @@ public final class CombatEvents {
         state.distance = stopDistance((ServerLevel)player.level(), player.getEyePosition(), state.direction,
             state.charge * 4.0D);
         lineAttack(player, state.distance, ballDamageMultiplier(tier, state.charge),
-            ballKnockback(tier, state.charge), state.charge >= maxCharges, tier);
+            ballKnockback(tier, state.charge), state.charge >= maxCharges, true, tier);
         ((ServerLevel)player.level()).playSound(null, player.blockPosition(), SoundEvents.TRIDENT_THROW.value(),
             SoundSource.PLAYERS, 0.9F, 0.72F);
     }
@@ -328,7 +343,7 @@ public final class CombatEvents {
             state.returned = true;
             WeaponTier tier = ((ArsenalWeaponItem)player.getMainHandItem().getItem()).tier();
             lineAttack(player, state.distance, ballDamageMultiplier(tier, state.charge),
-                ballKnockback(tier, state.charge), state.charge >= maxBallCharges(tier), tier);
+                ballKnockback(tier, state.charge), false, true, tier);
             ((ServerLevel)player.level()).playSound(null, player.blockPosition(), SoundEvents.TRIDENT_RETURN,
                 SoundSource.PLAYERS, 0.9F, 0.78F);
         }
@@ -341,17 +356,27 @@ public final class CombatEvents {
     }
 
     private static void lineAttack(ServerPlayer player, double distance, float multiplier,
-            float knockback, boolean fracture, WeaponTier tier) {
+            float knockback, boolean fracture, boolean applyEnchantments, WeaponTier tier) {
         ServerLevel level = (ServerLevel) player.level();
         Vec3 start = player.getEyePosition().add(0, -0.55D, 0), direction = player.getLookAngle().normalize();
         Vec3 end = start.add(direction.scale(stopDistance(level, start, direction, distance)));
         AABB box = new AABB(start, end).inflate(0.75D, 1.0D, 0.75D);
-        float base = (float)player.getAttributeValue(Attributes.ATTACK_DAMAGE) * multiplier;
+        float attributeDamage = (float)player.getAttributeValue(Attributes.ATTACK_DAMAGE);
+        float base = attributeDamage * multiplier;
+        ItemStack weapon = player.getMainHandItem();
+        DamageSource source = weapon.getDamageSource(player, () -> player.damageSources().playerAttack(player));
         for (LivingEntity target : level.getEntitiesOfClass(LivingEntity.class, box, target -> validTarget(player, target))) {
             if (!target.getBoundingBox().inflate(0.7D, 1.0D, 0.7D).clip(start, end).isPresent()) continue;
             target.invulnerableTime = 0;
-            if (target.hurtServer(level, player.damageSources().playerAttack(player), base)) {
-                target.knockback(knockback, -direction.x, -direction.z);
+            float damage = applyEnchantments
+                ? EnchantmentHelper.modifyDamage(level, weapon, target, source, base)
+                : base;
+            float finalKnockback = applyEnchantments
+                ? EnchantmentHelper.modifyKnockback(level, weapon, target, source, knockback)
+                : knockback;
+            if (target.hurtServer(level, source, damage)) {
+                target.knockback(finalKnockback, -direction.x, -direction.z);
+                if (applyEnchantments) EnchantmentHelper.doPostAttackEffectsWithItemSource(level, target, source, weapon);
                 player.getMainHandItem().hurtAndBreak(1, player, EquipmentSlot.MAINHAND);
                 if (fracture) fractureArmor(target, tier);
             }
@@ -384,7 +409,7 @@ public final class CombatEvents {
         RamState state = RAMS.get(player.getUUID());
         if (state == null) return;
         if (!(player.getMainHandItem().getItem() instanceof ArsenalWeaponItem weapon) || weapon.kind() != WeaponKind.BATTERING_RAM
-            || !player.getOffhandItem().isEmpty() || player.level().getGameTime() - state.lastHeartbeat > 3
+            || !player.getOffhandItem().isEmpty() || player.level().getGameTime() - state.lastHeartbeat > 8
             || (!player.isCreative() && player.getFoodData().getFoodLevel() <= 6)) {
             RAMS.remove(player.getUUID()); if (player.isUsingItem()) player.stopUsingItem(); return;
         }
@@ -442,7 +467,7 @@ public final class CombatEvents {
         player.getCooldowns().addCooldown(player.getMainHandItem(), 60);
         player.stopUsingItem();
         player.swing(InteractionHand.MAIN_HAND, true);
-        float damage = bulwarkDamage(player);
+        float damage = bulwarkDamage(player) * attackChargeMultiplier(player);
         ServerLevel level = (ServerLevel)player.level();
         ItemStack bulwark = player.getMainHandItem();
         for (LivingEntity target : level.getEntitiesOfClass(LivingEntity.class, player.getBoundingBox().inflate(4.0D),
@@ -455,6 +480,7 @@ public final class CombatEvents {
         }
         level.playSound(null, player.blockPosition(), SoundEvents.SHIELD_BLOCK.value(), SoundSource.PLAYERS, 1.0F, 0.75F);
         level.playSound(null, player.blockPosition(), SoundEvents.IRON_GOLEM_ATTACK, SoundSource.PLAYERS, 0.9F, 0.70F);
+        player.resetAttackStrengthTicker();
     }
 
     private static void updateBulwarkMovement(Player player) {
@@ -472,8 +498,15 @@ public final class CombatEvents {
     }
 
     private static int maxBallCharges(WeaponTier tier) { return tier == WeaponTier.GOLD ? 2 : 3; }
+
+    /** Matches Minecraft's normal melee cooldown curve: 20% at empty, 100% at full. */
+    private static float attackChargeMultiplier(Player player) {
+        float charge = player.getAttackStrengthScale(0.5F);
+        return 0.2F + charge * charge * 0.8F;
+    }
+
     private static float ballDamageMultiplier(WeaponTier tier, int charge) {
-        return tier == WeaponTier.GOLD ? 2.75F * charge / 2.0F : new float[]{0, 1.75F, 2.25F, 2.75F}[charge];
+        return new float[]{0, 1.25F, 1.75F, 2.25F}[charge];
     }
     private static float ballKnockback(WeaponTier tier, int charge) {
         return tier == WeaponTier.GOLD ? 2.40F * charge / 2.0F : 0.75F + charge * 0.55F;
@@ -538,6 +571,31 @@ public final class CombatEvents {
         final float yaw, pitch; long lastHeartbeat; final Set<Integer> hit = new HashSet<>();
         RamState(float yaw, float pitch) { this.yaw = yaw; this.pitch = pitch; }
     }
-    private record PendingMeleeAttack(int targetId, long gameTime, WeaponKind kind, boolean fullyCharged) {}
+    private static void updateClawChain(LivingHurtEvent event, Player attacker, LivingEntity target,
+            PendingMeleeAttack pending) {
+        int previousHand = attacker.getPersistentData().getIntOr(CLAW_LAST_HAND, -1);
+        int previousTarget = attacker.getPersistentData().getIntOr(CLAW_LAST_TARGET, -1);
+        int chain = attacker.getPersistentData().getIntOr(CLAW_CRIT_CHAIN, 0);
+        boolean valid = pending != null && pending.kind == WeaponKind.CLAWS && pending.fullyCharged
+            && pending.targetId == target.getId() && attacker.level().getGameTime() - pending.gameTime <= 1L;
+        if (!valid) chain = 0;
+        else if (previousTarget == target.getId() && previousHand != pending.hand) chain++;
+        else chain = 1;
+        if (chain >= 4) {
+            event.setAmount(event.getAmount() * 1.5F);
+            chain = 0;
+            if (attacker.level() instanceof ServerLevel level) {
+                level.sendParticles(ParticleTypes.CRIT, target.getX(), target.getY(0.6D), target.getZ(),
+                    14, target.getBbWidth() * 0.35D, target.getBbHeight() * 0.25D, target.getBbWidth() * 0.35D, 0.18D);
+                level.playSound(null, target.blockPosition(), SoundEvents.PLAYER_ATTACK_CRIT,
+                    SoundSource.PLAYERS, 1.0F, 1.15F);
+            }
+        }
+        attacker.getPersistentData().putInt(CLAW_CRIT_CHAIN, chain);
+        attacker.getPersistentData().putInt(CLAW_LAST_HAND, pending == null ? 0 : pending.hand);
+        attacker.getPersistentData().putInt(CLAW_LAST_TARGET, target.getId());
+    }
+
+    private record PendingMeleeAttack(int targetId, long gameTime, WeaponKind kind, boolean fullyCharged, int hand) {}
     private CombatEvents() {}
 }

@@ -3,7 +3,7 @@
 Nanonaitor's Arsenal is a Forge weapon mod built around specialized combat roles,
 active mechanics, and deliberate tradeoffs instead of interchangeable damage tiers.
 
-This branch contains release `1.0.0` for Minecraft 26.1.2 and Forge 64.0.12.
+This branch contains release `1.1.0` for Minecraft 26.1.2 and Forge 64.0.12.
 The original Minecraft 1.12.2 release remains preserved on the repository's
 `main` branch.
 
@@ -23,8 +23,7 @@ Fracture, reducing armor by 20% per level. Tier caps range from 40% for wood to
 ### Scimitars
 
 Fast, curved blades inspired by historical Middle Eastern swords and classic
-RuneScape silhouettes. Fully charged hits have a 10% chance to inflict Weakness II
-for 2 seconds.
+RuneScape silhouettes. Every successful hit inflicts Weakness II for 10 seconds.
 
 ### Paired Claws
 
@@ -37,6 +36,7 @@ linked claw mirrors enchantments and durability from the main claw.
 Hold attack to swing an iron chain and tier-colored head in a four-block area around
 the wielder every 25 ticks. Every visible non-allied enemy in range receives a full
 melee hit, including off-hand Defender bonuses, Strength, and enchantment damage.
+Conventional shield blocking stops the continuous swing; Defenders remain exempt.
 
 ### Battering Rams
 
@@ -67,7 +67,8 @@ the fortified building's gate.
 ## Rendering and controls
 
 - Flails and Balls and Chains use standalone animated 3D combat renders.
-- Their held sprites change while attacking.
+- Their held sprites hide during active swings so the standalone 3D render stays clear,
+  while inventory, hotbar, dropped-item, and item-frame sprites remain visible.
 - Ball and Chain throws follow the exact aimed trajectory in first and third person.
 - Paired Claws assign the main and linked claw to separate mouse buttons.
 - No animation or compatibility mod is required.

@@ -1,6 +1,7 @@
 package com.nanonaitor.arsenal.client;
 
 import net.minecraft.client.model.HumanoidModel;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.entity.state.HumanoidRenderState;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
@@ -21,7 +22,10 @@ public final class BatteringRamClientExtensions implements IClientItemExtensions
     @Override
     public HumanoidModel.ArmPose getArmPose(LivingEntity entity, InteractionHand hand, ItemStack stack) {
         if (!entity.getOffhandItem().isEmpty()) return null;
-        return entity.isUsingItem() && entity.getUseItem() == stack ? BRACED_CHARGE : LOW_CARRY;
+        boolean charging = entity == Minecraft.getInstance().player
+            ? ClientControls.ramActive()
+            : entity.isUsingItem() && entity.getUseItem() == stack;
+        return charging ? BRACED_CHARGE : LOW_CARRY;
     }
 
     private static void poseLowCarry(HumanoidModel<? extends HumanoidRenderState> model,
@@ -37,22 +41,27 @@ public final class BatteringRamClientExtensions implements IClientItemExtensions
 
     private static void poseBracedCharge(HumanoidModel<? extends HumanoidRenderState> model,
             HumanoidRenderState state, HumanoidArm arm) {
-        // Pull the elbows inward and level the ram as the player commits to the charge.
-        model.rightArm.xRot = -1.20F;
-        model.rightArm.yRot = -0.16F;
-        model.rightArm.zRot = -0.05F;
-        model.leftArm.xRot = -1.62F;
-        model.leftArm.yRot = 0.20F;
-        model.leftArm.zRot = 0.05F;
+        // Lean into the ram and lock both hands around its grips. Keep the arms
+        // rigid so the long held model does not amplify a small arm oscillation
+        // into visible third-person jitter.
+        model.body.xRot = 0.24F;
+        model.body.yRot = 0.0F;
+        model.body.zRot = 0.0F;
+        model.rightArm.xRot = -1.52F;
+        model.rightArm.yRot = -0.25F;
+        model.rightArm.zRot = -0.08F;
+        model.leftArm.xRot = -1.52F;
+        model.leftArm.yRot = 0.25F;
+        model.leftArm.zRot = 0.08F;
 
-        // Keep a committed running stride even when collision briefly slows the player.
-        // This makes the pointed end appear to drive through the custom break path.
-        float stride = Mth.cos(state.ageInTicks * 0.85F) * 1.15F;
+        // Keep a committed running stride even when a collision momentarily stops
+        // movement. A small knee bend keeps the stance lower and weight-forward.
+        float stride = Mth.cos(state.ageInTicks * 0.85F) * 1.25F;
         model.rightLeg.xRot = stride;
         model.leftLeg.xRot = -stride;
         model.rightLeg.yRot = 0.0F;
         model.leftLeg.yRot = 0.0F;
-        model.rightLeg.zRot = 0.0F;
-        model.leftLeg.zRot = 0.0F;
+        model.rightLeg.zRot = 0.025F;
+        model.leftLeg.zRot = -0.025F;
     }
 }

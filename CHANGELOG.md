@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.1.0 - 2026-07-26
+
+- Scimitars now guarantee Weakness II for 10 seconds on every successful hit.
+- Ball & Chain combat renders now use a six-protrusion spiked head on every vanilla tier.
+- Flails stop spinning while the player blocks with a conventional shield; Defenders remain compatible.
+- Cleaned weapon tooltips, including removing the Battering Ram hunger-warning line while preserving its actual hunger requirement.
+- Removed dormant models and textures for unregistered non-vanilla compatibility tiers.
+- Ball & Chain charging swings now deal 0.5x damage; throws deal 1.25x, 1.75x, or 2.25x damage by charge.
+- Fully charged Ball & Chain throws apply full enchantment damage and Armor Fracture only once, on the outgoing hit.
+- Ball & Chain recipes now use two Chains and a material block; Netherite remains a Smithing Table upgrade.
+- Every fourth fully charged, properly alternating Claw hit is now a guaranteed critical strike.
+- Reduced Scimitar base damage by roughly 10%, rounded to the nearest half point.
+- Bulwark attacks and bashes now scale with vanilla attack-charge strength.
+- Stabilized the Battering Ram's third-person charge pose and corrected the Flail's third-person rotation direction.
+- Added a cracked-armor status icon for Armor Fracture.
+
 ## 1.0.0 - 2026-07-23
 
 - Ported the complete standalone Arsenal weapon roster to Minecraft 26.1.2 / Forge 64.0.12.

@@ -4,6 +4,17 @@
     "property": "minecraft:custom_model_data",
     "index": 0,
     "on_false": {"type": "minecraft:model", "model": "nanonaitors_arsenal:item/flail_stone"},
-    "on_true": {"type": "minecraft:model", "model": "nanonaitors_arsenal:item/flail_swinging_stone"}
+    "on_true": {
+      "type": "minecraft:select",
+      "property": "minecraft:display_context",
+      "cases": [{
+        "when": ["firstperson_lefthand", "firstperson_righthand", "thirdperson_lefthand", "thirdperson_righthand"],
+        "model": {"type": "minecraft:empty"}
+      }, {
+        "when": "gui",
+        "model": {"type": "minecraft:model", "model": "nanonaitors_arsenal:item/flail_swinging_stone"}
+      }],
+      "fallback": {"type": "minecraft:model", "model": "nanonaitors_arsenal:item/flail_stone"}
+    }
   }
 }

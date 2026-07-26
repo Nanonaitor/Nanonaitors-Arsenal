@@ -5,6 +5,7 @@ import com.mojang.math.Axis;
 import com.nanonaitor.arsenal.item.ArsenalWeaponItem;
 import com.nanonaitor.arsenal.item.WeaponKind;
 import com.nanonaitor.arsenal.item.WeaponTier;
+import com.nanonaitor.arsenal.registry.ModItems;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.item.ItemStackRenderState;
@@ -35,10 +36,10 @@ public final class ClientWeaponRenderer {
         if (!(player.getMainHandItem().getItem() instanceof ArsenalWeaponItem weapon)) return;
         long now = minecraft.level.getGameTime();
         boolean local = player == minecraft.player;
-        if (weapon.kind() == WeaponKind.FLAIL && (local ? ClientControls.flailVisual(now) : player.isUsingItem())) {
-            double angle = (now + minecraft.getDeltaTracker().getGameTimeDeltaPartialTick(false)) / 25.0D * Math.PI * 2.0D;
+        if (weapon.kind() == WeaponKind.FLAIL && (local ? ClientControls.flailActive() : player.isUsingItem())) {
+            double angle = -(now + minecraft.getDeltaTracker().getGameTimeDeltaPartialTick(false)) / 25.0D * Math.PI * 2.0D;
             renderChain(event, player.getMainHandItem(), weapon.tier(),
-                0.34D, 1.2D, 0.0D, Math.cos(angle) * 4.0D, 1.05D, Math.sin(angle) * 4.0D, 0.58F);
+                0.34D, 1.2D, 0.0D, Math.cos(angle) * 4.0D, 1.05D, Math.sin(angle) * 4.0D, 0.58F, false);
         } else if (weapon.kind() == WeaponKind.BALL_AND_CHAIN) {
             double partial = minecraft.getDeltaTracker().getGameTimeDeltaPartialTick(false);
             double bodyYaw = Math.toRadians(Mth.rotLerp((float)partial, player.yBodyRotO, player.yBodyRot));
@@ -52,7 +53,7 @@ public final class ClientWeaponRenderer {
                 renderChain(event, player.getMainHandItem(), weapon.tier(),
                     handX, handY, handZ,
                     -sinBody * localBallZ, 1.2D + Math.sin(angle) * 0.72D,
-                    cosBody * localBallZ, 0.48F);
+                    cosBody * localBallZ, 0.48F, true);
             } else if (local && ClientControls.ballRelease(now)) {
                 double progress = (now - ClientControls.ballReleaseStarted() + partial) / 16.0D;
                 double travel = Math.sin(progress * Math.PI);
@@ -63,7 +64,7 @@ public final class ClientWeaponRenderer {
                     handX * (1.0D - travel) + look.x * distance,
                     handY + (player.getEyeHeight() - handY) * travel + look.y * distance,
                     handZ * (1.0D - travel) + look.z * distance,
-                    0.48F + ClientControls.releasedCharge() * 0.05F);
+                    0.48F + ClientControls.releasedCharge() * 0.05F, true);
             }
         }
     }
@@ -71,34 +72,55 @@ public final class ClientWeaponRenderer {
     public static void renderFirstPerson(RenderHandEvent event) {
         Minecraft minecraft = Minecraft.getInstance();
         if (event.getHand() != InteractionHand.MAIN_HAND || minecraft.player == null || minecraft.level == null
-            || !(event.getItemStack().getItem() instanceof ArsenalWeaponItem weapon)
-            || weapon.kind() != WeaponKind.BALL_AND_CHAIN) return;
+            || !(event.getItemStack().getItem() instanceof ArsenalWeaponItem weapon)) return;
         long now = minecraft.level.getGameTime();
         double partial = event.getPartialTick();
-        if (ClientControls.ballWindup(now)) {
+        if (weapon.kind() == WeaponKind.BATTERING_RAM && ClientControls.ramActive()) {
+            // A steady forward brace for first person. This replaces the vanilla
+            // mining/block animation and adds only a small running pulse, so the
+            // pointed end visibly drives forward without competing transforms.
+            double pulse = Math.sin((now + partial) * 0.85D);
+            event.getPoseStack().translate(-0.08D, -0.08D + Math.abs(pulse) * 0.025D,
+                -0.42D - Math.max(0.0D, pulse) * 0.035D);
+            event.getPoseStack().mulPose(Axis.XP.rotationDegrees(-7.0F));
+        } else if (weapon.kind() == WeaponKind.FLAIL && ClientControls.flailActive()) {
+            double angle = -(now + partial) / 25.0D * Math.PI * 2.0D;
+            double cameraYaw = Math.toRadians(Mth.rotLerp((float)partial,
+                minecraft.player.yRotO, minecraft.player.getYRot()));
+            double relative = angle - cameraYaw;
+            // Match the third-person rig's actual four-block horizontal orbit.
+            // Convert its world-space circle into camera space instead of drawing
+            // the old miniature ellipse directly in front of the screen.
+            renderChain(event.getPoseStack(), event.getNodeCollector(), event.getPackedLight(), 0,
+                weapon.tier(), 0.38D, -0.42D, -0.15D,
+                Math.cos(relative) * 4.0D, -0.57D,
+                -Math.sin(relative) * 4.0D, 0.58F, 0.20F, false);
+        } else if (weapon.kind() == WeaponKind.BALL_AND_CHAIN && ClientControls.ballWindup(now)) {
             double angle = (now - ClientControls.ballStarted() + partial) / 25.0D * Math.PI * 2.0D;
             renderChain(event.getPoseStack(), event.getNodeCollector(), event.getPackedLight(), 0,
                 weapon.tier(), 0.50D, -0.40D, -0.72D,
                 0.04D, -0.12D + Math.sin(angle) * 0.44D,
-                -1.18D + Math.cos(angle) * 0.50D, 0.22F, 0.12F);
-        } else if (ClientControls.ballRelease(now)) {
+                -1.18D + Math.cos(angle) * 0.50D, 0.22F, 0.12F, true);
+        } else if (weapon.kind() == WeaponKind.BALL_AND_CHAIN && ClientControls.ballRelease(now)) {
             double progress = (now - ClientControls.ballReleaseStarted() + partial) / 16.0D;
             double distance = ClientControls.releasedDistance() * Math.sin(progress * Math.PI);
             renderChain(event.getPoseStack(), event.getNodeCollector(), event.getPackedLight(), 0,
                 weapon.tier(), 0.50D, -0.40D, -0.72D,
-                0.0D, -0.08D, -1.05D - distance, 0.20F, 0.12F);
+                0.0D, -0.08D, -1.05D - distance, 0.20F, 0.12F, true);
         }
     }
 
     private static void renderChain(RenderLivingEvent.Post<?, ?, ?> event, ItemStack held, WeaponTier tier,
-            double ax, double ay, double az, double bx, double by, double bz, float ballScale) {
+            double ax, double ay, double az, double bx, double by, double bz, float ballScale,
+            boolean spikedHead) {
         renderChain(event.getPoseStack(), event.getNodeCollector(), event.getState().lightCoords,
-            event.getState().outlineColor, tier, ax, ay, az, bx, by, bz, ballScale, 0.20F);
+            event.getState().outlineColor, tier, ax, ay, az, bx, by, bz, ballScale, 0.20F,
+            spikedHead);
     }
 
     private static void renderChain(PoseStack pose, SubmitNodeCollector collector, int light, int outline,
             WeaponTier tier, double ax, double ay, double az, double bx, double by, double bz,
-            float ballScale, float linkScale) {
+            float ballScale, float linkScale, boolean spikedHead) {
         double dx = bx - ax, dy = by - ay, dz = bz - az;
         double length = Math.sqrt(dx * dx + dy * dy + dz * dz);
         int links = Math.max(1, (int)Math.ceil(length / 0.28D));
@@ -107,7 +129,8 @@ public final class ClientWeaponRenderer {
             renderLink(pose, collector, light, outline, ax + dx * t, ay + dy * t, az + dz * t,
                 dx / length, dy / length, dz / length, linkScale, i % 2 == 0 ? 0.0F : 90.0F);
         }
-        renderItem(pose, collector, light, outline, materialStack(tier), bx, by, bz, ballScale);
+        renderItem(pose, collector, light, outline,
+            spikedHead ? ballVisualStack(tier) : materialStack(tier), bx, by, bz, ballScale);
     }
 
     private static void renderLink(PoseStack pose, SubmitNodeCollector collector, int light, int outline,
@@ -149,6 +172,9 @@ public final class ClientWeaponRenderer {
             case DIAMOND -> Items.DIAMOND_BLOCK;
             case NETHERITE -> Items.NETHERITE_BLOCK;
         });
+    }
+    private static ItemStack ballVisualStack(WeaponTier tier) {
+        return new ItemStack(ModItems.BALL_VISUALS.get(tier).get());
     }
     private ClientWeaponRenderer() {}
 }

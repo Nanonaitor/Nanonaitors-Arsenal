@@ -1,0 +1,7 @@
+{
+  "parent": "nanonaitors_arsenal:item/battering_ram_diamond",
+  "display": {
+    "thirdperson_righthand": {"rotation": [0, 0, 0], "translation": [-2, 5, -4], "scale": [0.68, 0.68, 0.68]},
+    "thirdperson_lefthand": {"rotation": [0, 180, 0], "translation": [2, 5, -4], "scale": [0.68, 0.68, 0.68]}
+  }
+}
