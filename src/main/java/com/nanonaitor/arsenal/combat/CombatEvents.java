@@ -299,7 +299,8 @@ public final class CombatEvents {
         if (!active) { releaseBall(player); return; }
         if (!(player.getMainHandItem().getItem() instanceof ArsenalWeaponItem weapon)
             || weapon.kind() != WeaponKind.BALL_AND_CHAIN || !player.getOffhandItem().isEmpty()) return;
-        BallState state = BALLS.computeIfAbsent(player.getUUID(), id -> new BallState(player.level().getGameTime()));
+        BallState state = BALLS.computeIfAbsent(player.getUUID(),
+            id -> new BallState(player.level().getGameTime(), weapon.tier()));
         state.lastHeartbeat = player.level().getGameTime();
     }
 
@@ -308,8 +309,9 @@ public final class CombatEvents {
         if (state == null) return;
         if (state.releasing) { updateBallRelease(player, state); return; }
         if (!(player.getMainHandItem().getItem() instanceof ArsenalWeaponItem weapon)
-            || weapon.kind() != WeaponKind.BALL_AND_CHAIN || !player.getOffhandItem().isEmpty()) {
-            BALLS.remove(player.getUUID()); return;
+            || weapon.kind() != WeaponKind.BALL_AND_CHAIN || weapon.tier() != state.tier
+            || !player.getOffhandItem().isEmpty()) {
+            cancelBall(player); return;
         }
         long now = player.level().getGameTime();
         if (!player.isUsingItem()) player.startUsingItem(InteractionHand.MAIN_HAND);
@@ -320,7 +322,7 @@ public final class CombatEvents {
             int previousCharge = state.charge;
             state.lastSwing = index;
             state.charge = Math.min(maxCharges, state.charge + 1);
-            lineAttack(player, 3.0D, 0.5F, 0.3F, false, false, weapon.tier());
+            lineAttack(player, 3.0D, 0.5F, 0.3F, false, true, weapon.tier());
             ((ServerLevel)player.level()).playSound(null, player.blockPosition(), SoundEvents.PLAYER_ATTACK_SWEEP,
                 SoundSource.PLAYERS, 0.65F, 0.72F);
             if (previousCharge < maxCharges && state.charge == maxCharges) {
@@ -337,9 +339,14 @@ public final class CombatEvents {
         if (state == null || state.releasing || state.charge <= 0) {
             BALLS.remove(player.getUUID()); return;
         }
+        if (!(player.getMainHandItem().getItem() instanceof ArsenalWeaponItem weapon)
+            || weapon.kind() != WeaponKind.BALL_AND_CHAIN || weapon.tier() != state.tier
+            || !player.getOffhandItem().isEmpty()) {
+            cancelBall(player); return;
+        }
         state.releasing = true; state.releaseTick = player.level().getGameTime();
         state.direction = player.getLookAngle().normalize();
-        WeaponTier tier = ((ArsenalWeaponItem)player.getMainHandItem().getItem()).tier();
+        WeaponTier tier = state.tier;
         int maxCharges = maxBallCharges(tier);
         int effectiveCharge = effectiveBallCharge(tier, state.charge);
         state.distance = stopDistance((ServerLevel)player.level(), player.getEyePosition(), state.direction,
@@ -351,10 +358,15 @@ public final class CombatEvents {
     }
 
     private static void updateBallRelease(ServerPlayer player, BallState state) {
+        if (!(player.getMainHandItem().getItem() instanceof ArsenalWeaponItem weapon)
+            || weapon.kind() != WeaponKind.BALL_AND_CHAIN || weapon.tier() != state.tier
+            || !player.getOffhandItem().isEmpty()) {
+            cancelBall(player); return;
+        }
         long age = player.level().getGameTime() - state.releaseTick;
         if (age == 8 && !state.returned) {
             state.returned = true;
-            WeaponTier tier = ((ArsenalWeaponItem)player.getMainHandItem().getItem()).tier();
+            WeaponTier tier = state.tier;
             lineAttack(player, state.distance, ballDamageMultiplier(tier, state.charge),
                 ballKnockback(tier, state.charge), false, true, tier);
             ((ServerLevel)player.level()).playSound(null, player.blockPosition(), SoundEvents.TRIDENT_RETURN,
@@ -362,10 +374,15 @@ public final class CombatEvents {
         }
         if (age >= 16) { BALLS.remove(player.getUUID()); player.stopUsingItem(); }
         else {
-            WeaponTier tier = ((ArsenalWeaponItem)player.getMainHandItem().getItem()).tier();
+            WeaponTier tier = state.tier;
             double progress = age / 16.0D;
             VisualEffects.ballRelease((ServerLevel)player.level(), player, tier, state, progress);
         }
+    }
+
+    private static void cancelBall(ServerPlayer player) {
+        BALLS.remove(player.getUUID());
+        if (player.isUsingItem()) player.stopUsingItem();
     }
 
     private static void lineAttack(ServerPlayer player, double distance, float multiplier,
@@ -546,16 +563,27 @@ public final class CombatEvents {
 
     private static void pairClaws(Player player) {
         ItemStack main = player.getMainHandItem();
-        if (main.getItem() instanceof ArsenalWeaponItem weapon && weapon.kind() == WeaponKind.CLAWS) {
-            ItemStack off = player.getOffhandItem();
-            if (off.isEmpty() || off.getItem() instanceof ArsenalWeaponItem linked && linked.kind() == WeaponKind.LINKED_CLAWS) {
-                ItemStack desired = new ItemStack(ModItems.get(WeaponKind.LINKED_CLAWS, weapon.tier()).get());
-                desired.applyComponents(main.getComponentsPatch());
-                player.setItemSlot(EquipmentSlot.OFFHAND, desired);
+        ItemStack off = player.getOffhandItem();
+        boolean mayCreateLinkedClaw = off.isEmpty() || isLinkedClaw(off);
+
+        // Linked claws are temporary projections, never real inventory items. A hand-swap can
+        // otherwise move one into the hotbar/main hand before the old off-hand-only cleanup runs.
+        for (int slot = 0; slot < player.getInventory().getContainerSize(); slot++) {
+            if (isLinkedClaw(player.getInventory().getItem(slot))) {
+                player.getInventory().setItem(slot, ItemStack.EMPTY);
             }
-        } else if (player.getOffhandItem().getItem() instanceof ArsenalWeaponItem linked && linked.kind() == WeaponKind.LINKED_CLAWS) {
-            player.setItemSlot(EquipmentSlot.OFFHAND, ItemStack.EMPTY);
         }
+
+        if (main.getItem() instanceof ArsenalWeaponItem weapon && weapon.kind() == WeaponKind.CLAWS
+            && mayCreateLinkedClaw) {
+            ItemStack desired = new ItemStack(ModItems.get(WeaponKind.LINKED_CLAWS, weapon.tier()).get());
+            desired.applyComponents(main.getComponentsPatch());
+            player.setItemSlot(EquipmentSlot.OFFHAND, desired);
+        }
+    }
+
+    private static boolean isLinkedClaw(ItemStack stack) {
+        return stack.getItem() instanceof ArsenalWeaponItem weapon && weapon.kind() == WeaponKind.LINKED_CLAWS;
     }
 
     private static void syncClawPair(Player player) {
@@ -594,8 +622,9 @@ public final class CombatEvents {
     }
 
     public static final class BallState {
+        final WeaponTier tier;
         long started, lastHeartbeat, releaseTick; int lastSwing = -1, charge; boolean releasing, returned; double distance; Vec3 direction;
-        BallState(long tick) { started = lastHeartbeat = tick; }
+        BallState(long tick, WeaponTier tier) { started = lastHeartbeat = tick; this.tier = tier; }
         public int charge() { return charge; }
         public double distance() { return distance; }
     }

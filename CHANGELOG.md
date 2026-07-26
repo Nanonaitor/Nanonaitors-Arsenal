@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.1.3 - 2026-07-26
+
+- Flail combat links now use connected segments of Minecraft's 3D Iron Chain block model instead of the flat Iron Chain item sprite.
+- Adopted the redesigned RuneScape-inspired Scimitar silhouette for every vanilla tier, with consistent gold guards, wooden grips, material-colored blades, and the reduced in-hand model size/thickness.
+- Fixed linked off-hand Claws surviving hand or hotbar swaps; temporary linked copies are now removed from every inventory slot whenever their real main-hand Claw is no longer active.
+- Reoriented the actual Ball & Chain idle and charging sprites in third person so the player's hand grips the chain rather than overlapping the ball; inventory and first-person presentation remain unchanged.
+- Ball & Chain charging swings now process weapon enchantment damage and post-hit effects while retaining their `0.5x` base/attribute damage multiplier.
+- Fixed a player-tick crash when changing away from a Ball & Chain during its outgoing or returning throw animation; switching weapons now cancels the active throw safely.
+- Increased the redesigned Scimitar's inventory, hotbar, and item-browser display size by 15% without changing its held scale.
+- Updated the Copper, Stone, Gold, and Iron Flail sprites and the Netherite Morning Star sprite with the finalized artwork.
+
 ## 1.1.2 - 2026-07-26
 
 - Corrected release packaging so the complete compiled mod, including its Forge entry point, is included in the distributed JAR.

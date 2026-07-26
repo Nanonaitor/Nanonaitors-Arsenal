@@ -96,7 +96,7 @@ public final class ClientWeaponRenderer {
             renderChain(event.getPoseStack(), event.getNodeCollector(), event.getPackedLight(), 0,
                 weapon.tier(), 0.38D, -0.42D, -0.15D,
                 Math.cos(relative) * 4.0D, -0.57D,
-                -Math.sin(relative) * 4.0D, 0.58F, 0.20F, false);
+                -Math.sin(relative) * 4.0D, 0.58F, 0.28F, false);
         } else if (weapon.kind() == WeaponKind.BALL_AND_CHAIN && ClientControls.ballWindup(now)) {
             double angle = (now - ClientControls.ballStarted() + partial) / 25.0D * Math.PI * 2.0D;
             renderChain(event.getPoseStack(), event.getNodeCollector(), event.getPackedLight(), 0,
@@ -116,8 +116,8 @@ public final class ClientWeaponRenderer {
             double ax, double ay, double az, double bx, double by, double bz, float ballScale,
             boolean spikedHead) {
         renderChain(event.getPoseStack(), event.getNodeCollector(), event.getState().lightCoords,
-            event.getState().outlineColor, tier, ax, ay, az, bx, by, bz, ballScale, 0.20F,
-            spikedHead);
+            event.getState().outlineColor, tier, ax, ay, az, bx, by, bz, ballScale,
+            spikedHead ? 0.20F : 0.28F, spikedHead);
     }
 
     private static void renderChain(PoseStack pose, SubmitNodeCollector collector, int light, int outline,
@@ -129,20 +129,23 @@ public final class ClientWeaponRenderer {
         for (int i = 1; i < links; i++) {
             double t = i / (double)links;
             renderLink(pose, collector, light, outline, ax + dx * t, ay + dy * t, az + dz * t,
-                dx / length, dy / length, dz / length, linkScale, i % 2 == 0 ? 0.0F : 90.0F);
+                dx / length, dy / length, dz / length, linkScale,
+                i % 2 == 0 ? 0.0F : 45.0F, !spikedHead);
         }
         renderItem(pose, collector, light, outline,
             spikedHead ? ballVisualStack(tier) : materialStack(tier), bx, by, bz, ballScale);
     }
 
     private static void renderLink(PoseStack pose, SubmitNodeCollector collector, int light, int outline,
-            double x, double y, double z, double dx, double dy, double dz, float scale, float twist) {
+            double x, double y, double z, double dx, double dy, double dz, float scale, float twist,
+            boolean blockModel) {
         pose.pushPose();
         pose.translate(x, y, z);
         pose.mulPose(new Quaternionf().rotationTo(0.0F, 1.0F, 0.0F, (float)dx, (float)dy, (float)dz));
         pose.mulPose(Axis.YP.rotationDegrees(twist));
         pose.scale(scale, scale, scale);
-        submitItem(pose, collector, light, outline, new ItemStack(Items.IRON_CHAIN));
+        submitItem(pose, collector, light, outline, new ItemStack(blockModel
+            ? ModItems.CHAIN_LINK_UPRIGHT.get() : Items.IRON_CHAIN));
         pose.popPose();
     }
 
