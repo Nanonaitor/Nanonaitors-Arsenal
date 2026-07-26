@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.2 - 2026-07-26
+
+- Corrected release packaging so the complete compiled mod, including its Forge entry point, is included in the distributed JAR.
+- No gameplay or balance changes from 1.1.1.
+
 ## 1.1.1 - 2026-07-26
 
 - Gold Ball & Chain now skips charge stage 2: its second revolution delivers the full 2.25x damage and 12-block reach of a normal third charge.
