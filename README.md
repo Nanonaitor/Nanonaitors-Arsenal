@@ -3,9 +3,9 @@
 Nanonaitor's Arsenal is a Forge weapon mod built around specialized combat roles,
 active mechanics, and deliberate tradeoffs instead of interchangeable damage tiers.
 
-This branch contains release `1.1.0` for Minecraft 26.1.2 and Forge 64.0.12.
+This branch contains release `1.1.1` for Minecraft 26.1.2 and Forge 64.0.12.
 The original Minecraft 1.12.2 release remains preserved on the repository's
-`main` branch.
+`mc-1.12.2` branch.
 
 ## Included equipment
 
@@ -49,7 +49,8 @@ or enemy struck.
 
 Hold attack to build up to three charges, then release a collision-limited line
 attack that strikes on both the outward and returning passes. Each charge adds four
-blocks of reach; Gold reaches full power at two charges. Fully charged throws gain
+blocks of reach. Gold skips the middle stage, reaching the full 12-block, 2.25x
+throw after two charges. Fully charged throws gain
 tier-scaled armor piercing and can permanently reduce mob armor.
 
 ### Sun-War Bulwark

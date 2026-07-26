@@ -56,7 +56,7 @@ public final class BatteringRamClientExtensions implements IClientItemExtensions
 
         // Keep a committed running stride even when a collision momentarily stops
         // movement. A small knee bend keeps the stance lower and weight-forward.
-        float stride = Mth.cos(state.ageInTicks * 0.85F) * 1.25F;
+        float stride = Mth.cos(state.ageInTicks * 0.45F) * 0.85F;
         model.rightLeg.xRot = stride;
         model.leftLeg.xRot = -stride;
         model.rightLeg.yRot = 0.0F;

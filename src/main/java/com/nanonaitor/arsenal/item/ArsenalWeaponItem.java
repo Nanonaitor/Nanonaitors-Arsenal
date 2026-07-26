@@ -68,6 +68,7 @@ public class ArsenalWeaponItem extends Item {
             }
             case BATTERING_RAM -> {
                 lines.accept(Component.literal("Two-Handed: hold attack to charge and smash a forward 3x3 path.").withStyle(ChatFormatting.RED));
+                lines.accept(Component.literal("Entity damage uses the attack charge present when the ram begins.").withStyle(ChatFormatting.YELLOW));
                 lines.accept(Component.literal(switch (tier) {
                     case WOOD -> "Breaks soft terrain, foliage, wool and glass.";
                     case STONE, COPPER, GOLD -> "Also breaks planks and constructed wooden blocks.";
@@ -81,7 +82,11 @@ public class ArsenalWeaponItem extends Item {
                 int charges = tier == WeaponTier.GOLD ? 2 : 3;
                 int reach = 4;
                 lines.accept(Component.literal("Two-Handed: hold attack for up to " + charges + " charges, then release.").withStyle(ChatFormatting.RED));
-                lines.accept(Component.literal("Throws " + reach + " blocks per charge and hits both outward and returning.").withStyle(ChatFormatting.GOLD));
+                if (tier == WeaponTier.GOLD) {
+                    lines.accept(Component.literal("Second charge jumps to full 12-block reach.").withStyle(ChatFormatting.GOLD));
+                } else {
+                    lines.accept(Component.literal("Throws " + reach + " blocks per charge and hits both outward and returning.").withStyle(ChatFormatting.GOLD));
+                }
                 lines.accept(Component.literal("Full charge pierces " + tier.armorPiercePercent() + "% armor.").withStyle(ChatFormatting.DARK_RED));
                 lines.accept(Component.literal("Full charge fractures armor once per throw; requires an empty offhand.").withStyle(ChatFormatting.DARK_GRAY));
             }

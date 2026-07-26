@@ -46,6 +46,7 @@ public final class ClientControls {
         if (!(player.getMainHandItem().getItem() instanceof ArsenalWeaponItem weapon)) {
             if (ballWasDown) ModNetwork.send(ModNetwork.BALL_CHAIN, false);
             if (flailWasDown) ModNetwork.send(ModNetwork.FLAIL, false);
+            if (ramLocked) ModNetwork.send(ModNetwork.RAM, false);
             clearFlailSprite(); clearBallSprite();
             ballWasDown = false; flailWasDown = false; ramLocked = false; return;
         }
@@ -77,7 +78,9 @@ public final class ClientControls {
             if (!down && ballWasDown) {
                 int maxCharges = weapon.tier() == com.nanonaitor.arsenal.item.WeaponTier.GOLD ? 2 : 3;
                 releasedCharge = Math.max(1, Math.min(maxCharges, (int)((now - ballStarted) / 25) + 1));
-                releasedDistance = releasedCharge * 4.0D;
+                int effectiveCharge = weapon.tier() == com.nanonaitor.arsenal.item.WeaponTier.GOLD
+                    && releasedCharge >= 2 ? 3 : releasedCharge;
+                releasedDistance = effectiveCharge * 4.0D;
                 ballReleaseStarted = now;
                 ModNetwork.send(ModNetwork.BALL_CHAIN, false);
             }
@@ -89,7 +92,12 @@ public final class ClientControls {
         if (weapon.kind() == WeaponKind.BATTERING_RAM) {
             boolean charging = attack && emptyOffhand && (player.isCreative() || player.getFoodData().getFoodLevel() > 6);
             if (charging) {
-                if (!ramLocked) { ramLocked = true; lockedYaw = player.getYRot(); lockedPitch = player.getXRot(); }
+                if (!ramLocked) {
+                    ramLocked = true;
+                    lockedYaw = player.getYRot();
+                    lockedPitch = player.getXRot();
+                    player.resetAttackStrengthTicker();
+                }
                 // Keep one continuous use state for the custom two-handed pose. The
                 // server also owns this state, but starting it locally avoids a short
                 // carry/charge flicker while its heartbeat packet makes the round trip.
@@ -99,12 +107,16 @@ public final class ClientControls {
                     lastHeartbeat = now; ModNetwork.send(ModNetwork.RAM, true);
                 }
             } else {
+                if (ramLocked) ModNetwork.send(ModNetwork.RAM, false);
                 if (ramLocked && player.isUsingItem()
                     && player.getUseItem().getItem() instanceof ArsenalWeaponItem active
                     && active.kind() == WeaponKind.BATTERING_RAM) player.stopUsingItem();
                 ramLocked = false;
             }
-        } else ramLocked = false;
+        } else {
+            if (ramLocked) ModNetwork.send(ModNetwork.RAM, false);
+            ramLocked = false;
+        }
     }
     private static boolean interaction(InputEvent.InteractionKeyMappingTriggered event) {
         Minecraft minecraft = Minecraft.getInstance();

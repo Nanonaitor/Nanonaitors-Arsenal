@@ -84,7 +84,9 @@ public final class ClientWeaponRenderer {
                 -0.42D - Math.max(0.0D, pulse) * 0.035D);
             event.getPoseStack().mulPose(Axis.XP.rotationDegrees(-7.0F));
         } else if (weapon.kind() == WeaponKind.FLAIL && ClientControls.flailActive()) {
-            double angle = -(now + partial) / 25.0D * Math.PI * 2.0D;
+            // Camera space mirrors the depth axis, so use the opposite signed
+            // angle here to preserve the third-person rig's apparent direction.
+            double angle = (now + partial) / 25.0D * Math.PI * 2.0D;
             double cameraYaw = Math.toRadians(Mth.rotLerp((float)partial,
                 minecraft.player.yRotO, minecraft.player.getYRot()));
             double relative = angle - cameraYaw;

@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.1 - 2026-07-26
+
+- Gold Ball & Chain now skips charge stage 2: its second revolution delivers the full 2.25x damage and 12-block reach of a normal third charge.
+- Battering Rams now stop immediately on attack release, keep client/server charge state synchronized, and use a smoother third-person running stride.
+- Flail revolutions now travel in the same apparent direction in first- and third-person views.
+- Fixed normal Bulwark strikes always using the minimum 20% attack-charge multiplier; fully charged strikes now deal the intended `1 + armor points` damage.
+- Battering Ram entity damage now snapshots and consumes attack charge when a continuous ram begins; mining remains available immediately regardless of charge.
+
 ## 1.1.0 - 2026-07-26
 
 - Scimitars now guarantee Weakness II for 10 seconds on every successful hit.

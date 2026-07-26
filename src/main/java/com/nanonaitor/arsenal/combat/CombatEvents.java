@@ -62,6 +62,7 @@ public final class CombatEvents {
     private static final Map<UUID, RamState> RAMS = new HashMap<>();
     private static final Map<UUID, Long> LAST_CLAW_OFFHAND = new HashMap<>();
     private static final Map<UUID, PendingMeleeAttack> PENDING_MELEE = new HashMap<>();
+    private static final Map<UUID, PendingBulwarkAttack> PENDING_BULWARK = new HashMap<>();
     private static final Identifier PERMANENT_FRACTURE = Identifier.fromNamespaceAndPath(ArsenalMod.MOD_ID, "ball_chain_fracture");
     private static final String CLAW_LAST_HAND = "ArsenalClawLastHand", CLAW_LAST_TARGET = "ArsenalClawLastTarget",
         CLAW_CRIT_CHAIN = "ArsenalClawCritChain";
@@ -95,7 +96,11 @@ public final class CombatEvents {
                 event.setAmount(0.0F);
                 return;
             }
-            event.setAmount(bulwarkDamage(attacker) * attackChargeMultiplier(attacker));
+            PendingBulwarkAttack pending = PENDING_BULWARK.remove(attacker.getUUID());
+            float chargeMultiplier = pending != null && pending.targetId == event.getEntity().getId()
+                && attacker.level().getGameTime() - pending.gameTime <= 1L
+                ? pending.chargeMultiplier : attackChargeMultiplier(attacker);
+            event.setAmount(bulwarkDamage(attacker) * chargeMultiplier);
             return;
         }
         ItemStack weapon = attacker.getMainHandItem();
@@ -122,7 +127,14 @@ public final class CombatEvents {
     public static boolean onAttackEntity(AttackEntityEvent event) {
         Player player = event.getEntity();
         if (player.getMainHandItem().getItem() instanceof ArsenalShieldItem shield
-            && shield.shieldType() == ArsenalShieldItem.Type.SUN_WAR && !player.getOffhandItem().isEmpty()) return true;
+            && shield.shieldType() == ArsenalShieldItem.Type.SUN_WAR) {
+            if (!player.getOffhandItem().isEmpty()) return true;
+            if (!player.level().isClientSide()) {
+                PENDING_BULWARK.put(player.getUUID(), new PendingBulwarkAttack(event.getTarget().getId(),
+                    player.level().getGameTime(), attackChargeMultiplier(player)));
+            }
+            return false;
+        }
         if (!(player.getMainHandItem().getItem() instanceof ArsenalWeaponItem weapon)) return false;
         if (weapon.kind() == WeaponKind.FLAIL || weapon.kind() == WeaponKind.BALL_AND_CHAIN) return true;
         if (!player.level().isClientSide() && (weapon.kind() == WeaponKind.MORNING_STAR
@@ -153,7 +165,7 @@ public final class CombatEvents {
     public static void handleControl(ServerPlayer player, byte action, boolean active) {
         if (action == ModNetwork.FLAIL) flailControl(player, active);
         else if (action == ModNetwork.BALL_CHAIN) ballControl(player, active);
-        else if (action == ModNetwork.RAM) ramControl(player);
+        else if (action == ModNetwork.RAM) ramControl(player, active);
         else if (action == ModNetwork.BULWARK_BASH) bulwarkBash(player);
         else if (action == ModNetwork.CLAW) clawAttack(player);
     }
@@ -329,8 +341,9 @@ public final class CombatEvents {
         state.direction = player.getLookAngle().normalize();
         WeaponTier tier = ((ArsenalWeaponItem)player.getMainHandItem().getItem()).tier();
         int maxCharges = maxBallCharges(tier);
+        int effectiveCharge = effectiveBallCharge(tier, state.charge);
         state.distance = stopDistance((ServerLevel)player.level(), player.getEyePosition(), state.direction,
-            state.charge * 4.0D);
+            effectiveCharge * 4.0D);
         lineAttack(player, state.distance, ballDamageMultiplier(tier, state.charge),
             ballKnockback(tier, state.charge), state.charge >= maxCharges, true, tier);
         ((ServerLevel)player.level()).playSound(null, player.blockPosition(), SoundEvents.TRIDENT_THROW.value(),
@@ -398,18 +411,32 @@ public final class CombatEvents {
             oldAmount - reduction, AttributeModifier.Operation.ADD_VALUE));
     }
 
-    private static void ramControl(ServerPlayer player) {
+    private static void ramControl(ServerPlayer player, boolean active) {
+        if (!active) {
+            RAMS.remove(player.getUUID());
+            if (player.isUsingItem()
+                && player.getUseItem().getItem() instanceof ArsenalWeaponItem weapon
+                && weapon.kind() == WeaponKind.BATTERING_RAM) player.stopUsingItem();
+            return;
+        }
         if (!(player.getMainHandItem().getItem() instanceof ArsenalWeaponItem weapon) || weapon.kind() != WeaponKind.BATTERING_RAM
             || !player.getOffhandItem().isEmpty() || (!player.isCreative() && player.getFoodData().getFoodLevel() <= 6)) return;
-        RAMS.computeIfAbsent(player.getUUID(), id -> new RamState(player.getYRot(), player.getXRot()))
-            .lastHeartbeat = player.level().getGameTime();
+        RamState state = RAMS.get(player.getUUID());
+        if (state == null) {
+            state = new RamState(player.getYRot(), player.getXRot(), attackChargeMultiplier(player));
+            RAMS.put(player.getUUID(), state);
+            // A held ram is one continuous attack. Snapshot its strength first,
+            // then consume the cooldown exactly once when that ram begins.
+            player.resetAttackStrengthTicker();
+        }
+        state.lastHeartbeat = player.level().getGameTime();
     }
 
     private static void updateRam(ServerPlayer player) {
         RamState state = RAMS.get(player.getUUID());
         if (state == null) return;
         if (!(player.getMainHandItem().getItem() instanceof ArsenalWeaponItem weapon) || weapon.kind() != WeaponKind.BATTERING_RAM
-            || !player.getOffhandItem().isEmpty() || player.level().getGameTime() - state.lastHeartbeat > 8
+            || !player.getOffhandItem().isEmpty() || player.level().getGameTime() - state.lastHeartbeat > 4
             || (!player.isCreative() && player.getFoodData().getFoodLevel() <= 6)) {
             RAMS.remove(player.getUUID()); if (player.isUsingItem()) player.stopUsingItem(); return;
         }
@@ -422,7 +449,7 @@ public final class CombatEvents {
         for (LivingEntity target : ((ServerLevel)player.level()).getEntitiesOfClass(LivingEntity.class,
                 player.getBoundingBox().move(forward.scale(0.8D)).inflate(0.7D, 0.4D, 0.7D), target -> validTarget(player, target))) {
             if (state.hit.add(target.getId()) && target.hurtServer((ServerLevel)player.level(), player.damageSources().playerAttack(player),
-                    (float)player.getAttributeValue(Attributes.ATTACK_DAMAGE))) {
+                    (float)player.getAttributeValue(Attributes.ATTACK_DAMAGE) * state.damageMultiplier)) {
                 damage(player.getMainHandItem(), player, 1); player.causeFoodExhaustion(0.5F);
             }
         }
@@ -499,6 +526,11 @@ public final class CombatEvents {
 
     private static int maxBallCharges(WeaponTier tier) { return tier == WeaponTier.GOLD ? 2 : 3; }
 
+    /** Gold skips the middle power stage: its second revolution is a full charge. */
+    private static int effectiveBallCharge(WeaponTier tier, int charge) {
+        return tier == WeaponTier.GOLD && charge >= 2 ? 3 : charge;
+    }
+
     /** Matches Minecraft's normal melee cooldown curve: 20% at empty, 100% at full. */
     private static float attackChargeMultiplier(Player player) {
         float charge = player.getAttackStrengthScale(0.5F);
@@ -506,7 +538,7 @@ public final class CombatEvents {
     }
 
     private static float ballDamageMultiplier(WeaponTier tier, int charge) {
-        return new float[]{0, 1.25F, 1.75F, 2.25F}[charge];
+        return new float[]{0, 1.25F, 1.75F, 2.25F}[effectiveBallCharge(tier, charge)];
     }
     private static float ballKnockback(WeaponTier tier, int charge) {
         return tier == WeaponTier.GOLD ? 2.40F * charge / 2.0F : 0.75F + charge * 0.55F;
@@ -568,8 +600,12 @@ public final class CombatEvents {
         public double distance() { return distance; }
     }
     private static final class RamState {
-        final float yaw, pitch; long lastHeartbeat; final Set<Integer> hit = new HashSet<>();
-        RamState(float yaw, float pitch) { this.yaw = yaw; this.pitch = pitch; }
+        final float yaw, pitch, damageMultiplier; long lastHeartbeat; final Set<Integer> hit = new HashSet<>();
+        RamState(float yaw, float pitch, float damageMultiplier) {
+            this.yaw = yaw;
+            this.pitch = pitch;
+            this.damageMultiplier = damageMultiplier;
+        }
     }
     private static void updateClawChain(LivingHurtEvent event, Player attacker, LivingEntity target,
             PendingMeleeAttack pending) {
@@ -597,5 +633,6 @@ public final class CombatEvents {
     }
 
     private record PendingMeleeAttack(int targetId, long gameTime, WeaponKind kind, boolean fullyCharged, int hand) {}
+    private record PendingBulwarkAttack(int targetId, long gameTime, float chargeMultiplier) {}
     private CombatEvents() {}
 }
