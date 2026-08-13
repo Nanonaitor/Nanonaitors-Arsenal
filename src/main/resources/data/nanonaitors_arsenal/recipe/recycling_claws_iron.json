@@ -1,0 +1,10 @@
+{
+  "type": "minecraft:smelting",
+  "category": "misc",
+  "cookingtime": 200,
+  "experience": 0.1,
+  "ingredient": "nanonaitors_arsenal:claws_iron",
+  "result": {
+    "id": "minecraft:iron_ingot"
+  }
+}

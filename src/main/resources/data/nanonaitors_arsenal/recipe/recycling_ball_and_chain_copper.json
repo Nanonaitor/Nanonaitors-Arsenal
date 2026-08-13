@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:smelting",
+  "category": "misc",
+  "cookingtime": 200,
+  "experience": 0.1,
+  "ingredient": "nanonaitors_arsenal:ball_and_chain_copper",
+  "result": {
+    "id": "minecraft:copper_ingot",
+    "count": 3
+  }
+}

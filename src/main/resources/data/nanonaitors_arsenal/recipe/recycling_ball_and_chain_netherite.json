@@ -1,0 +1,10 @@
+{
+  "type": "minecraft:smelting",
+  "category": "misc",
+  "cookingtime": 200,
+  "experience": 0.1,
+  "ingredient": "nanonaitors_arsenal:ball_and_chain_netherite",
+  "result": {
+    "id": "minecraft:netherite_scrap"
+  }
+}

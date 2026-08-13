@@ -2,7 +2,7 @@
   "type": "minecraft:crafting_shaped",
   "category": "equipment",
   "key": {
-    "M": "minecraft:iron_block",
+    "M": "minecraft:copper_block",
     "L": "#minecraft:logs",
     "S": "minecraft:stick"
   },
