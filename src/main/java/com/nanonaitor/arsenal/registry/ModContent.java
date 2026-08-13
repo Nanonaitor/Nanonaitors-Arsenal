@@ -1,6 +1,7 @@
 package com.nanonaitor.arsenal.registry;
 
 import com.nanonaitor.arsenal.NanonaitorsArsenal;
+import com.nanonaitor.arsenal.block.BlockIronChain;
 import com.nanonaitor.arsenal.item.ItemMorningStar;
 import com.nanonaitor.arsenal.item.ItemClaws;
 import com.nanonaitor.arsenal.item.ItemLinkedClaw;
@@ -8,12 +9,15 @@ import com.nanonaitor.arsenal.item.ItemScimitar;
 import com.nanonaitor.arsenal.item.ItemFlail;
 import com.nanonaitor.arsenal.item.ItemBatteringRam;
 import com.nanonaitor.arsenal.item.ItemBallAndChain;
+import com.nanonaitor.arsenal.item.ItemSunWarBulwark;
 import com.nanonaitor.arsenal.item.WeaponTier;
 import com.nanonaitor.arsenal.potion.PotionArmorFracture;
 import java.util.EnumMap;
 import java.util.Map;
 import net.minecraft.client.renderer.block.model.ModelResourceLocation;
+import net.minecraft.block.Block;
 import net.minecraft.item.Item;
+import net.minecraft.item.ItemBlock;
 import net.minecraft.potion.Potion;
 import net.minecraftforge.client.event.ModelRegistryEvent;
 import net.minecraftforge.client.model.ModelLoader;
@@ -40,11 +44,24 @@ public final class ModContent {
     public static final Map<WeaponTier, ItemLinkedClaw> LINKED_CLAWS =
         new EnumMap<>(WeaponTier.class);
     public static PotionArmorFracture ARMOR_FRACTURE;
+    public static ItemSunWarBulwark SUN_WAR_BULWARK;
+    public static final BlockIronChain IRON_CHAIN = new BlockIronChain();
+    public static ItemBlock IRON_CHAIN_ITEM;
 
     private ModContent() {}
 
     @SubscribeEvent
+    public static void registerBlocks(RegistryEvent.Register<Block> event) {
+        event.getRegistry().register(IRON_CHAIN);
+    }
+
+    @SubscribeEvent
     public static void registerItems(RegistryEvent.Register<Item> event) {
+        IRON_CHAIN_ITEM = new ItemBlock(IRON_CHAIN);
+        IRON_CHAIN_ITEM.setRegistryName(IRON_CHAIN.getRegistryName());
+        event.getRegistry().register(IRON_CHAIN_ITEM);
+        SUN_WAR_BULWARK = new ItemSunWarBulwark();
+        event.getRegistry().register(SUN_WAR_BULWARK);
         for (WeaponTier tier : WeaponTier.values()) {
             ItemMorningStar morningStar = new ItemMorningStar(tier);
             ItemScimitar scimitar = new ItemScimitar(tier);
@@ -74,6 +91,8 @@ public final class ModContent {
     @SubscribeEvent
     @SideOnly(Side.CLIENT)
     public static void registerModels(ModelRegistryEvent event) {
+        registerModel(IRON_CHAIN_ITEM);
+        registerModel(SUN_WAR_BULWARK);
         for (ItemMorningStar item : MORNING_STARS.values()) {
             registerModel(item);
         }

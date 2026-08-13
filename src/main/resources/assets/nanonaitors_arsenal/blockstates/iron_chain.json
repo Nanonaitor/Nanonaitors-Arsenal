@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "axis=x": {"model":"nanonaitors_arsenal:iron_chain", "x":90, "y":90},
+    "axis=y": {"model":"nanonaitors_arsenal:iron_chain"},
+    "axis=z": {"model":"nanonaitors_arsenal:iron_chain", "x":90}
+  }
+}

@@ -15,14 +15,15 @@ public final class ArsenalCreativeTab extends CreativeTabs {
 
     @Override
     public ItemStack getTabIconItem() {
-        if (ModContent.SCIMITARS.get(WeaponTier.DIAMOND) != null) {
-            return new ItemStack(ModContent.SCIMITARS.get(WeaponTier.DIAMOND));
+        if (ModContent.MORNING_STARS.get(WeaponTier.DIAMOND) != null) {
+            return new ItemStack(ModContent.MORNING_STARS.get(WeaponTier.DIAMOND));
         }
         return new ItemStack(Items.DIAMOND_SWORD);
     }
 
     @Override
     public void displayAllRelevantItems(NonNullList<ItemStack> items) {
+        add(items, ModContent.SUN_WAR_BULWARK);
         for (WeaponTier tier : WeaponTier.values()) {
             if (ArsenalCompatManager.isTierAvailable(tier)) add(items, ModContent.MORNING_STARS.get(tier));
         }

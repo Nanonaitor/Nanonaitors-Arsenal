@@ -3,38 +3,41 @@ package com.nanonaitor.arsenal.item;
 import com.nanonaitor.arsenal.combat.ScimitarCombat;
 import java.util.List;
 import net.minecraft.client.util.ITooltipFlag;
-import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
-import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.text.TextFormatting;
 import net.minecraft.world.World;
 
 public final class ItemScimitar extends ItemArsenalWeapon {
     public ItemScimitar(WeaponTier tier) {
-        super(tier, "scimitar", 2.5D + tier.getMaterial().getAttackDamage(), -2.2D);
+        super(tier, "scimitar", roundedAttackDamage(tier) - 1.0D, -2.2D);
     }
 
-    @Override
-    public boolean onLeftClickEntity(ItemStack stack, EntityPlayer player, Entity entity) {
-        if (!player.world.isRemote && entity instanceof EntityLivingBase) {
-            ScimitarCombat.prepareAttack(player, (EntityLivingBase) entity, this,
-                player.getCooledAttackStrength(0.5F) >= 0.95F);
-        }
-        return false;
+    /** Ten percent below the original final damage, rounded to the nearest half point. */
+    private static double roundedAttackDamage(WeaponTier tier) {
+        double original = 3.5D + tier.getMaterial().getAttackDamage();
+        return Math.round(original * 0.90D * 2.0D) / 2.0D;
     }
 
     @Override
     public boolean hitEntity(ItemStack stack, EntityLivingBase target, EntityLivingBase attacker) {
-        if (!attacker.world.isRemote && attacker instanceof EntityPlayer) {
-            ScimitarCombat.confirmHit((EntityPlayer) attacker, target, this);
+        if (!attacker.world.isRemote) {
+            ScimitarCombat.applyWeakness(target, this);
         }
         return super.hitEntity(stack, target, attacker);
     }
 
     @Override
     public void addInformation(ItemStack stack, World world, List<String> tooltip, ITooltipFlag flag) {
-        tooltip.add(TextFormatting.DARK_PURPLE
-            + "Fully charged hits: 10% chance to inflict Weakness II for 2 secs.");
+        if (getTier() == WeaponTier.LIVING) {
+            tooltip.add(TextFormatting.DARK_PURPLE
+                + "Hits inflict Weakness II for 10 secs.");
+        } else if (getTier() == WeaponTier.SENTIENT) {
+            tooltip.add(TextFormatting.DARK_PURPLE
+                + "Hits inflict Weakness III for 10 secs.");
+        } else {
+            tooltip.add(TextFormatting.DARK_PURPLE
+                + "Hits inflict Weakness I for 10 secs.");
+        }
     }
 }

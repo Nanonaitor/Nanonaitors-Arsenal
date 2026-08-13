@@ -29,7 +29,8 @@ public final class FlailInputHandler {
         EntityPlayer player = minecraft.player;
         if (player == null || minecraft.currentScreen != null
             || !(player.getHeldItemMainhand().getItem() instanceof ItemFlail)
-            || !minecraft.gameSettings.keyBindAttack.isKeyDown()) {
+            || !minecraft.gameSettings.keyBindAttack.isKeyDown()
+            || FlailCombat.isBlockingConventionalShield(player)) {
             return;
         }
         requestSwing(player);
@@ -46,6 +47,9 @@ public final class FlailInputHandler {
     }
 
     private static void requestSwing(EntityPlayer player) {
+        if (FlailCombat.isBlockingConventionalShield(player)) {
+            return;
+        }
         long now = player.world.getTotalWorldTime();
         if (lastRequestTick == Long.MIN_VALUE || now < lastRequestTick
             || now - lastRequestTick >= FlailCombat.SWING_INTERVAL_TICKS) {

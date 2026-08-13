@@ -35,6 +35,7 @@ item.nanonaitors_arsenal.linked_claw_iron.name=Linked Iron Claw
 item.nanonaitors_arsenal.linked_claw_diamond.name=Linked Diamond Claw
 effect.nanonaitors_arsenal.armor_fracture=Armor Fracture
 itemGroup.nanonaitors_arsenal=Nanonaitor's Arsenal
+item.nanonaitors_arsenal.sun_war_bulwark.name=Sun-War Bulwark
 
 # Optional RLCraft-compatible material tiers
 item.nanonaitors_arsenal.morning_star_silver.name=Silver Morning Star
@@ -135,3 +136,4 @@ item.nanonaitors_arsenal.ball_and_chain_desert_venom.name=Desert Myrmex Stinger 
 item.nanonaitors_arsenal.ball_and_chain_jungle_venom.name=Jungle Myrmex Stinger Ball & Chain
 item.nanonaitors_arsenal.ball_and_chain_living.name=Living Ball & Chain
 item.nanonaitors_arsenal.ball_and_chain_sentient.name=Sentient Ball & Chain
+tile.nanonaitors_arsenal.iron_chain.name=Iron Chain

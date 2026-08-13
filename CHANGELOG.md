@@ -1,5 +1,53 @@
 # Changelog
 
+## 1.1.0 - 2026-08-13
+
+- Added a guaranteed critical to every fourth fully charged, correctly alternating Claw hit.
+- Rebalanced Ball & Chain wind-ups to 0.5x base damage while retaining full enchantment bonuses.
+- Rebalanced Ball & Chain throws to 1.25x/1.75x/2.25x damage and made Gold skip directly to the 12-block full-charge result on its second revolution.
+- Limited full-charge Armor Fracture to the outgoing throw and made weapon/offhand swaps cancel active throws safely.
+- Made Bulwark strikes, Bulwark bashes, and Battering Ram entity hits scale with the vanilla attack-cooldown meter.
+- Restricted Sweeping Edge to Scimitars and reduced Scimitar damage by roughly 10%, rounded to the nearest half point.
+- Updated vanilla Ball & Chain recipes to use two Iron Chains and a full material block where applicable.
+- Backported the finalized Stone/Gold/Iron Flail sprites, Ball & Chain grip orientation, Iron Chain combat model, and cracked-armor Armor Fracture icon.
+- Added standalone physical left/right mouse control for main/offhand Claw attacks without requiring RLCombat.
+- Added the extremely durable two-handed Sun-War Bulwark with passive reduction,
+  all-direction combat guarding, armor-scaled slow attacks, movement tradeoffs,
+  durability costs, and a server-authoritative four-block area bash.
+- Added a dedicated recipe, tooltip, blocking model, and 3D model for the Bulwark.
+- Added modern alternating flat/upright chain-link geometry to Flail and Ball &
+  Chain animations without requiring a vanilla Chain item.
+- Made Gold Ball & Chain reach full charge in two swings and added a full-charge
+  confirmation jingle for every tier.
+- Removed the unintended vanilla movement slowdown caused by the Ball & Chain's
+  synchronized animation-use state.
+- Backported the modern Bulwark and Battering Ram held/active transforms and
+  two-handed player poses to Forge 1.12.2.
+- Backported the modern Ball & Chain inventory/active sprites, material-colored
+  Flail swing sprites, Iron Chain visuals, and Diamond Morning Star tab icon.
+- Hid the ordinary held Flail and Ball & Chain models during sustained swings,
+  while preserving their inventory and hotbar sprites and separate 3D effects.
+- Prevented Ball & Chain wind-up attacks from mining blocks, matching Flails.
+- Corrected the 1.12.2 Bulwark's third-person carry and guard orientation so
+  the shield remains upright instead of inheriting the arm's downward pitch.
+- Distinguished Desert and Jungle Myrmex Stinger Flail recipes by replacing
+  their iron ingot with the matching Desert or Jungle Myrmex chitin.
+- Sent paired-claw offhand damage before its visual swing packet so RLCombat
+  cannot misclassify and reduce the custom full-damage attack.
+- Living and Sentient Scimitars now guarantee Weakness III and Weakness IV
+  respectively for 5 seconds instead of using the normal 10% Weakness proc.
+- Living Flail and Ball & Chain 3D heads now use SRP's Hivesteel texture;
+  Sentient versions use SRP's Bleeding Obsidian texture.
+- Myrmex Flail and Ball & Chain 3D heads now use matching Jungle or Desert
+  Resin textures; Stinger variants use the corresponding Cocoon texture.
+- Dragon Bone Flail and Ball & Chain 3D heads now use Ice and Fire's Dragon
+  Bone Block pattern, with custom red, purple, and light-blue recolors for
+  Fire, Lightning, and Ice Dragon-Blooded variants.
+- Ball & Chain sprites now hide only in first- and third-person hands during
+  swings while remaining visible in inventories, hotbars, JEI, and the world.
+- Dragon Bone Battering Ram heads now share the Dragon Bone Block texture and
+  custom Fire, Lightning, and Ice recolors used by animated weapon heads.
+
 ## 1.0.0 - 2026-07-21
 
 - Initial public release for Minecraft 1.12.2 and Forge 14.23.5.2860.

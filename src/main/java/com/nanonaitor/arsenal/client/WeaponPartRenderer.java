@@ -8,8 +8,9 @@ import net.minecraft.nbt.NBTTagCompound;
 
 public final class WeaponPartRenderer {
     public static final String PART_TAG = "ArsenalAnimationPart";
-    public static final int CHAIN_LINK = 1;
+    public static final int CHAIN_LINK_FLAT = 1;
     public static final int BALL = 2;
+    public static final int CHAIN_LINK_UPRIGHT = 3;
     private static final double LINK_SPACING = 0.28D;
 
     private WeaponPartRenderer() {}
@@ -18,7 +19,22 @@ public final class WeaponPartRenderer {
                                           double anchorX, double anchorY, double anchorZ,
                                           double ballX, double ballY, double ballZ,
                                           double ballRadius) {
-        ItemStack chain = animationPart(held, CHAIN_LINK);
+        renderChainAndBall(held, anchorX, anchorY, anchorZ,
+            ballX, ballY, ballZ, ballRadius, false);
+    }
+
+    public static void renderStraightChainAndBall(ItemStack held,
+                                                  double anchorX, double anchorY, double anchorZ,
+                                                  double ballX, double ballY, double ballZ,
+                                                  double ballRadius) {
+        renderChainAndBall(held, anchorX, anchorY, anchorZ,
+            ballX, ballY, ballZ, ballRadius, true);
+    }
+
+    private static void renderChainAndBall(ItemStack held,
+                                           double anchorX, double anchorY, double anchorZ,
+                                           double ballX, double ballY, double ballZ,
+                                           double ballRadius, boolean straightLinks) {
         ItemStack ball = animationPart(held, BALL);
         double dx = ballX - anchorX;
         double dy = ballY - anchorY;
@@ -30,9 +46,13 @@ public final class WeaponPartRenderer {
         float tilt = (float) Math.toDegrees(Math.atan2(horizontal, dy));
         for (int index = 1; index < links; index++) {
             double t = index / (double) links;
+            ItemStack chain = animationPart(held, straightLinks
+                ? CHAIN_LINK_UPRIGHT
+                : (index % 2 == 0 ? CHAIN_LINK_FLAT : CHAIN_LINK_UPRIGHT));
             renderPart(chain,
                 anchorX + dx * t, anchorY + dy * t, anchorZ + dz * t,
-                0.20D, yaw, tilt, index % 2 == 0 ? 0.0F : 90.0F);
+                0.26D, yaw, tilt,
+                straightLinks ? 0.0F : (index % 2 == 0 ? 0.0F : 90.0F));
         }
         renderPart(ball, ballX, ballY, ballZ, ballRadius * 2.0D,
             yaw, 0.0F, 0.0F);

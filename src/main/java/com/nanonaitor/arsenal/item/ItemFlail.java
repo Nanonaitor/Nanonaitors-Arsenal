@@ -1,6 +1,8 @@
 package com.nanonaitor.arsenal.item;
 
+import com.nanonaitor.arsenal.combat.FlailCombat;
 import java.util.List;
+import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.client.util.ITooltipFlag;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.ResourceLocation;
@@ -13,7 +15,10 @@ public final class ItemFlail extends ItemArsenalWeapon {
         addPropertyOverride(new ResourceLocation("nanonaitors_arsenal", "swinging"),
             (stack, world, entity) -> entity != null
                 && entity.getEntityData().getBoolean("ArsenalFlailActive")
-                && entity.getHeldItemMainhand().getItem() == this ? 1.0F : 0.0F);
+                && entity.getHeldItemMainhand().getItem() == this
+                && (!(entity instanceof EntityPlayer)
+                    || !FlailCombat.isBlockingConventionalShield((EntityPlayer) entity))
+                ? 1.0F : 0.0F);
         addPropertyOverride(new ResourceLocation("nanonaitors_arsenal", "animation_part"),
             (stack, world, entity) -> stack.hasTagCompound()
                 ? stack.getTagCompound().getInteger("ArsenalAnimationPart") : 0.0F);

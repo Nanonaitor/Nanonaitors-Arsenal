@@ -195,7 +195,7 @@ public final class BallAndChainAnimationHandler {
     private static void renderChainAndBall(EntityPlayer player, RenderFrame frame,
                                            double ballX, double ballY, double ballZ,
                                            double radius) {
-        WeaponPartRenderer.renderChainAndBall(player.getHeldItemMainhand(),
+        WeaponPartRenderer.renderStraightChainAndBall(player.getHeldItemMainhand(),
             frame.anchorX, frame.anchorY, frame.anchorZ,
             ballX, ballY, ballZ, radius);
     }

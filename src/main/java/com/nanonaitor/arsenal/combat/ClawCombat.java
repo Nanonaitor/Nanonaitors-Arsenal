@@ -9,6 +9,7 @@ import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.init.SoundEvents;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.event.entity.living.LivingAttackEvent;
+import net.minecraftforge.event.entity.living.LivingHurtEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.eventhandler.EventPriority;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
@@ -26,9 +27,22 @@ public final class ClawCombat {
         int previousHand = item.getLastConfirmedHand(stack);
         boolean paired = ClawPairHandler.hasMatchingLinkedClaw(player, item);
         boolean canPierce = paired && fullyCharged && previousHand >= 0
-            && previousHand == 1;
+            && previousHand == 1 && item.getLastConfirmedTarget(stack) == target.getEntityId();
+        boolean guaranteedCritical = paired && item.willGuaranteeCritical(stack,
+            currentHand, target.getEntityId(), fullyCharged);
         PENDING_ATTACKS.put(player, new PendingAttack(target.getEntityId(),
-            player.world.getTotalWorldTime(), item, stack, currentHand, paired, canPierce));
+            player.world.getTotalWorldTime(), item, stack, currentHand, paired,
+            fullyCharged, canPierce, guaranteedCritical));
+    }
+
+    @SubscribeEvent(priority = EventPriority.LOW)
+    public static void onLivingHurt(LivingHurtEvent event) {
+        if (!(event.getSource().getTrueSource() instanceof EntityPlayer)) return;
+        PendingAttack pending = matching((EntityPlayer) event.getSource().getTrueSource(),
+            event.getEntityLiving());
+        if (pending != null && pending.guaranteedCritical) {
+            event.setAmount(event.getAmount() * 1.5F);
+        }
     }
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
@@ -55,8 +69,9 @@ public final class ClawCombat {
             item.resetPair(stack);
             return;
         }
-        item.confirmHand(stack, pending.currentHand);
-        if (pending.pierced) {
+        boolean critical = item.confirmChargedAlternatingHit(stack, pending.currentHand,
+            target.getEntityId(), pending.fullyCharged);
+        if (pending.pierced || critical) {
             target.world.playSound(null, target.posX, target.posY, target.posZ,
                 SoundEvents.ENTITY_PLAYER_ATTACK_CRIT, target.getSoundCategory(), 0.45F, 1.45F);
         }
@@ -80,18 +95,24 @@ public final class ClawCombat {
         private final ItemStack stack;
         private final int currentHand;
         private final boolean paired;
+        private final boolean fullyCharged;
         private final boolean canPierce;
+        private final boolean guaranteedCritical;
         private boolean pierced;
 
         private PendingAttack(int targetId, long worldTime, ItemClaws item,
-                              ItemStack stack, int currentHand, boolean paired, boolean canPierce) {
+                              ItemStack stack, int currentHand, boolean paired,
+                              boolean fullyCharged, boolean canPierce,
+                              boolean guaranteedCritical) {
             this.targetId = targetId;
             this.worldTime = worldTime;
             this.item = item;
             this.stack = stack;
             this.currentHand = currentHand;
             this.paired = paired;
+            this.fullyCharged = fullyCharged;
             this.canPierce = canPierce;
+            this.guaranteedCritical = guaranteedCritical;
         }
     }
 }

@@ -7,7 +7,6 @@ import com.nanonaitor.arsenal.item.ItemBatteringRam;
 import com.nanonaitor.arsenal.item.ItemClaws;
 import com.nanonaitor.arsenal.item.ItemFlail;
 import com.nanonaitor.arsenal.item.ItemMorningStar;
-import com.nanonaitor.arsenal.item.ItemScimitar;
 import com.nanonaitor.arsenal.item.WeaponTier;
 import com.nanonaitor.arsenal.registry.ModContent;
 import java.lang.reflect.Method;
@@ -42,6 +41,7 @@ public final class ArsenalCompatEffects {
     private static final String PROGRESS = "srpkills";
     private static final String LIGHTNING_TICK = "ArsenalElectricEffectTick";
     private static final String RAGE_MARKER = "ArsenalSrpRamRage";
+    private static final int LIVING_EFFECT_DURATION_TICKS = 10 * 20;
     private ArsenalCompatEffects() {}
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
@@ -123,18 +123,15 @@ public final class ArsenalCompatEffects {
                                                boolean sentient) {
         int amplifier = sentient ? 1 : 0;
         if (weapon instanceof ItemMorningStar) {
-            addPotion(target, "corrosive", 100, amplifier);
+            addPotion(target, "corrosive", LIVING_EFFECT_DURATION_TICKS, amplifier);
         } else if (weapon instanceof ItemClaws) {
-            addPotion(target, "bleed", 100, amplifier);
+            addPotion(target, "bleed", LIVING_EFFECT_DURATION_TICKS, amplifier);
         } else if (weapon instanceof ItemFlail) {
-            addPotion(target, "antimall", 100, amplifier);
+            addPotion(target, "antimall", LIVING_EFFECT_DURATION_TICKS, amplifier);
         } else if (weapon instanceof ItemBallAndChain) {
             if (ArsenalCompatManager.isSrpParasite(target)) {
-                addPotion(target, "debar", 100, amplifier);
+                addPotion(target, "debar", LIVING_EFFECT_DURATION_TICKS, amplifier);
             }
-        } else if (weapon instanceof ItemScimitar) {
-            target.addPotionEffect(new PotionEffect(MobEffects.WEAKNESS, 100,
-                sentient ? 2 : 1));
         }
         // Battering Rams keep their proc on the wielder through heldSrpEffects().
     }

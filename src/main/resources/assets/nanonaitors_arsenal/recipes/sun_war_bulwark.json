@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": ["GOG", "DSD", "GOG"],
+  "key": {
+    "G": {"item": "minecraft:gold_block"},
+    "O": {"item": "minecraft:obsidian"},
+    "D": {"item": "minecraft:diamond"},
+    "S": {"item": "minecraft:shield"}
+  },
+  "result": {"item": "nanonaitors_arsenal:sun_war_bulwark"}
+}

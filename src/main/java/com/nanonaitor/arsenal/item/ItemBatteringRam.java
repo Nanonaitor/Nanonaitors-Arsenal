@@ -37,7 +37,6 @@ public final class ItemBatteringRam extends ItemArsenalWeapon {
         tooltip.add(TextFormatting.GOLD + "Hold left-click to charge forward.");
         tooltip.add(TextFormatting.GRAY + getBreakDescription());
         tooltip.add(TextFormatting.GRAY + "Costs 1 durability per block or enemy hit.");
-        tooltip.add(TextFormatting.DARK_RED + "Cannot charge at 3 hunger icons or less.");
         tooltip.add(TextFormatting.DARK_GRAY + "Requires an empty offhand.");
     }
 

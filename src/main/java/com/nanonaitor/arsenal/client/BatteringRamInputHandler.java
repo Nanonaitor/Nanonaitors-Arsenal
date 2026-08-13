@@ -21,6 +21,19 @@ public final class BatteringRamInputHandler {
 
     private BatteringRamInputHandler() {}
 
+    /** Stable local render state; vanilla may briefly reset active-hand use while attacking. */
+    public static boolean isCharging(EntityPlayer player) {
+        Minecraft minecraft = Minecraft.getMinecraft();
+        if (player == minecraft.player) {
+            return cameraLocked
+                && minecraft.gameSettings.keyBindAttack.isKeyDown()
+                && player.getHeldItemMainhand().getItem() instanceof ItemBatteringRam
+                && player.getHeldItemOffhand().isEmpty();
+        }
+        return player.isHandActive()
+            && player.getActiveItemStack() == player.getHeldItemMainhand();
+    }
+
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END) {

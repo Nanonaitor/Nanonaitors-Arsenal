@@ -24,5 +24,7 @@ public final class ModNetwork {
             BallAndChainReleaseAnimationMessage.class, 4, Side.CLIENT);
         CHANNEL.registerMessage(FlailAnimationMessage.Handler.class,
             FlailAnimationMessage.class, 5, Side.CLIENT);
+        CHANNEL.registerMessage(BulwarkBashMessage.Handler.class,
+            BulwarkBashMessage.class, 6, Side.SERVER);
     }
 }

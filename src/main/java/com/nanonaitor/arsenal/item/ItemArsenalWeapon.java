@@ -8,6 +8,7 @@ import java.util.Collections;
 import java.util.Set;
 import net.minecraft.enchantment.Enchantment;
 import net.minecraft.enchantment.EnumEnchantmentType;
+import net.minecraft.init.Enchantments;
 import net.minecraft.entity.SharedMonsterAttributes;
 import net.minecraft.entity.ai.attributes.AttributeModifier;
 import net.minecraft.inventory.EntityEquipmentSlot;
@@ -48,6 +49,9 @@ public abstract class ItemArsenalWeapon extends ItemSword {
      */
     @Override
     public boolean canApplyAtEnchantingTable(ItemStack stack, Enchantment enchantment) {
+        if (enchantment == Enchantments.SWEEPING && !(this instanceof ItemScimitar)) {
+            return false;
+        }
         return enchantment.type == EnumEnchantmentType.WEAPON
             || super.canApplyAtEnchantingTable(stack, enchantment);
     }

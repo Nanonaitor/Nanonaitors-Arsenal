@@ -8,10 +8,8 @@ import com.nanonaitor.arsenal.network.BallAndChainReleaseAnimationMessage;
 import com.nanonaitor.arsenal.network.ModNetwork;
 import com.nanonaitor.arsenal.registry.ModContent;
 import java.util.Comparator;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import java.util.WeakHashMap;
 import net.minecraft.enchantment.EnchantmentHelper;
@@ -33,6 +31,7 @@ import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.RayTraceResult;
 import net.minecraft.util.math.Vec3d;
 import net.minecraftforge.event.entity.player.AttackEntityEvent;
+import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.eventhandler.EventPriority;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
@@ -47,7 +46,7 @@ public final class BallAndChainCombat {
     public static final double WINDUP_REACH = 3.0D;
     public static final double THROW_REACH_PER_CHARGE = 4.0D;
     private static final double LINE_RADIUS = 0.55D;
-    private static final float[] RELEASE_DAMAGE_MULTIPLIER = {0.0F, 1.75F, 2.25F, 2.75F};
+    private static final float[] RELEASE_DAMAGE_MULTIPLIER = {0.0F, 1.25F, 1.75F, 2.25F};
     private static final Map<EntityPlayer, SwingState> SWINGS = new WeakHashMap<>();
     private static final Map<EntityPlayer, ThrowState> THROWS = new WeakHashMap<>();
 
@@ -58,6 +57,16 @@ public final class BallAndChainCombat {
         if (event.getEntityPlayer().getHeldItemMainhand().getItem()
             instanceof ItemBallAndChain) {
             event.setCanceled(true);
+        }
+    }
+
+    @SubscribeEvent(priority = EventPriority.HIGHEST)
+    public static void preventBlockBreaking(PlayerInteractEvent.LeftClickBlock event) {
+        if (event.getEntityPlayer().getHeldItemMainhand().getItem()
+            instanceof ItemBallAndChain) {
+            event.setCanceled(true);
+            event.setUseBlock(net.minecraftforge.fml.common.eventhandler.Event.Result.DENY);
+            event.setUseItem(net.minecraftforge.fml.common.eventhandler.Event.Result.DENY);
         }
     }
 
@@ -114,14 +123,29 @@ public final class BallAndChainCombat {
         int swingIndex = (int) ((now - state.startTick) / SWING_INTERVAL_TICKS);
         if (swingIndex != state.lastSwingIndex) {
             state.lastSwingIndex = swingIndex;
-            state.charge = Math.min(3, state.charge + 1);
+            int maxCharges = maxCharges(((ItemBallAndChain) weapon.getItem()).getTier());
+            int previousCharge = state.charge;
+            state.charge = Math.min(maxCharges, state.charge + 1);
             performWindupSweep(player, weapon, state.charge);
+            if (previousCharge < maxCharges && state.charge == maxCharges) {
+                player.world.playSound(null, player.posX, player.posY, player.posZ,
+                    SoundEvents.ENTITY_PLAYER_LEVELUP, player.getSoundCategory(),
+                    0.55F, 1.55F);
+            }
         }
     }
 
     private static boolean updateThrow(EntityPlayerMP player) {
         ThrowState state = THROWS.get(player);
         if (state == null) {
+            return false;
+        }
+        ItemStack current = player.getHeldItemMainhand();
+        if (current != state.weapon || !(current.getItem() instanceof ItemBallAndChain)
+            || ((ItemBallAndChain) current.getItem()).getTier() != state.tier
+            || !player.getHeldItemOffhand().isEmpty()) {
+            THROWS.remove(player);
+            if (player.isHandActive()) player.resetActiveHand();
             return false;
         }
         long age = player.world.getTotalWorldTime() - state.startTick;
@@ -166,7 +190,7 @@ public final class BallAndChainCombat {
         boolean hit = false;
         for (EntityLivingBase target : targets) {
             if (intersectsLine(target, start, end, 0.7D, 1.0D)) {
-                float damage = baseDamage + EnchantmentHelper.getModifierForCreature(
+                float damage = baseDamage * 0.5F + EnchantmentHelper.getModifierForCreature(
                     weapon, target.getCreatureAttribute());
                 hit |= applyHit(player, target, weapon, damage, 0.3F,
                     forward, false);
@@ -185,25 +209,26 @@ public final class BallAndChainCombat {
             player.resetActiveHand();
             return;
         }
-        int charge = Math.min(3, swing.charge);
+        ItemBallAndChain item = (ItemBallAndChain) weapon.getItem();
+        int charge = Math.min(maxCharges(item.getTier()), swing.charge);
+        int effectiveCharge = item.getTier() == WeaponTier.GOLD && charge >= 2 ? 3 : charge;
         Vec3d start = new Vec3d(player.posX, player.posY + 1.25D, player.posZ);
         Vec3d direction = player.getLookVec().normalize();
-        Vec3d intendedEnd = start.add(direction.scale(charge * THROW_REACH_PER_CHARGE));
+        Vec3d intendedEnd = start.add(direction.scale(effectiveCharge * THROW_REACH_PER_CHARGE));
         Vec3d end = stopAtSolidBlock(player, start, intendedEnd);
-        ItemBallAndChain item = (ItemBallAndChain) weapon.getItem();
+        float multiplier = RELEASE_DAMAGE_MULTIPLIER[effectiveCharge];
         float baseDamage = (float) player.getEntityAttribute(
-            SharedMonsterAttributes.ATTACK_DAMAGE).getAttributeValue()
-            * RELEASE_DAMAGE_MULTIPLIER[charge];
+            SharedMonsterAttributes.ATTACK_DAMAGE).getAttributeValue() * multiplier;
         ThrowState state = new ThrowState(player.world.getTotalWorldTime(),
-            weapon, item.getTier(), charge, start, end, direction, baseDamage);
+            weapon, item.getTier(), effectiveCharge, start, end, direction, baseDamage);
         THROWS.put(player, state);
         player.setActiveHand(EnumHand.MAIN_HAND);
-        sendReleaseAnimation(player, charge, (float) start.distanceTo(end));
+        sendReleaseAnimation(player, effectiveCharge, (float) start.distanceTo(end));
         performThrowPass(player, state, false);
         if (end.distanceTo(intendedEnd) > 0.05D) {
             player.world.playSound(null, end.x, end.y, end.z,
                 SoundEvents.ENTITY_IRONGOLEM_ATTACK, player.getSoundCategory(),
-                0.8F, 0.75F + charge * 0.08F);
+                0.8F, 0.75F + effectiveCharge * 0.08F);
         }
     }
 
@@ -225,7 +250,7 @@ public final class BallAndChainCombat {
             }
             float damage = state.baseDamage + EnchantmentHelper.getModifierForCreature(
                 state.weapon, target.getCreatureAttribute());
-            if (state.charge == 3) {
+            if (isFullCharge(state)) {
                 damage = compensateForArmor(target, damage,
                     getArmorPiercing(state.tier));
             }
@@ -233,7 +258,7 @@ public final class BallAndChainCombat {
             if (applyHit(player, target, state.weapon, damage, knockback,
                 direction, true)) {
                 hit = true;
-                if (state.fracturedEntities.add(target.getEntityId())) {
+                if (!returning && isFullCharge(state)) {
                     fractureArmor(target, state.tier);
                 }
             }
@@ -341,6 +366,14 @@ public final class BallAndChainCombat {
         return tier.getArmorPiercePercent() / 100.0F;
     }
 
+    private static int maxCharges(WeaponTier tier) {
+        return tier == WeaponTier.GOLD ? 2 : 3;
+    }
+
+    private static boolean isFullCharge(ThrowState state) {
+        return state.charge >= 3;
+    }
+
     private static float compensateForArmor(EntityLivingBase target, float damage,
                                              float piercing) {
         float armor = target.getTotalArmorValue();
@@ -412,7 +445,6 @@ public final class BallAndChainCombat {
         private final Vec3d end;
         private final Vec3d direction;
         private final float baseDamage;
-        private final Set<Integer> fracturedEntities = new HashSet<>();
         private boolean returnHitDone;
 
         private ThrowState(long startTick, ItemStack weapon, WeaponTier tier,

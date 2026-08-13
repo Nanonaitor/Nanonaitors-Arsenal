@@ -67,6 +67,11 @@ public final class FlailAnimationHandler {
                 ACTIVE.remove(player);
                 continue;
             }
+            if (FlailCombat.isBlockingConventionalShield(player)) {
+                player.getEntityData().setBoolean("ArsenalFlailActive", false);
+                ACTIVE.remove(player);
+                continue;
+            }
             AnimationState state = ACTIVE.get(player);
             boolean localHeldInput = player == minecraft.player
                 && minecraft.currentScreen == null

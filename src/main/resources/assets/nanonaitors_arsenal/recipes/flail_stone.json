@@ -1,1 +1,24 @@
-{"type":"minecraft:crafting_shaped","pattern":[" M "," I "," S "],"key":{"M":{"type":"forge:ore_dict","ore":"cobblestone"},"I":{"type":"forge:ore_dict","ore":"ingotIron"},"S":{"type":"forge:ore_dict","ore":"stickWood"}},"result":{"item":"nanonaitors_arsenal:flail_stone"}}
+{
+    "type":  "minecraft:crafting_shaped",
+    "pattern":  [
+                    " M ",
+                    " C ",
+                    " S "
+                ],
+    "key":  {
+                "M":  {
+                          "type":  "forge:ore_dict",
+                          "ore":  "cobblestone"
+                      },
+                "S":  {
+                          "type":  "forge:ore_dict",
+                          "ore":  "stickWood"
+                      },
+                "C":  {
+                          "item":  "nanonaitors_arsenal:iron_chain"
+                      }
+            },
+    "result":  {
+                   "item":  "nanonaitors_arsenal:flail_stone"
+               }
+}

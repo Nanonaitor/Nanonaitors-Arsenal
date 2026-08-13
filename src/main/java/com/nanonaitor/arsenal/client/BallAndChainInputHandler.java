@@ -6,6 +6,9 @@ import com.nanonaitor.arsenal.network.BallAndChainSwingMessage;
 import com.nanonaitor.arsenal.network.ModNetwork;
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.entity.SharedMonsterAttributes;
+import net.minecraft.entity.ai.attributes.AttributeModifier;
+import net.minecraft.entity.ai.attributes.IAttributeInstance;
 import net.minecraft.util.EnumHand;
 import net.minecraftforge.event.entity.player.AttackEntityEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -16,6 +19,8 @@ import net.minecraftforge.fml.relauncher.Side;
 
 @Mod.EventBusSubscriber(modid = NanonaitorsArsenal.MOD_ID, value = Side.CLIENT)
 public final class BallAndChainInputHandler {
+    private static final java.util.UUID USE_SPEED_UUID = java.util.UUID.fromString(
+        "ddf96815-9596-4d0c-93ea-a08c00a16ae4");
     private static long lastHeartbeatTick = Long.MIN_VALUE;
     private static boolean wasSwinging;
 
@@ -40,6 +45,7 @@ public final class BallAndChainInputHandler {
             && !retrieving
             && minecraft.currentScreen == null
             && minecraft.gameSettings.keyBindAttack.isKeyDown();
+        updateUseSpeed(player, canSwing || retrieving);
         player.getEntityData().setBoolean("ArsenalBallAndChainActive",
             holdingWeapon && (canSwing || retrieving));
         if (!canSwing) {
@@ -62,6 +68,21 @@ public final class BallAndChainInputHandler {
             || now - lastHeartbeatTick >= 2L) {
             lastHeartbeatTick = now;
             ModNetwork.CHANNEL.sendToServer(new BallAndChainSwingMessage(true));
+        }
+    }
+
+    private static void updateUseSpeed(EntityPlayer player, boolean active) {
+        IAttributeInstance speed = player.getEntityAttribute(
+            SharedMonsterAttributes.MOVEMENT_SPEED);
+        AttributeModifier old = speed.getModifier(USE_SPEED_UUID);
+        if (old != null) speed.removeModifier(old);
+        if (active && player.isHandActive()) {
+            // Minecraft 1.12.2 multiplies movement input by 0.2 whenever an
+            // item is active. This transient x5 modifier cancels only that
+            // animation-state penalty; all other speed effects still apply.
+            speed.applyModifier(new AttributeModifier(USE_SPEED_UUID,
+                "Ball and Chain animation movement compensation", 4.0D, 2)
+                .setSaved(false));
         }
     }
 

@@ -3,8 +3,11 @@
 A Forge 1.12.2 weapon mod focused on specialized weapons with distinct combat
 roles, counters, and active abilities rather than interchangeable damage tiers.
 
-The current release is `1.0.0` for Minecraft 1.12.2 and Forge
-14.23.5.2860.
+The current 1.12.2 release is `1.1.0`, including the Sun-War Bulwark and the
+latest weapon and compatibility updates for Forge 14.23.5.2860.
+
+This branch contains the Minecraft 1.12.2 port. The repository's default
+`main` branch contains the Minecraft 26.1.2 release.
 
 ## Design goals
 
@@ -14,8 +17,9 @@ The current release is `1.0.0` for Minecraft 1.12.2 and Forge
 - Optional RLCraft-style integrations should activate only when their source mods exist.
 - Mechanics should be data-driven enough to port to newer Minecraft versions later.
 
-## Weapon families in 1.0.0
+## Weapon families
 
+- Sun-War Bulwark
 - Morning star
 - Scimitar
 - Flail
@@ -23,14 +27,21 @@ The current release is `1.0.0` for Minecraft 1.12.2 and Forge
 - Battering ram
 - Ball and chain
 
-## Future content (planned)
+## Implemented mechanics
 
-- Anti-Dragon Shield
-- Heavy two-handed Bulwark
+### Sun-War Bulwark
 
-These shields are planned for a future release and are not included in 1.0.0.
-
-## Implemented in 1.0.0
+An extremely durable two-handed fortress shield that requires an empty offhand. While
+ready it passively reduces non-void damage by 15%. Active guarding works from
+all directions and completely stops direct melee, projectiles, magic, and
+explosions, but not falling, fire, lava, drowning, starvation, suffocation, or
+similar environmental hazards. Movement is reduced by 40% while carried and
+75% while guarding. Its extremely slow 0.25-speed strikes deal
+`1 + total armor points` damage. Attacking while guarding performs a
+server-authoritative four-block-radius bash with armor-scaled damage, strong
+knockback, and a three-second cooldown. Blocked attacks and successful bash
+targets consume durability. Normal strikes and bashes scale with the vanilla
+attack-cooldown meter.
 
 ### Morning Stars
 
@@ -42,10 +53,10 @@ reducing the target's vanilla armor attribute by 20% per level. Wood caps at
 
 ### Scimitars
 
-Fast, slightly lighter weapons with a large RuneScape-inspired hooked profile.
-Every fully charged confirmed hit has a 10% chance to inflict Weakness II for
-two seconds. The short duration and full-charge requirement prevent the effect
-from becoming a permanent eight-point attack-damage penalty.
+Fast weapons with a large RuneScape-inspired hooked profile. Their original
+damage is reduced by roughly 10%, rounded to the nearest half point. Ordinary
+tiers inflict Weakness I for 10 seconds; Living and Sentient tiers inflict
+Weakness II and III respectively.
 
 ### Claws
 
@@ -54,7 +65,8 @@ offhand. Left-click attacks with the main claw; right-clicking a living target
 attacks with the offhand claw on an independent cooldown. A fully charged hit
 can pierce normal damage invulnerability frames only when the previous
 confirmed hit used the opposite hand. Both claws share durability and
-enchantments. When Quality Tools is installed, its `Quality` tag is also
+enchantments. Every fourth fully charged, correctly alternating hit against the
+same target is a guaranteed critical. When Quality Tools is installed, its `Quality` tag is also
 mirrored without making the mod a dependency. The paired strike deliberately ignores RLCombat's
 generic weaker-offhand multiplier because it is one half of a single weapon.
 A real offhand item is allowed, but it disables every paired Claw ability until
@@ -90,24 +102,28 @@ front collar and spike. Charging uses a shield-style brace, raising both arms in
 third person. Every broken block and enemy hit costs one durability. Charging
 continuously builds exhaustion, with additional exhaustion for each block or
 enemy struck, and cannot start or continue at three visible hunger icons or
-less. Creative players are exempt from the hunger restriction.
+less. Creative players are exempt from the hunger restriction. Entity damage
+is captured from the vanilla attack-cooldown meter when the charge begins;
+terrain breaking remains immediately available.
 
 ### Balls and Chains
 
 Two-handed Ball and Chain weapons combine frontal wind-up sweeps with a charged
 line attack. Hold left-click to swing once every 25 ticks; each sweep strikes a
 three-block area ahead extending one block above and below the player, and adds
-one charge up to three. Releasing launches the ball through every enemy in its
+one charge up to three. Wind-up sweeps deal half base damage while retaining
+full enchantment bonuses. Releasing launches the ball through every enemy in its
 path for 4/8/12 blocks in the exact aimed direction, including upward and
 downward shots, stopping at the first solid block. It damages every target once
 on the outward pass and again while returning to the wielder. A new wind-up
 cannot begin until retrieval finishes. Release damage is
-175%/225%/275% and knockback also rises with charge. A three-charge throw
+125%/175%/225% and knockback also rises with charge. Gold reaches the full
+12-block, 225% third-charge result on its second revolution. A full-charge throw
 pierces 25%/50%/50%/75%/100% armor from wood through diamond. Every confirmed
 throw hit permanently reduces a mob's armor by at least two points (or 10%,
 whichever is greater); players receive ten seconds of tier-scaled Armor
-Fracture instead, with armor fracture limited to once per target per complete
-throw. The dynamic chain and solid tier-textured ball render the compact wind-up,
+Fracture instead, applied only by the outgoing pass. Switching weapons or filling
+the offhand cancels an active throw safely. The dynamic chain and solid tier-textured ball render the compact wind-up,
 collision-limited launch, and return while both hands hold the grip.
 
 ## Enchanting
@@ -115,8 +131,8 @@ collision-limited launch, and return while both hands hold the grip.
 Every Arsenal weapon is damageable, reports the Forge `sword` tool class, and
 accepts normal sword enchantments through enchanting tables and enchanted books.
 This includes Sharpness, Smite, Bane of Arthropods, Knockback, Fire Aspect,
-Looting, Sweeping Edge, Unbreaking, and Mending. Modded enchantments that target
-ordinary swords can use the same compatibility path.
+Looting, Unbreaking, and Mending. Sweeping Edge is restricted to Scimitars.
+Modded enchantments that target ordinary swords can use the same compatibility path.
 
 ## Optional RLCraft material integration
 

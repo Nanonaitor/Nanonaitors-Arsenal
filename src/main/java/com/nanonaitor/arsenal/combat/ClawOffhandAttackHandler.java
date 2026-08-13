@@ -1,9 +1,6 @@
 package com.nanonaitor.arsenal.combat;
 
-import com.nanonaitor.arsenal.NanonaitorsArsenal;
 import com.nanonaitor.arsenal.item.ItemClaws;
-import com.nanonaitor.arsenal.network.ModNetwork;
-import com.nanonaitor.arsenal.network.OffhandClawAttackMessage;
 import java.util.Map;
 import java.util.WeakHashMap;
 import net.minecraft.enchantment.EnchantmentHelper;
@@ -11,47 +8,17 @@ import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.SharedMonsterAttributes;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.init.SoundEvents;
-import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.item.ItemStack;
-import net.minecraft.network.play.server.SPacketSoundEffect;
 import net.minecraft.util.SoundEvent;
 import net.minecraft.util.DamageSource;
-import net.minecraft.util.EnumActionResult;
 import net.minecraft.util.EnumHand;
 import net.minecraft.util.math.MathHelper;
-import net.minecraftforge.event.entity.player.PlayerInteractEvent;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.common.eventhandler.EventPriority;
-import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+import net.minecraftforge.fml.common.Loader;
 
-@Mod.EventBusSubscriber(modid = NanonaitorsArsenal.MOD_ID)
 public final class ClawOffhandAttackHandler {
     private static final Map<EntityPlayer, Long> LAST_ATTACK_TICK = new WeakHashMap<>();
 
     private ClawOffhandAttackHandler() {}
-
-    @SubscribeEvent(priority = EventPriority.HIGHEST)
-    public static void onEntityInteract(PlayerInteractEvent.EntityInteractSpecific event) {
-        EntityPlayer player = event.getEntityPlayer();
-        ItemStack main = player.getHeldItemMainhand();
-        if (event.getHand() != EnumHand.MAIN_HAND
-            || !(main.getItem() instanceof ItemClaws)
-            || !(event.getTarget() instanceof EntityLivingBase)) {
-            return;
-        }
-        ItemClaws claws = (ItemClaws) main.getItem();
-        if (!ClawPairHandler.hasMatchingLinkedClaw(player, claws)) {
-            return;
-        }
-
-        event.setCancellationResult(EnumActionResult.SUCCESS);
-        event.setCanceled(true);
-        if (player.world.isRemote) {
-            player.swingArm(EnumHand.OFF_HAND);
-            ModNetwork.CHANNEL.sendToServer(new OffhandClawAttackMessage(
-                event.getTarget().getEntityId()));
-        }
-    }
 
     public static void tryServerAttack(EntityPlayer player, EntityLivingBase target) {
         ItemStack main = player.getHeldItemMainhand();
@@ -70,7 +37,10 @@ public final class ClawOffhandAttackHandler {
         LAST_ATTACK_TICK.put(player, now);
 
         boolean fullyCharged = strength >= 0.95F;
-        boolean canPierce = fullyCharged && claws.getLastConfirmedHand(main) == 0;
+        boolean canPierce = fullyCharged && claws.getLastConfirmedHand(main) == 0
+            && claws.getLastConfirmedTarget(main) == target.getEntityId();
+        boolean guaranteedCritical = claws.willGuaranteeCritical(main, 1,
+            target.getEntityId(), fullyCharged);
         int previousResistance = target.hurtResistantTime;
         if (canPierce) {
             target.hurtResistantTime = 0;
@@ -82,8 +52,26 @@ public final class ClawOffhandAttackHandler {
             main, target.getCreatureAttribute());
         float damage = baseDamage * (0.2F + strength * strength * 0.8F)
             + enchantmentDamage * strength;
+        if (guaranteedCritical) damage *= 1.5F;
 
-        boolean hit = target.attackEntityFrom(DamageSource.causePlayerDamage(player), damage);
+        // RLCombat inspects the equipped offhand while resolving player damage
+        // and can apply its generic weaker-offhand rule to this custom paired
+        // attack. The linked claw already derives its full damage, enchants,
+        // quality and cooldown from the main claw, so hide only the generated
+        // visual partner for the synchronous damage call when RLCombat exists.
+        ItemStack linked = player.getHeldItemOffhand();
+        boolean hideLinkedForRlCombat = Loader.isModLoaded("bettercombatmod");
+        if (hideLinkedForRlCombat) {
+            player.inventory.offHandInventory.set(0, ItemStack.EMPTY);
+        }
+        boolean hit;
+        try {
+            hit = target.attackEntityFrom(DamageSource.causePlayerDamage(player), damage);
+        } finally {
+            if (hideLinkedForRlCombat) {
+                player.inventory.offHandInventory.set(0, linked);
+            }
+        }
         if (!hit) {
             target.hurtResistantTime = previousResistance;
             return;
@@ -93,7 +81,8 @@ public final class ClawOffhandAttackHandler {
         // default weakerOffhand rule keys off the active swing hand and would
         // otherwise halve this paired-weapon attack.
         player.swingArm(EnumHand.OFF_HAND);
-        claws.confirmHand(main, 1);
+        boolean critical = claws.confirmChargedAlternatingHit(main, 1,
+            target.getEntityId(), fullyCharged);
         main.damageItem(1, player);
         player.addExhaustion(0.1F);
 
@@ -110,29 +99,18 @@ public final class ClawOffhandAttackHandler {
         EnchantmentHelper.applyThornEnchantments(target, player);
         EnchantmentHelper.applyArthropodEnchantments(player, target);
 
-        SoundEvent sound = SoundEvents.ENTITY_PLAYER_ATTACK_SWEEP;
-        float pitch = fullyCharged ? 1.1F : 1.35F;
-        if (player instanceof EntityPlayerMP) {
-            EntityPlayerMP serverPlayer = (EntityPlayerMP) player;
-            serverPlayer.connection.sendPacket(new SPacketSoundEffect(sound,
-                player.getSoundCategory(), target.posX, target.posY, target.posZ,
-                1.0F, pitch));
-            player.world.playSound(player, target.posX, target.posY, target.posZ,
-                sound, player.getSoundCategory(), 1.0F, pitch);
+        // Match the normal main-hand weapon feedback instead of using the
+        // sweeping sound for every linked-claw hit. Playing from the server with
+        // no excluded player makes the wielder and nearby players hear it once.
+        SoundEvent sound = fullyCharged ? SoundEvents.ENTITY_PLAYER_ATTACK_STRONG
+            : SoundEvents.ENTITY_PLAYER_ATTACK_WEAK;
+        player.world.playSound(null, player.posX, player.posY, player.posZ,
+            sound, player.getSoundCategory(), 1.0F, fullyCharged ? 1.0F : 1.1F);
+        if (canPierce || critical) {
+            player.world.playSound(null, target.posX, target.posY, target.posZ,
+                SoundEvents.ENTITY_PLAYER_ATTACK_CRIT, target.getSoundCategory(),
+                0.45F, 1.45F);
         }
     }
 
-    @SubscribeEvent(priority = EventPriority.HIGHEST)
-    public static void onRightClickEmpty(PlayerInteractEvent.RightClickEmpty event) {
-        EntityPlayer player = event.getEntityPlayer();
-        ItemStack main = player.getHeldItemMainhand();
-        if (!player.world.isRemote || event.getHand() != EnumHand.MAIN_HAND
-            || !(main.getItem() instanceof ItemClaws)) {
-            return;
-        }
-        ItemClaws claws = (ItemClaws) main.getItem();
-        if (ClawPairHandler.hasMatchingLinkedClaw(player, claws)) {
-            player.swingArm(EnumHand.OFF_HAND);
-        }
-    }
 }

@@ -14,7 +14,10 @@ import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.init.MobEffects;
 import net.minecraft.init.SoundEvents;
+import net.minecraft.item.EnumAction;
 import net.minecraft.item.ItemStack;
+import net.minecraft.util.EnumParticleTypes;
+import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.DamageSource;
 import net.minecraft.util.SoundEvent;
 import net.minecraft.util.math.AxisAlignedBB;
@@ -54,7 +57,7 @@ public final class FlailCombat {
     public static void tryServerSwing(EntityPlayerMP player) {
         ItemStack weapon = player.getHeldItemMainhand();
         if (!(weapon.getItem() instanceof ItemFlail) || !player.isEntityAlive()
-            || player.isSpectator()) {
+            || player.isSpectator() || isBlockingConventionalShield(player)) {
             return;
         }
         long now = player.world.getTotalWorldTime();
@@ -113,6 +116,7 @@ public final class FlailCombat {
             : SoundEvents.ENTITY_PLAYER_ATTACK_NODAMAGE;
         player.world.playSound(null, player.posX, player.posY, player.posZ,
             sound, player.getSoundCategory(), hitAnything ? 1.0F : 0.65F, 0.82F);
+        spawnHitboxCircle(player);
         ModNetwork.CHANNEL.sendToAllAround(
             new FlailAnimationMessage(player.getEntityId()),
             new NetworkRegistry.TargetPoint(player.dimension, player.posX,
@@ -120,6 +124,37 @@ public final class FlailCombat {
         if (hitAnything) {
             weapon.damageItem(1, player);
             player.addExhaustion(0.1F);
+        }
+    }
+
+    /**
+     * Flails cannot orbit while the player is actively guarding with a shield.
+     * Defenders deliberately remain exempt because attacking while defending is
+     * one of that mod's core mechanics.
+     */
+    public static boolean isBlockingConventionalShield(EntityPlayer player) {
+        if (player == null || !player.isHandActive()) {
+            return false;
+        }
+        ItemStack active = player.getActiveItemStack();
+        if (active.isEmpty() || active.getItemUseAction() != EnumAction.BLOCK) {
+            return false;
+        }
+        ResourceLocation registryName = active.getItem().getRegistryName();
+        return registryName == null
+            || !"defenders".equals(registryName.getResourceDomain());
+    }
+
+    /** Mirrors the modern build's visible four-block flail hitbox ring. */
+    private static void spawnHitboxCircle(EntityPlayerMP player) {
+        double base = Math.toRadians(player.rotationYaw);
+        for (int index = 0; index < 32; index++) {
+            double angle = base + Math.PI * 2.0D * index / 32.0D;
+            player.getServerWorld().spawnParticle(EnumParticleTypes.SWEEP_ATTACK,
+                player.posX + Math.cos(angle) * RADIUS,
+                player.posY + 1.0D,
+                player.posZ + Math.sin(angle) * RADIUS,
+                1, 0.0D, 0.0D, 0.0D, 0.0D);
         }
     }
 

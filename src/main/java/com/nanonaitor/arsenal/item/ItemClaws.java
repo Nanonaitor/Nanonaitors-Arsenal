@@ -13,6 +13,8 @@ import net.minecraft.world.World;
 
 public final class ItemClaws extends ItemArsenalWeapon {
     private static final String LAST_HAND_TAG = "LastConfirmedClaw";
+    private static final String LAST_TARGET_TAG = "LastConfirmedClawTarget";
+    private static final String CRIT_CHAIN_TAG = "ClawCriticalChain";
 
     public ItemClaws(WeaponTier tier) {
         super(tier, "claws", tier.getClawAttackDamage() - 1.0D, -1.6D);
@@ -46,17 +48,55 @@ public final class ItemClaws extends ItemArsenalWeapon {
         tag.setInteger(LAST_HAND_TAG, hand);
     }
 
+    public int getLastConfirmedTarget(ItemStack stack) {
+        return stack.hasTagCompound() && stack.getTagCompound().hasKey(LAST_TARGET_TAG)
+            ? stack.getTagCompound().getInteger(LAST_TARGET_TAG) : -1;
+    }
+
+    public boolean willGuaranteeCritical(ItemStack stack, int hand, int targetId,
+                                         boolean fullyCharged) {
+        if (!fullyCharged) return false;
+        int previousHand = getLastConfirmedHand(stack);
+        int previousTarget = getLastConfirmedTarget(stack);
+        int chain = stack.hasTagCompound()
+            ? stack.getTagCompound().getInteger(CRIT_CHAIN_TAG) : 0;
+        int next = previousTarget == targetId && previousHand >= 0 && previousHand != hand
+            ? chain + 1 : 1;
+        return next >= 4;
+    }
+
+    public boolean confirmChargedAlternatingHit(ItemStack stack, int hand,
+                                                int targetId, boolean fullyCharged) {
+        NBTTagCompound tag = tag(stack);
+        int chain = 0;
+        if (fullyCharged) {
+            int previousHand = getLastConfirmedHand(stack);
+            int previousTarget = getLastConfirmedTarget(stack);
+            chain = previousTarget == targetId && previousHand >= 0 && previousHand != hand
+                ? tag.getInteger(CRIT_CHAIN_TAG) + 1 : 1;
+        }
+        boolean critical = chain >= 4;
+        if (critical) chain = 0;
+        tag.setInteger(CRIT_CHAIN_TAG, chain);
+        tag.setInteger(LAST_HAND_TAG, hand);
+        tag.setInteger(LAST_TARGET_TAG, targetId);
+        return critical;
+    }
+
     public void resetPair(ItemStack stack) {
         if (stack.hasTagCompound()) {
             stack.getTagCompound().removeTag(LAST_HAND_TAG);
+            stack.getTagCompound().removeTag(LAST_TARGET_TAG);
+            stack.getTagCompound().removeTag(CRIT_CHAIN_TAG);
         }
     }
 
     @Override
     public void addInformation(ItemStack stack, World world, List<String> tooltip, ITooltipFlag flag) {
         tooltip.add(TextFormatting.GOLD + "Automatically equips its paired offhand claw.");
-        tooltip.add(TextFormatting.GRAY + "Left-click: main claw. Right-click targets: offhand claw.");
+        tooltip.add(TextFormatting.GRAY + "Left-click: main claw. Right-click: offhand claw.");
         tooltip.add(TextFormatting.GRAY + "Fully charged alternating hits pierce i-frames.");
+        tooltip.add(TextFormatting.YELLOW + "Every 4th fully charged alternating hit is a critical.");
         tooltip.add(TextFormatting.DARK_GRAY + "A different offhand item disables all paired abilities.");
     }
 

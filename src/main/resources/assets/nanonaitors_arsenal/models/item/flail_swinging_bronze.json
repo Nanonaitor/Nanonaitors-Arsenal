@@ -1,1 +1,1 @@
-{"parent": "nanonaitors_arsenal:item/flail_swinging_base", "textures": {"grip": "minecraft:blocks/planks_oak", "chain": "minecraft:blocks/iron_block", "metal": "nanonaitors_arsenal:items/material_bronze"}}
+{"parent":"item/handheld","display":{"thirdperson_righthand":{"scale":[0,0,0]},"thirdperson_lefthand":{"scale":[0,0,0]},"firstperson_lefthand":{"scale":[0,0,0]},"firstperson_righthand":{"scale":[0,0,0]},"gui":{"rotation":[30,225,0],"scale":[1.0,1.0,1.0]}},"textures":{"layer0":"nanonaitors_arsenal:items/flail_swinging_bronze"}}

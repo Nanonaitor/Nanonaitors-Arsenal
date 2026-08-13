@@ -50,8 +50,15 @@ public final class BatteringRamCombat {
             || !hasChargeEnergy(player)) {
             return;
         }
-        ChargeState state = CHARGES.computeIfAbsent(player,
-            ignored -> new ChargeState(player.rotationYaw, player.rotationPitch));
+        ChargeState state = CHARGES.get(player);
+        if (state == null) {
+            float strength = player.getCooledAttackStrength(0.5F);
+            float damageMultiplier = 0.2F + strength * strength * 0.8F;
+            state = new ChargeState(player.rotationYaw, player.rotationPitch,
+                damageMultiplier);
+            CHARGES.put(player, state);
+            player.resetCooldown();
+        }
         state.lastHeartbeatTick = player.world.getTotalWorldTime();
     }
 
@@ -250,7 +257,10 @@ public final class BatteringRamCombat {
             EntityLivingBase.class,
             player.getEntityBoundingBox().offset(forwardX * 0.8D, 0.0D, forwardZ * 0.8D)
                 .grow(0.7D, 0.4D, 0.7D),
-            target -> target != player && target.isEntityAlive()
+            // MmmMmmMmmMmm's training dummy intentionally returns false from
+            // isEntityAlive() even though it accepts player damage. Match the
+            // flail's target rule so usable nonstandard living targets are hit.
+            target -> target != player && !target.isDead
                 && !player.isOnSameTeam(target)
                 && !state.hitEntities.contains(target.getEntityId()));
         float baseDamage = (float) player.getEntityAttribute(
@@ -259,7 +269,7 @@ public final class BatteringRamCombat {
             float enchantmentDamage = EnchantmentHelper.getModifierForCreature(
                 stack, target.getCreatureAttribute());
             if (target.attackEntityFrom(DamageSource.causePlayerDamage(player),
-                baseDamage + enchantmentDamage)) {
+                baseDamage * state.damageMultiplier + enchantmentDamage)) {
                 state.hitEntities.add(target.getEntityId());
                 target.knockBack(player, 1.5F, forwardX, forwardZ);
                 stack.damageItem(1, player);
@@ -278,12 +288,15 @@ public final class BatteringRamCombat {
     private static final class ChargeState {
         private final float lockedYaw;
         private final float lockedPitch;
+        private final float damageMultiplier;
         private long lastHeartbeatTick;
         private final Set<Integer> hitEntities = new HashSet<>();
 
-        private ChargeState(float lockedYaw, float lockedPitch) {
+        private ChargeState(float lockedYaw, float lockedPitch,
+                            float damageMultiplier) {
             this.lockedYaw = lockedYaw;
             this.lockedPitch = lockedPitch;
+            this.damageMultiplier = damageMultiplier;
         }
     }
 }

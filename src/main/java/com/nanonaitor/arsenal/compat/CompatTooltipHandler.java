@@ -25,30 +25,45 @@ public final class CompatTooltipHandler {
         if (tier==WeaponTier.SILVER) event.getToolTip().add(TextFormatting.GRAY+"+2 damage vs undead.");
         if (tier.isMyrmex()) event.getToolTip().add(TextFormatting.GRAY+"+4 damage vs non-arthropods and Death Worms.");
         if (tier.isVenom()) event.getToolTip().add(TextFormatting.DARK_GREEN+"Poison III for 10 secs on hit.");
-        if (tier==WeaponTier.FLAMED_DRAGONBONE) event.getToolTip().add(TextFormatting.RED+"Ignites and knocks back; bonus damage vs Ice Dragons.");
-        if (tier==WeaponTier.ICED_DRAGONBONE) event.getToolTip().add(TextFormatting.AQUA+"Freezes, slows, and knocks back; bonus damage vs Fire Dragons.");
-        if (tier==WeaponTier.ELECTRIC_DRAGONBONE) event.getToolTip().add(TextFormatting.LIGHT_PURPLE+"Chains lightning and knocks back; bonus damage vs dragons.");
+        if (tier==WeaponTier.FLAMED_DRAGONBONE) {
+            event.getToolTip().add(TextFormatting.RED+"Ignites and knocks back.");
+            event.getToolTip().add(TextFormatting.RED+"+13.5 damage vs Ice Dragons.");
+        }
+        if (tier==WeaponTier.ICED_DRAGONBONE) {
+            event.getToolTip().add(TextFormatting.AQUA+"Freezes, slows, and knocks back.");
+            event.getToolTip().add(TextFormatting.AQUA+"+13.5 damage vs Fire Dragons.");
+        }
+        if (tier==WeaponTier.ELECTRIC_DRAGONBONE) {
+            event.getToolTip().add(TextFormatting.LIGHT_PURPLE+"Chains lightning and knocks back.");
+            event.getToolTip().add(TextFormatting.LIGHT_PURPLE
+                +"+6.75 damage vs Fire and Ice Dragons.");
+        }
         if (tier==WeaponTier.LIVING) {
             int points=stack.hasTagCompound()?stack.getTagCompound().getInteger("srpkills"):0;
             event.getToolTip().add(TextFormatting.DARK_RED+"Parasite evolution: "+points+" / "+ArsenalCompatManager.getSrpEvolutionThreshold());
         }
         if (tier==WeaponTier.LIVING || tier==WeaponTier.SENTIENT) {
             boolean sentient=tier==WeaponTier.SENTIENT;
-            String level=sentient?" II":" I";
             if (stack.getItem() instanceof ItemMorningStar)
-                event.getToolTip().add(TextFormatting.DARK_GREEN+"Hits inflict Corrosion"+level+" for 5 secs.");
+                event.getToolTip().add(TextFormatting.WHITE+"Renders armour "
+                    +TextFormatting.RED+"useless"+TextFormatting.WHITE+" over time.");
             else if (stack.getItem() instanceof ItemClaws)
-                event.getToolTip().add(TextFormatting.DARK_RED+"Hits inflict Bleeding"+level+" for 5 secs.");
+                event.getToolTip().add(TextFormatting.WHITE+"Inflicts "
+                    +TextFormatting.RED+"life-threatening"+TextFormatting.WHITE+" injuries.");
             else if (stack.getItem() instanceof ItemFlail)
-                event.getToolTip().add(TextFormatting.DARK_PURPLE+"Hits inflict Immalleable"+level+" for 5 secs.");
+                event.getToolTip().add(TextFormatting.RED+(sentient?"Decimates":"Wipes out")
+                    +TextFormatting.WHITE+" a large area.");
             else if (stack.getItem() instanceof ItemBallAndChain)
-                event.getToolTip().add(TextFormatting.DARK_PURPLE+"Ignores parasite adaptation; inflicts Debar"+level+".");
+                event.getToolTip().add(TextFormatting.RED+"Kill one"
+                    +TextFormatting.WHITE+" kill many.");
             else if (stack.getItem() instanceof ItemBatteringRam)
-                event.getToolTip().add(TextFormatting.RED+"While held: Rage"+level+"; cleansed when unequipped.");
+                event.getToolTip().add(TextFormatting.WHITE+"Lashes out "
+                    +TextFormatting.GREEN+"virulent"+TextFormatting.WHITE+" strikes.");
             else if (stack.getItem() instanceof ItemScimitar)
-                event.getToolTip().add(TextFormatting.DARK_PURPLE+"Hits inflict Weakness "+(sentient?"III":"II")+" for 5 secs.");
-            if (sentient) event.getToolTip().add(TextFormatting.DARK_GRAY
-                +"Retains SRP's normal chance to mark its wielder as Prey.");
+                event.getToolTip().add(TextFormatting.WHITE+"Leaves its victims "
+                    +TextFormatting.DARK_GRAY+"too weak to fight"+TextFormatting.WHITE+".");
+            if (sentient) event.getToolTip().add(TextFormatting.WHITE
+                +"You can't hide anymore...");
         }
     }
 }

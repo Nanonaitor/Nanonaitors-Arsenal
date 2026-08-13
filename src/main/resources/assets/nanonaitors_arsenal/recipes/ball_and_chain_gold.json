@@ -1,1 +1,23 @@
-{"type":"forge:ore_shaped","pattern":[" MM"," IM","S  "],"key":{"M":{"type":"forge:ore_dict","ore":"ingotGold"},"I":{"type":"forge:ore_dict","ore":"ingotIron"},"S":{"type":"forge:ore_dict","ore":"stickWood"}},"result":{"item":"nanonaitors_arsenal:ball_and_chain_gold"}}
+{
+    "type":  "forge:ore_shaped",
+    "pattern":  [
+                    "  B",
+                    " C ",
+                    "SC "
+                ],
+    "key":  {
+                "S":  {
+                          "type":  "forge:ore_dict",
+                          "ore":  "stickWood"
+                      },
+                "C":  {
+                          "item":  "nanonaitors_arsenal:iron_chain"
+                      },
+                "B":  {
+                          "item":  "minecraft:gold_block"
+                      }
+            },
+    "result":  {
+                   "item":  "nanonaitors_arsenal:ball_and_chain_gold"
+               }
+}
