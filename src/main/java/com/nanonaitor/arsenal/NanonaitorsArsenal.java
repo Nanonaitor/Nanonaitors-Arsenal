@@ -2,12 +2,14 @@ package com.nanonaitor.arsenal;
 
 import com.nanonaitor.arsenal.client.ArsenalCreativeTab;
 import com.nanonaitor.arsenal.network.ModNetwork;
+import com.nanonaitor.arsenal.recipe.ModSmeltingRecipes;
 import net.minecraft.creativetab.CreativeTabs;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
+import net.minecraftforge.fml.common.event.FMLInitializationEvent;
 
 @Mod(
     modid = NanonaitorsArsenal.MOD_ID,
@@ -26,5 +28,10 @@ public final class NanonaitorsArsenal {
     public void preInit(FMLPreInitializationEvent event) {
         ModNetwork.init();
         LOGGER.info("Loading {} {} for Minecraft 1.12.2", NAME, VERSION);
+    }
+
+    @Mod.EventHandler
+    public void init(FMLInitializationEvent event) {
+        ModSmeltingRecipes.register();
     }
 }
