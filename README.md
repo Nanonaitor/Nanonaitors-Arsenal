@@ -3,19 +3,10 @@
 A Forge 1.12.2 weapon mod focused on specialized weapons with distinct combat
 roles, counters, and active abilities rather than interchangeable damage tiers.
 
-The current 1.12.2 release is `1.1.0`, including the Sun-War Bulwark and the
-latest weapon and compatibility updates for Forge 14.23.5.2860.
+The current 1.12.2 release is `1.1.0`for Forge 14.23.5.2860.
 
 This branch contains the Minecraft 1.12.2 port. The repository's default
 `main` branch contains the Minecraft 26.1.2 release.
-
-## Design goals
-
-- Every weapon should solve a specific combat problem or enable a recognizable playstyle.
-- Special abilities should have clear costs, cooldowns, counters, and readable feedback.
-- Vanilla Forge must load without any optional compatibility mod installed.
-- Optional RLCraft-style integrations should activate only when their source mods exist.
-- Mechanics should be data-driven enough to port to newer Minecraft versions later.
 
 ## Weapon families
 
@@ -39,24 +30,21 @@ similar environmental hazards. Movement is reduced by 40% while carried and
 75% while guarding. Its extremely slow 0.25-speed strikes deal
 `1 + total armor points` damage. Attacking while guarding performs a
 server-authoritative four-block-radius bash with armor-scaled damage, strong
-knockback, and a three-second cooldown. Blocked attacks and successful bash
+knockback, and a 3-second cooldown. Blocked attacks and successful bash
 targets consume durability. Normal strikes and bashes scale with the vanilla
 attack-cooldown meter.
 
 ### Morning Stars
 
-Wood, stone, gold, iron, and diamond Morning Stars are slower and hit harder
-than equivalent swords. Fully charged confirmed hits build Armor Fracture,
-reducing the target's vanilla armor attribute by 20% per level. Wood caps at
-40%, stone and gold at 60%, iron at 80%, and diamond at 100%. The effect lasts
-30 seconds on mobs and 10 seconds on players.
+Morning Stars are slower and hit harder than equivalent tier swords. Fully charged 
+confirmed hits build Armor Fracture, reducing the target's vanilla armor attribute
+20% per level. Wood caps at 40%, stone and gold at 60%, iron at 80%, and diamond at 
+100%. The effect lasts 30 seconds on mobs and 10 seconds on players.
 
 ### Scimitars
 
-Fast weapons with a large RuneScape-inspired hooked profile. Their original
-damage is reduced by roughly 10%, rounded to the nearest half point. Ordinary
-tiers inflict Weakness I for 10 seconds; Living and Sentient tiers inflict
-Weakness II and III respectively.
+Fast weapons with a large hooked profile. Ordinary tiers inflict Weakness I for 10 
+seconds; higher tiers inflict Weakness II and III respectively.
 
 ### Claws
 
@@ -65,46 +53,43 @@ offhand. Left-click attacks with the main claw; right-clicking a living target
 attacks with the offhand claw on an independent cooldown. A fully charged hit
 can pierce normal damage invulnerability frames only when the previous
 confirmed hit used the opposite hand. Both claws share durability and
-enchantments. Every fourth fully charged, correctly alternating hit against the
-same target is a guaranteed critical. When Quality Tools is installed, its `Quality` tag is also
-mirrored without making the mod a dependency. The paired strike deliberately ignores RLCombat's
-generic weaker-offhand multiplier because it is one half of a single weapon.
+enchantments. Every 4th fully charged, correctly alternating hit against the
+same target is a guaranteed critical. 
+
 A real offhand item is allowed, but it disables every paired Claw ability until
-the offhand is empty again. Each tier deals half the displayed base damage of
-its equivalent vanilla sword: 2/2.5/2/3/3.5 from wood through diamond. Linked
-Claws are deleted immediately if they ever become dropped world entities.
+the offhand is empty again. Linked Claws are deleted immediately if they become 
+dropped world entities.
 
 ### Flails
 
-Wood, stone, gold, iron, and diamond Flails are wide-area crowd-control
-weapons. Hold left-click while aiming anywhere to create a full
-four-block attack sphere every 25 ticks; no primary target is required. Every
-visible, non-allied enemy receives a complete weapon hit. Block breaking is
+Flails are wide-area crowd-control weapons. Hold left-click while aiming anywhere 
+to create a full four-block attack sphere every 25 ticks; no primary target is required. 
+Every visible, non-allied enemy receives a complete weapon hit. Block breaking is
 disabled while spinning. Range is measured between entity hitboxes so elevated,
-lowered, tall, and special training-dummy entities are detected even when they
-report themselves as not alive. Flails deal one point less damage than equivalent
-swords and have 0.8 attack speed. A standalone horizontal swing animation shows
+lowered, tall, and special entities are detected. 
+
+Flails have 0.8 attack speed. A standalone horizontal swing animation shows
 an opaque tier-colored ball and repeated iron links orbiting four blocks around
-the wielder. It does not require Mo' Bends and uses a sharper air-cut sound.
+the wielder.
 
 ### Battering Rams
 
-Wood, stone, gold, iron, and diamond Battering Rams are extremely slow,
-two-handed charge weapons. Hold left-click with an empty offhand to rush
-forward, strike each enemy once per uninterrupted charge, and smash a 3x3 face
-at body level without drilling into the floor. Wood breaks soft soil; stone and
-gold add crafted plank blocks; iron adds logs and cobblestone derivatives; and
-diamond adds ordinary stone derivatives. Gold has Stone-level breaking but a
+Battering Rams are extremely slow, two-handed charge weapons. 
+Hold left-click with an empty offhand to rush forward, strike each enemy once per 
+uninterrupted charge, and smash a 3x3 face at body level without drilling into the floor. 
+
+Wood breaks soft soil; stone and gold add crafted plank blocks; 
+iron adds logs and cobblestone derivatives; 
+diamond adds ordinary stone derivatives. 
+
+Gold has Stone-level breaking but a
 faster 1.0 attack speed. Each non-wood recipe uses a full material block for its
-spike. Each enemy hit or block broken consumes one durability. Their 3D model is
-a long oak log reinforced by iron bands, with two grips and a fully tier-colored
-front collar and spike. Charging uses a shield-style brace, raising both arms in
-third person. Every broken block and enemy hit costs one durability. Charging
-continuously builds exhaustion, with additional exhaustion for each block or
+spike. 
+
+Each enemy hit or block broken consumes one durability.
+Charging continuously builds exhaustion, with additional exhaustion for each block or
 enemy struck, and cannot start or continue at three visible hunger icons or
-less. Creative players are exempt from the hunger restriction. Entity damage
-is captured from the vanilla attack-cooldown meter when the charge begins;
-terrain breaking remains immediately available.
+less.
 
 ### Balls and Chains
 
