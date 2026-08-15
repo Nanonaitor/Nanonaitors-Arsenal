@@ -6,8 +6,8 @@
     "S": "minecraft:stick"
   },
   "pattern": [
+    " M ",
     "MMM",
-    "MSM",
     " S "
   ],
   "result": {

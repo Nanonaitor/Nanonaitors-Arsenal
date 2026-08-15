@@ -1,6 +1,10 @@
 {
   "itemGroup.nanonaitors_arsenal": "Nanonaitor's Arsenal",
   "effect.nanonaitors_arsenal.armor_fracture": "Armor Fracture",
+  "enchantment.nanonaitors_arsenal.long_chain": "Long Chain",
+  "enchantment.nanonaitors_arsenal.rotation_force": "Rotation Force",
+  "enchantment.nanonaitors_arsenal.long_chain.desc": "+1 block of Flail and Ball & Chain reach per level.",
+  "enchantment.nanonaitors_arsenal.rotation_force.desc": "+0.2 Flail and Ball & Chain attack speed per level.",
   "item.nanonaitors_arsenal.sun_war_bulwark": "Sun-War Bulwark",
   "item.nanonaitors_arsenal.morning_star_wood": "Wood Morning Star",
   "item.nanonaitors_arsenal.morning_star_stone": "Stone Morning Star",

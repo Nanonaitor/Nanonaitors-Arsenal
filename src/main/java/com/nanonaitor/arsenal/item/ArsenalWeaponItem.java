@@ -63,6 +63,7 @@ public class ArsenalWeaponItem extends Item {
             case LINKED_CLAWS -> lines.accept(Component.literal("Linked to the matching main-hand claws.").withStyle(ChatFormatting.DARK_GRAY));
             case FLAIL -> {
                 lines.accept(Component.literal("Hold attack to strike every target within 4 blocks.").withStyle(ChatFormatting.GOLD));
+                lines.accept(Component.literal("Reach modifiers and Long Chain extend the attack area.").withStyle(ChatFormatting.GRAY));
                 lines.accept(Component.literal("Cannot mine blocks while spinning.").withStyle(ChatFormatting.DARK_GRAY));
                 lines.accept(Component.literal("Cannot spin while blocking with a conventional shield.").withStyle(ChatFormatting.DARK_GRAY));
             }
@@ -87,6 +88,7 @@ public class ArsenalWeaponItem extends Item {
                 } else {
                     lines.accept(Component.literal("Throws " + reach + " blocks per charge and hits both outward and returning.").withStyle(ChatFormatting.GOLD));
                 }
+                lines.accept(Component.literal("Reach modifiers and Long Chain add to every attack.").withStyle(ChatFormatting.GRAY));
                 lines.accept(Component.literal("Full charge pierces " + tier.armorPiercePercent() + "% armor.").withStyle(ChatFormatting.DARK_RED));
                 lines.accept(Component.literal("Full charge fractures armor once per throw; requires an empty offhand.").withStyle(ChatFormatting.DARK_GRAY));
             }

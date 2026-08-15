@@ -5,6 +5,7 @@ import com.mojang.math.Axis;
 import com.nanonaitor.arsenal.item.ArsenalWeaponItem;
 import com.nanonaitor.arsenal.item.WeaponKind;
 import com.nanonaitor.arsenal.item.WeaponTier;
+import com.nanonaitor.arsenal.combat.ChainWeaponStats;
 import com.nanonaitor.arsenal.registry.ModItems;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.Minecraft;
@@ -36,10 +37,13 @@ public final class ClientWeaponRenderer {
         if (!(player.getMainHandItem().getItem() instanceof ArsenalWeaponItem weapon)) return;
         long now = minecraft.level.getGameTime();
         boolean local = player == minecraft.player;
+        int swingTicks = ChainWeaponStats.swingIntervalTicks(player, player.getMainHandItem());
         if (weapon.kind() == WeaponKind.FLAIL && (local ? ClientControls.flailActive() : player.isUsingItem())) {
-            double angle = -(now + minecraft.getDeltaTracker().getGameTimeDeltaPartialTick(false)) / 25.0D * Math.PI * 2.0D;
+            double angle = -(now + minecraft.getDeltaTracker().getGameTimeDeltaPartialTick(false)) / swingTicks * Math.PI * 2.0D;
+            double reach = ChainWeaponStats.flailReach(player, player.getMainHandItem());
             renderChain(event, player.getMainHandItem(), weapon.tier(),
-                0.34D, 1.2D, 0.0D, Math.cos(angle) * 4.0D, 1.05D, Math.sin(angle) * 4.0D, 0.58F, false);
+                0.34D, 1.2D, 0.0D, Math.cos(angle) * reach, 1.05D,
+                Math.sin(angle) * reach, 0.58F, false);
         } else if (weapon.kind() == WeaponKind.BALL_AND_CHAIN) {
             double partial = minecraft.getDeltaTracker().getGameTimeDeltaPartialTick(false);
             double bodyYaw = Math.toRadians(Mth.rotLerp((float)partial, player.yBodyRotO, player.yBodyRot));
@@ -48,11 +52,12 @@ public final class ClientWeaponRenderer {
             double handY = 1.2D;
             double handZ = sinBody * 0.32D + cosBody * 0.12D;
             if (local && ClientControls.ballWindup(now) || !local && player.isUsingItem()) {
-                double angle = (now - (local ? ClientControls.ballStarted() : now - player.getTicksUsingItem()) + partial) / 25.0D * Math.PI * 2.0D;
-                double localBallZ = 0.75D + Math.cos(angle) * 0.45D;
+                double angle = (now - (local ? ClientControls.ballStarted() : now - player.getTicksUsingItem()) + partial) / swingTicks * Math.PI * 2.0D;
+                double scale = ChainWeaponStats.ballWindupReach(player, player.getMainHandItem()) / 3.0D;
+                double localBallZ = (0.75D + Math.cos(angle) * 0.45D) * scale;
                 renderChain(event, player.getMainHandItem(), weapon.tier(),
                     handX, handY, handZ,
-                    -sinBody * localBallZ, 1.2D + Math.sin(angle) * 0.72D,
+                    -sinBody * localBallZ, 1.2D + Math.sin(angle) * 0.72D * scale,
                     cosBody * localBallZ, 0.48F, true);
             } else if (local && ClientControls.ballRelease(now)) {
                 double progress = (now - ClientControls.ballReleaseStarted() + partial) / 16.0D;
@@ -75,6 +80,7 @@ public final class ClientWeaponRenderer {
             || !(event.getItemStack().getItem() instanceof ArsenalWeaponItem weapon)) return;
         long now = minecraft.level.getGameTime();
         double partial = event.getPartialTick();
+        int swingTicks = ChainWeaponStats.swingIntervalTicks(minecraft.player, event.getItemStack());
         if (weapon.kind() == WeaponKind.BATTERING_RAM && ClientControls.ramActive()) {
             // A steady forward brace for first person. This replaces the vanilla
             // mining/block animation and adds only a small running pulse, so the
@@ -86,7 +92,7 @@ public final class ClientWeaponRenderer {
         } else if (weapon.kind() == WeaponKind.FLAIL && ClientControls.flailActive()) {
             // Camera space mirrors the depth axis, so use the opposite signed
             // angle here to preserve the third-person rig's apparent direction.
-            double angle = (now + partial) / 25.0D * Math.PI * 2.0D;
+            double angle = (now + partial) / swingTicks * Math.PI * 2.0D;
             double cameraYaw = Math.toRadians(Mth.rotLerp((float)partial,
                 minecraft.player.yRotO, minecraft.player.getYRot()));
             double relative = angle - cameraYaw;
@@ -95,14 +101,15 @@ public final class ClientWeaponRenderer {
             // the old miniature ellipse directly in front of the screen.
             renderChain(event.getPoseStack(), event.getNodeCollector(), event.getPackedLight(), 0,
                 weapon.tier(), 0.38D, -0.42D, -0.15D,
-                Math.cos(relative) * 4.0D, -0.57D,
-                -Math.sin(relative) * 4.0D, 0.58F, 0.28F, false);
+                Math.cos(relative) * ChainWeaponStats.flailReach(minecraft.player, event.getItemStack()), -0.57D,
+                -Math.sin(relative) * ChainWeaponStats.flailReach(minecraft.player, event.getItemStack()), 0.58F, 0.28F, false);
         } else if (weapon.kind() == WeaponKind.BALL_AND_CHAIN && ClientControls.ballWindup(now)) {
-            double angle = (now - ClientControls.ballStarted() + partial) / 25.0D * Math.PI * 2.0D;
+            double angle = (now - ClientControls.ballStarted() + partial) / swingTicks * Math.PI * 2.0D;
+            double scale = ChainWeaponStats.ballWindupReach(minecraft.player, event.getItemStack()) / 3.0D;
             renderChain(event.getPoseStack(), event.getNodeCollector(), event.getPackedLight(), 0,
                 weapon.tier(), 0.50D, -0.40D, -0.72D,
-                0.04D, -0.12D + Math.sin(angle) * 0.44D,
-                -1.18D + Math.cos(angle) * 0.50D, 0.22F, 0.12F, true);
+                0.04D, -0.12D + Math.sin(angle) * 0.44D * scale,
+                -1.18D + Math.cos(angle) * 0.50D * scale, 0.22F, 0.12F, true);
         } else if (weapon.kind() == WeaponKind.BALL_AND_CHAIN && ClientControls.ballRelease(now)) {
             double progress = (now - ClientControls.ballReleaseStarted() + partial) / 16.0D;
             double distance = ClientControls.releasedDistance() * Math.sin(progress * Math.PI);

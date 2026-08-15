@@ -240,14 +240,15 @@ public final class CombatEvents {
         setServerFlailSprite(player, player.getMainHandItem());
         if (!player.isUsingItem()) player.startUsingItem(InteractionHand.MAIN_HAND);
         long now = player.level().getGameTime(), previous = LAST_FLAIL.getOrDefault(player.getUUID(), Long.MIN_VALUE / 2);
-        if (now - previous < 25) return;
+        if (now - previous < ChainWeaponStats.swingIntervalTicks(player, player.getMainHandItem())) return;
         LAST_FLAIL.put(player.getUUID(), now);
         ServerLevel level = (ServerLevel) player.level();
         ItemStack flail = player.getMainHandItem();
         DamageSource source = flail.getDamageSource(player, () -> player.damageSources().playerAttack(player));
         float attackStrength = player.getAttackStrengthScale(0.5F);
         boolean hit = false;
-        for (LivingEntity target : level.getEntitiesOfClass(LivingEntity.class, player.getBoundingBox().inflate(4.0D),
+        double radius = ChainWeaponStats.flailReach(player, flail);
+        for (LivingEntity target : level.getEntitiesOfClass(LivingEntity.class, player.getBoundingBox().inflate(radius),
                 target -> validTarget(player, target) && player.hasLineOfSight(target))) {
             target.invulnerableTime = 0;
             hit |= target.hurtServer(level, source, effectiveMeleeDamage(player, target, source, attackStrength));
@@ -316,13 +317,13 @@ public final class CombatEvents {
         long now = player.level().getGameTime();
         if (!player.isUsingItem()) player.startUsingItem(InteractionHand.MAIN_HAND);
         if (now - state.lastHeartbeat > 3) { releaseBall(player); return; }
-        int index = (int)((now - state.started) / 25);
-        if (index != state.lastSwing) {
+        if (now >= state.nextSwing) {
             int maxCharges = maxBallCharges(weapon.tier());
             int previousCharge = state.charge;
-            state.lastSwing = index;
+            state.nextSwing = now + ChainWeaponStats.swingIntervalTicks(player, player.getMainHandItem());
             state.charge = Math.min(maxCharges, state.charge + 1);
-            lineAttack(player, 3.0D, 0.5F, 0.3F, false, true, weapon.tier());
+            lineAttack(player, ChainWeaponStats.ballWindupReach(player, player.getMainHandItem()), 0.5F,
+                0.3F, false, true, weapon.tier());
             ((ServerLevel)player.level()).playSound(null, player.blockPosition(), SoundEvents.PLAYER_ATTACK_SWEEP,
                 SoundSource.PLAYERS, 0.65F, 0.72F);
             if (previousCharge < maxCharges && state.charge == maxCharges) {
@@ -350,7 +351,7 @@ public final class CombatEvents {
         int maxCharges = maxBallCharges(tier);
         int effectiveCharge = effectiveBallCharge(tier, state.charge);
         state.distance = stopDistance((ServerLevel)player.level(), player.getEyePosition(), state.direction,
-            effectiveCharge * 4.0D);
+            ChainWeaponStats.ballThrowReach(player, player.getMainHandItem(), effectiveCharge));
         lineAttack(player, state.distance, ballDamageMultiplier(tier, state.charge),
             ballKnockback(tier, state.charge), state.charge >= maxCharges, true, tier);
         ((ServerLevel)player.level()).playSound(null, player.blockPosition(), SoundEvents.TRIDENT_THROW.value(),
@@ -623,8 +624,8 @@ public final class CombatEvents {
 
     public static final class BallState {
         final WeaponTier tier;
-        long started, lastHeartbeat, releaseTick; int lastSwing = -1, charge; boolean releasing, returned; double distance; Vec3 direction;
-        BallState(long tick, WeaponTier tier) { started = lastHeartbeat = tick; this.tier = tier; }
+        long started, lastHeartbeat, nextSwing, releaseTick; int charge; boolean releasing, returned; double distance; Vec3 direction;
+        BallState(long tick, WeaponTier tier) { started = lastHeartbeat = nextSwing = tick; this.tier = tier; }
         public int charge() { return charge; }
         public double distance() { return distance; }
     }
