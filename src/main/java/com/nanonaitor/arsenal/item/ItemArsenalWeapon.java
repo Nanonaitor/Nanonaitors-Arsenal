@@ -4,6 +4,8 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import com.nanonaitor.arsenal.NanonaitorsArsenal;
 import com.nanonaitor.arsenal.compat.ArsenalCompatManager;
+import com.nanonaitor.arsenal.enchantment.EnchantmentLongChain;
+import com.nanonaitor.arsenal.enchantment.EnchantmentRotationForce;
 import java.util.Collections;
 import java.util.Set;
 import net.minecraft.enchantment.Enchantment;
@@ -49,6 +51,10 @@ public abstract class ItemArsenalWeapon extends ItemSword {
      */
     @Override
     public boolean canApplyAtEnchantingTable(ItemStack stack, Enchantment enchantment) {
+        if (enchantment instanceof EnchantmentLongChain
+            || enchantment instanceof EnchantmentRotationForce) {
+            return this instanceof ItemFlail || this instanceof ItemBallAndChain;
+        }
         if (enchantment == Enchantments.SWEEPING && !(this instanceof ItemScimitar)) {
             return false;
         }

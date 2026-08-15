@@ -39,7 +39,9 @@ public final class ModRecipes {
         if (m == null) return;
         Object v = venom && ArsenalCompatManager.hasItem("iceandfire:myrmex_stinger")
             ? ArsenalCompatManager.itemStack("iceandfire:myrmex_stinger") : m;
-        recipe(e, "morning_star", t, ModContent.MORNING_STARS, venom?"MVM":"MMM", venom?"VSV":"MSM", " S ", 'M', m, 'V', v);
+        recipe(e, "morning_star", t, ModContent.MORNING_STARS,
+            venom ? " V " : " M ", venom ? "VMV" : "MMM", " S ",
+            'M', m, 'V', v);
         recipe(e, "scimitar", t, ModContent.SCIMITARS, venom?" VM":" MM", "MM ", "S  ", 'M', m, 'V', v);
         recipe(e, "claws", t, ModContent.CLAWS, venom?"V V":"M M", "MWM", " S ", 'M', m, 'V', v, 'W', "plankWood");
         recipe(e, "flail", t, ModContent.FLAILS, venom?"V V":" M ",
@@ -86,7 +88,7 @@ public final class ModRecipes {
         Object h = ArsenalCompatManager.itemStack("srparasites:hardened_bone_handle");
         Object tendon = ArsenalCompatManager.itemStack("srparasites:dried_tendons");
         Object shell = ArsenalCompatManager.itemStack("srparasites:vile_shell");
-        living(e, "morning_star", ModContent.MORNING_STARS.get(t), "FFF", "FCF", " H ", f,c,h);
+        living(e, "morning_star", ModContent.MORNING_STARS.get(t), " F ", "FCF", " H ", f,c,h);
         living(e, "scimitar", ModContent.SCIMITARS.get(t), " FF", "FC ", "H  ", f,c,h);
         living(e, "claws", ModContent.CLAWS.get(t), "F F", "FCF", " H ", f,c,h);
         living(e, "flail", ModContent.FLAILS.get(t), " C ", " T ", " H ", f,c,h, 'T',tendon);

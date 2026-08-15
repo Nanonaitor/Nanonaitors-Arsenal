@@ -2,6 +2,8 @@ package com.nanonaitor.arsenal.registry;
 
 import com.nanonaitor.arsenal.NanonaitorsArsenal;
 import com.nanonaitor.arsenal.block.BlockIronChain;
+import com.nanonaitor.arsenal.enchantment.EnchantmentLongChain;
+import com.nanonaitor.arsenal.enchantment.EnchantmentRotationForce;
 import com.nanonaitor.arsenal.item.ItemMorningStar;
 import com.nanonaitor.arsenal.item.ItemClaws;
 import com.nanonaitor.arsenal.item.ItemLinkedClaw;
@@ -15,6 +17,7 @@ import com.nanonaitor.arsenal.potion.PotionArmorFracture;
 import java.util.EnumMap;
 import java.util.Map;
 import net.minecraft.client.renderer.block.model.ModelResourceLocation;
+import net.minecraft.enchantment.Enchantment;
 import net.minecraft.block.Block;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemBlock;
@@ -44,6 +47,8 @@ public final class ModContent {
     public static final Map<WeaponTier, ItemLinkedClaw> LINKED_CLAWS =
         new EnumMap<>(WeaponTier.class);
     public static PotionArmorFracture ARMOR_FRACTURE;
+    public static EnchantmentLongChain LONG_CHAIN;
+    public static EnchantmentRotationForce ROTATION_FORCE;
     public static ItemSunWarBulwark SUN_WAR_BULWARK;
     public static final BlockIronChain IRON_CHAIN = new BlockIronChain();
     public static ItemBlock IRON_CHAIN_ITEM;
@@ -86,6 +91,13 @@ public final class ModContent {
     public static void registerPotions(RegistryEvent.Register<Potion> event) {
         ARMOR_FRACTURE = new PotionArmorFracture();
         event.getRegistry().register(ARMOR_FRACTURE);
+    }
+
+    @SubscribeEvent
+    public static void registerEnchantments(RegistryEvent.Register<Enchantment> event) {
+        LONG_CHAIN = new EnchantmentLongChain();
+        ROTATION_FORCE = new EnchantmentRotationForce();
+        event.getRegistry().registerAll(LONG_CHAIN, ROTATION_FORCE);
     }
 
     @SubscribeEvent

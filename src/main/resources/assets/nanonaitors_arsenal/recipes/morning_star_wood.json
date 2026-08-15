@@ -1,6 +1,6 @@
 {
   "type": "minecraft:crafting_shaped",
-  "pattern": ["MMM", "MSM", " S "],
+  "pattern": [" M ", "MMM", " S "],
   "key": {
     "M": { "type": "forge:ore_dict", "ore": "plankWood" },
     "S": { "item": "minecraft:stick" }

@@ -44,8 +44,9 @@ public final class ItemBallAndChain extends ItemArsenalWeapon {
         int charges = getTier() == WeaponTier.GOLD ? 2 : 3;
         tooltip.add(TextFormatting.RED + "Two-Handed");
         tooltip.add(TextFormatting.GOLD + "Hold attack to build up to " + charges + " charges.");
-        tooltip.add(TextFormatting.GRAY + "Wind-up sweeps deal 0.5x damage 3 blocks ahead.");
-        tooltip.add(TextFormatting.GRAY + "Release to throw 4 blocks per charge.");
+        tooltip.add(TextFormatting.GRAY + "Wind-up sweeps deal 0.5x damage 3 base blocks ahead.");
+        tooltip.add(TextFormatting.GRAY + "Release to throw 4 base blocks per charge.");
+        tooltip.add(TextFormatting.DARK_GRAY + "Reach and attack-speed modifiers apply.");
         tooltip.add(TextFormatting.GRAY + "Throws deal 1.25x / 1.75x / 2.25x damage.");
         tooltip.add(TextFormatting.GRAY + "Hits in both directions; stops at solid blocks.");
         tooltip.add(TextFormatting.DARK_RED + "Full-charge throw pierces "

@@ -28,6 +28,7 @@ public final class ItemFlail extends ItemArsenalWeapon {
     public void addInformation(ItemStack stack, World world, List<String> tooltip,
                                ITooltipFlag flag) {
         tooltip.add(TextFormatting.GOLD + "Hold left-click to swing continuously.");
-        tooltip.add(TextFormatting.GRAY + "Hits all visible enemies within 4 blocks.");
+        tooltip.add(TextFormatting.GRAY + "Hits all visible enemies within 4 base blocks.");
+        tooltip.add(TextFormatting.DARK_GRAY + "Reach and attack-speed modifiers apply.");
     }
 }

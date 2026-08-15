@@ -40,7 +40,7 @@ public final class ModSmeltingRecipes {
         if (!ArsenalCompatManager.isTierAvailable(tier) || whole.isEmpty()) return;
 
         // floor(primary material / 3), matching the upper end of the requested 25-33% band.
-        add(ModContent.MORNING_STARS.get(tier), counted(whole, 2)); // 7 primary materials
+        add(ModContent.MORNING_STARS.get(tier), counted(whole, 1)); // 4 primary materials
         add(ModContent.SCIMITARS.get(tier), counted(whole, 1));    // 4 primary materials
         add(ModContent.CLAWS.get(tier), counted(whole, 1));        // 4 primary materials
         add(ModContent.FLAILS.get(tier), counted(nugget, 3));      // 1 primary material

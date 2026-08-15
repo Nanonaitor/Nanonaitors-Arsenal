@@ -2,6 +2,7 @@ package com.nanonaitor.arsenal.client;
 
 import com.nanonaitor.arsenal.NanonaitorsArsenal;
 import com.nanonaitor.arsenal.combat.FlailCombat;
+import com.nanonaitor.arsenal.combat.ChainWeaponStats;
 import com.nanonaitor.arsenal.item.ItemFlail;
 import com.nanonaitor.arsenal.network.FlailSwingMessage;
 import com.nanonaitor.arsenal.network.ModNetwork;
@@ -51,8 +52,10 @@ public final class FlailInputHandler {
             return;
         }
         long now = player.world.getTotalWorldTime();
+        int interval = ChainWeaponStats.swingIntervalTicks(player,
+            player.getHeldItemMainhand());
         if (lastRequestTick == Long.MIN_VALUE || now < lastRequestTick
-            || now - lastRequestTick >= FlailCombat.SWING_INTERVAL_TICKS) {
+            || now - lastRequestTick >= interval) {
             lastRequestTick = now;
             player.resetCooldown();
             ModNetwork.CHANNEL.sendToServer(new FlailSwingMessage());

@@ -2,6 +2,7 @@ package com.nanonaitor.arsenal.client;
 
 import com.nanonaitor.arsenal.NanonaitorsArsenal;
 import com.nanonaitor.arsenal.combat.BallAndChainCombat;
+import com.nanonaitor.arsenal.combat.ChainWeaponStats;
 import com.nanonaitor.arsenal.item.ItemBallAndChain;
 import java.util.Iterator;
 import java.util.Map;
@@ -141,15 +142,19 @@ public final class BallAndChainAnimationHandler {
                                      float partialTicks) {
         RenderFrame frame = getFrame(player, partialTicks, player.rotationYaw, 0.0F);
         double age = player.world.getTotalWorldTime() - state.startTick + partialTicks;
-        double angle = age / BallAndChainCombat.SWING_INTERVAL_TICKS
+        ItemStack weapon = player.getHeldItemMainhand();
+        int interval = ChainWeaponStats.swingIntervalTicks(player, weapon);
+        double reachScale = ChainWeaponStats.ballWindupReach(player, weapon)
+            / BallAndChainCombat.WINDUP_REACH;
+        double angle = age / interval
             * Math.PI * 2.0D;
-        double distance = 0.75D + Math.cos(angle) * 0.45D;
+        double distance = (0.75D + Math.cos(angle) * 0.45D) * reachScale;
         double horizontal = Math.sqrt(frame.forwardX * frame.forwardX
             + frame.forwardZ * frame.forwardZ);
         double windupX = horizontal > 0.0001D ? frame.forwardX / horizontal : 0.0D;
         double windupZ = horizontal > 0.0001D ? frame.forwardZ / horizontal : 1.0D;
         double ballX = frame.anchorX + windupX * distance;
-        double ballY = frame.anchorY + Math.sin(angle) * 0.72D;
+        double ballY = frame.anchorY + Math.sin(angle) * 0.72D * reachScale;
         double ballZ = frame.anchorZ + windupZ * distance;
         renderChainAndBall(player, frame, ballX, ballY, ballZ, 0.24D);
     }

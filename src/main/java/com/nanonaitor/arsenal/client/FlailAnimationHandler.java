@@ -2,6 +2,7 @@ package com.nanonaitor.arsenal.client;
 
 import com.nanonaitor.arsenal.NanonaitorsArsenal;
 import com.nanonaitor.arsenal.combat.FlailCombat;
+import com.nanonaitor.arsenal.combat.ChainWeaponStats;
 import com.nanonaitor.arsenal.item.ItemFlail;
 import java.util.Iterator;
 import java.util.Map;
@@ -18,7 +19,6 @@ import net.minecraftforge.fml.relauncher.Side;
 
 @Mod.EventBusSubscriber(modid = NanonaitorsArsenal.MOD_ID, value = Side.CLIENT)
 public final class FlailAnimationHandler {
-    private static final int REMOTE_ANIMATION_TICKS = FlailCombat.SWING_INTERVAL_TICKS + 2;
     private static final Map<EntityPlayer, AnimationState> ACTIVE = new WeakHashMap<>();
 
     private FlailAnimationHandler() {}
@@ -40,12 +40,14 @@ public final class FlailAnimationHandler {
             return;
         }
         long now = minecraft.world.getTotalWorldTime();
+        int animationTicks = ChainWeaponStats.swingIntervalTicks(player,
+            player.getHeldItemMainhand()) + 2;
         AnimationState state = ACTIVE.get(player);
         if (state == null) {
-            state = new AnimationState(now, now + REMOTE_ANIMATION_TICKS);
+            state = new AnimationState(now, now + animationTicks);
             ACTIVE.put(player, state);
         }
-        state.endTick = now + REMOTE_ANIMATION_TICKS;
+        state.endTick = now + animationTicks;
         player.getEntityData().setBoolean("ArsenalFlailActive", true);
     }
 
@@ -141,13 +143,16 @@ public final class FlailAnimationHandler {
         double anchorZ = pz + rightZ * 0.38D;
 
         double age = player.world.getTotalWorldTime() - state.startTick + partialTicks;
-        double angle = age / FlailCombat.SWING_INTERVAL_TICKS * Math.PI * 2.0D;
+        ItemStack weapon = player.getHeldItemMainhand();
+        int interval = ChainWeaponStats.swingIntervalTicks(player, weapon);
+        double radius = ChainWeaponStats.flailReach(player, weapon);
+        double angle = age / interval * Math.PI * 2.0D;
         double orbitY = py + (player.isSneaking() ? 0.72D : 0.95D);
-        double ballX = px + rightX * Math.cos(angle) * FlailCombat.RADIUS
-            + forwardX * Math.sin(angle) * FlailCombat.RADIUS;
+        double ballX = px + rightX * Math.cos(angle) * radius
+            + forwardX * Math.sin(angle) * radius;
         double ballY = orbitY;
-        double ballZ = pz + rightZ * Math.cos(angle) * FlailCombat.RADIUS
-            + forwardZ * Math.sin(angle) * FlailCombat.RADIUS;
+        double ballZ = pz + rightZ * Math.cos(angle) * radius
+            + forwardZ * Math.sin(angle) * radius;
         WeaponPartRenderer.renderChainAndBall(player.getHeldItemMainhand(),
             anchorX, anchorY, anchorZ, ballX, ballY, ballZ, 0.30D);
     }

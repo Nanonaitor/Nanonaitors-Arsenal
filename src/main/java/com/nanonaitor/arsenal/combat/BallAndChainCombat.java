@@ -120,9 +120,9 @@ public final class BallAndChainCombat {
         if (!player.isHandActive()) {
             player.setActiveHand(EnumHand.MAIN_HAND);
         }
-        int swingIndex = (int) ((now - state.startTick) / SWING_INTERVAL_TICKS);
-        if (swingIndex != state.lastSwingIndex) {
-            state.lastSwingIndex = swingIndex;
+        if (now >= state.nextSwingTick) {
+            state.nextSwingTick = now
+                + ChainWeaponStats.swingIntervalTicks(player, weapon);
             int maxCharges = maxCharges(((ItemBallAndChain) weapon.getItem()).getTier());
             int previousCharge = state.charge;
             state.charge = Math.min(maxCharges, state.charge + 1);
@@ -177,8 +177,9 @@ public final class BallAndChainCombat {
                                            int charge) {
         Vec3d start = new Vec3d(player.posX, player.posY + 0.9D, player.posZ);
         Vec3d forward = horizontalLook(player);
+        double reach = ChainWeaponStats.ballWindupReach(player, weapon);
         Vec3d end = stopAtSolidBlock(player, start,
-            start.add(forward.scale(WINDUP_REACH)));
+            start.add(forward.scale(reach)));
         AxisAlignedBB search = sweptBox(start, end, 0.7D, 1.0D);
         List<EntityLivingBase> targets = player.world.getEntitiesWithinAABB(
             EntityLivingBase.class, search,
@@ -214,7 +215,9 @@ public final class BallAndChainCombat {
         int effectiveCharge = item.getTier() == WeaponTier.GOLD && charge >= 2 ? 3 : charge;
         Vec3d start = new Vec3d(player.posX, player.posY + 1.25D, player.posZ);
         Vec3d direction = player.getLookVec().normalize();
-        Vec3d intendedEnd = start.add(direction.scale(effectiveCharge * THROW_REACH_PER_CHARGE));
+        double throwReach = ChainWeaponStats.ballThrowReach(player, weapon,
+            effectiveCharge);
+        Vec3d intendedEnd = start.add(direction.scale(throwReach));
         Vec3d end = stopAtSolidBlock(player, start, intendedEnd);
         float multiplier = RELEASE_DAMAGE_MULTIPLIER[effectiveCharge];
         float baseDamage = (float) player.getEntityAttribute(
@@ -425,14 +428,13 @@ public final class BallAndChainCombat {
     }
 
     private static final class SwingState {
-        private final long startTick;
         private long lastHeartbeatTick;
-        private int lastSwingIndex = -1;
+        private long nextSwingTick;
         private int charge;
 
         private SwingState(long startTick) {
-            this.startTick = startTick;
             this.lastHeartbeatTick = startTick;
+            this.nextSwingTick = startTick;
         }
     }
 

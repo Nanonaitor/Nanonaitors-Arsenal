@@ -61,16 +61,19 @@ public final class FlailCombat {
             return;
         }
         long now = player.world.getTotalWorldTime();
+        int swingInterval = ChainWeaponStats.swingIntervalTicks(player, weapon);
         Long last = LAST_SWING_TICK.get(player);
-        if (last != null && now - last < SWING_INTERVAL_TICKS) {
+        if (last != null && now - last < swingInterval) {
             return;
         }
         LAST_SWING_TICK.put(player, now);
 
+        double radius = ChainWeaponStats.flailReach(player, weapon);
+
         List<EntityLivingBase> targets = player.world.getEntitiesWithinAABB(
-            EntityLivingBase.class, player.getEntityBoundingBox().grow(RADIUS),
+            EntityLivingBase.class, player.getEntityBoundingBox().grow(radius),
             target -> target != player && !target.isDead
-                && isHitboxWithinRange(player, target)
+                && isHitboxWithinRange(player, target, radius)
                 && !player.isOnSameTeam(target) && canSeeHitbox(player, target));
 
         float baseDamage = (float) player.getEntityAttribute(
@@ -116,7 +119,7 @@ public final class FlailCombat {
             : SoundEvents.ENTITY_PLAYER_ATTACK_NODAMAGE;
         player.world.playSound(null, player.posX, player.posY, player.posZ,
             sound, player.getSoundCategory(), hitAnything ? 1.0F : 0.65F, 0.82F);
-        spawnHitboxCircle(player);
+        spawnHitboxCircle(player, radius);
         ModNetwork.CHANNEL.sendToAllAround(
             new FlailAnimationMessage(player.getEntityId()),
             new NetworkRegistry.TargetPoint(player.dimension, player.posX,
@@ -146,20 +149,21 @@ public final class FlailCombat {
     }
 
     /** Mirrors the modern build's visible four-block flail hitbox ring. */
-    private static void spawnHitboxCircle(EntityPlayerMP player) {
+    private static void spawnHitboxCircle(EntityPlayerMP player, double radius) {
         double base = Math.toRadians(player.rotationYaw);
         for (int index = 0; index < 32; index++) {
             double angle = base + Math.PI * 2.0D * index / 32.0D;
             player.getServerWorld().spawnParticle(EnumParticleTypes.SWEEP_ATTACK,
-                player.posX + Math.cos(angle) * RADIUS,
+                player.posX + Math.cos(angle) * radius,
                 player.posY + 1.0D,
-                player.posZ + Math.sin(angle) * RADIUS,
+                player.posZ + Math.sin(angle) * radius,
                 1, 0.0D, 0.0D, 0.0D, 0.0D);
         }
     }
 
     private static boolean isHitboxWithinRange(EntityPlayer player,
-                                                EntityLivingBase target) {
+                                                EntityLivingBase target,
+                                                double radius) {
         AxisAlignedBB playerBox = player.getEntityBoundingBox();
         AxisAlignedBB targetBox = target.getEntityBoundingBox();
         double dx = Math.max(0.0D, Math.max(playerBox.minX - targetBox.maxX,
@@ -168,7 +172,7 @@ public final class FlailCombat {
             targetBox.minY - playerBox.maxY));
         double dz = Math.max(0.0D, Math.max(playerBox.minZ - targetBox.maxZ,
             targetBox.minZ - playerBox.maxZ));
-        return dx * dx + dy * dy + dz * dz <= RADIUS * RADIUS;
+        return dx * dx + dy * dy + dz * dz <= radius * radius;
     }
 
     private static boolean canSeeHitbox(EntityPlayer player, EntityLivingBase target) {

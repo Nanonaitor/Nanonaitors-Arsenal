@@ -138,7 +138,11 @@ public final class ShieldCombat {
     }
 
     private static float armorScaledDamage(EntityPlayer player) {
-        return 1.0F + player.getTotalArmorValue();
+        IAttributeInstance armor = player.getEntityAttribute(SharedMonsterAttributes.ARMOR);
+        // The live attribute includes armor items, potion modifiers, Baubles and
+        // quality-system modifiers rather than only counting worn armor pieces.
+        return 1.0F + (float) Math.max(0.0D, armor == null
+            ? player.getTotalArmorValue() : armor.getAttributeValue());
     }
 
     private static float attackChargeMultiplier(EntityPlayer player) {
