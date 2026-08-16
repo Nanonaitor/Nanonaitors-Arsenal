@@ -1,12 +1,10 @@
 package com.nanonaitor.arsenal.combat;
 
+import com.nanonaitor.arsenal.compat.SilverSetBonusCompat;
 import com.nanonaitor.arsenal.item.ItemScimitar;
 import com.nanonaitor.arsenal.item.WeaponTier;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.init.MobEffects;
-import net.minecraft.inventory.EntityEquipmentSlot;
-import net.minecraft.item.ItemArmor;
-import net.minecraft.item.ItemStack;
 import net.minecraft.potion.PotionEffect;
 
 public final class ScimitarCombat {
@@ -18,7 +16,8 @@ public final class ScimitarCombat {
     public static void applyWeakness(EntityLivingBase target, EntityLivingBase attacker,
                                      ItemScimitar item) {
         int amplifier = getBaseWeaknessAmplifier(item.getTier());
-        if (item.getTier() == WeaponTier.GOLD && hasFullGoldArmor(attacker)) {
+        if (item.getTier() == WeaponTier.GOLD
+            && SilverSetBonusCompat.isMagicInfusedGoldSetActive(attacker)) {
             amplifier = 1; // Weakness II while Gold's full-set infusion is active.
         }
         target.addPotionEffect(new PotionEffect(MobEffects.WEAKNESS,
@@ -31,15 +30,4 @@ public final class ScimitarCombat {
         return 0;
     }
 
-    public static boolean hasFullGoldArmor(EntityLivingBase wearer) {
-        return isGoldArmor(wearer.getItemStackFromSlot(EntityEquipmentSlot.HEAD))
-            && isGoldArmor(wearer.getItemStackFromSlot(EntityEquipmentSlot.CHEST))
-            && isGoldArmor(wearer.getItemStackFromSlot(EntityEquipmentSlot.LEGS))
-            && isGoldArmor(wearer.getItemStackFromSlot(EntityEquipmentSlot.FEET));
-    }
-
-    private static boolean isGoldArmor(ItemStack stack) {
-        return !stack.isEmpty() && stack.getItem() instanceof ItemArmor
-            && ((ItemArmor) stack.getItem()).getArmorMaterial() == ItemArmor.ArmorMaterial.GOLD;
-    }
 }

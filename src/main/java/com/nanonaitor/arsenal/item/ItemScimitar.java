@@ -7,6 +7,7 @@ import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.text.TextFormatting;
 import net.minecraft.world.World;
+import net.minecraftforge.fml.common.Loader;
 
 public final class ItemScimitar extends ItemArsenalWeapon {
     public ItemScimitar(WeaponTier tier) {
@@ -29,7 +30,7 @@ public final class ItemScimitar extends ItemArsenalWeapon {
 
     @Override
     public void addInformation(ItemStack stack, World world, List<String> tooltip, ITooltipFlag flag) {
-        if (getTier() == WeaponTier.GOLD) {
+        if (getTier() == WeaponTier.GOLD && Loader.isModLoaded("setbonus")) {
             tooltip.add(TextFormatting.DARK_PURPLE
                 + "Hits inflict Weakness I, or Weakness II with a full Gold armor set.");
         } else if (getTier() == WeaponTier.SENTIENT) {

@@ -46,7 +46,7 @@ public final class ModRecipes {
         recipe(e, "claws", t, ModContent.CLAWS, venom?"V V":"M M", "MWM", " S ", 'M', m, 'V', v, 'W', "plankWood");
         recipe(e, "flail", t, ModContent.FLAILS, venom?"V V":"MM ",
             " C ", " S ", 'M', m, 'V', v,
-            'C', new ItemStack(ModContent.IRON_CHAIN));
+            'C', "chainIron");
         Object heavyMaterial = t == WeaponTier.BRONZE ? m : blockIngredient(t);
         if (heavyMaterial != null) {
             recipe(e, "battering_ram", t, ModContent.BATTERING_RAMS, venom?" VM":"  M", "LLL", " S ", 'M', heavyMaterial, 'V', v, 'L', "logWood");
@@ -54,7 +54,7 @@ public final class ModRecipes {
         if (heavyMaterial != null) {
             recipe(e, "ball_and_chain", t, ModContent.BALLS_AND_CHAINS,
                 "  B", " C ", "C  ", 'B', heavyMaterial,
-                'C', new ItemStack(ModContent.IRON_CHAIN));
+                'C', "chainIron");
         }
     }
     private static Object blockIngredient(WeaponTier t) {

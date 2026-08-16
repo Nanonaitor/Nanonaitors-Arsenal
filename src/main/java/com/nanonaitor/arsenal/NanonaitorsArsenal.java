@@ -18,7 +18,7 @@ import net.minecraftforge.fml.common.event.FMLServerStartedEvent;
     name = NanonaitorsArsenal.NAME,
     version = NanonaitorsArsenal.VERSION,
     acceptedMinecraftVersions = "[1.12.2]",
-    dependencies = "after:setbonus;after:xat"
+    dependencies = "after:setbonus;after:xat;after:quark"
 )
 public final class NanonaitorsArsenal {
     public static final String MOD_ID = "nanonaitors_arsenal";

@@ -9,6 +9,7 @@ import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.UUID;
 import net.minecraft.entity.SharedMonsterAttributes;
+import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.ai.attributes.AttributeModifier;
 import net.minecraft.entity.ai.attributes.IAttributeInstance;
 import net.minecraft.entity.player.EntityPlayer;
@@ -28,6 +29,7 @@ public final class SilverSetBonusCompat {
         "563b78c5-187b-42ec-8698-28d8e906d70a");
     private static final double SILVER_ATTACK_SPEED_BONUS = 0.50D;
     private static boolean registeredWithSetBonus;
+    private static boolean goldRegisteredWithSetBonus;
 
     private SilverSetBonusCompat() {}
 
@@ -54,7 +56,7 @@ public final class SilverSetBonusCompat {
             if (quicksilverHands != null && findById(bonuses, "SBonusW") != null) {
                 int silverAdded = registerTier(equipment, quicksilverHands,
                     createEquip, WeaponTier.SILVER, "ArsenalSilver_");
-                registeredWithSetBonus = true;
+                registeredWithSetBonus = silverAdded > 0;
                 NanonaitorsArsenal.LOGGER.info(
                     "Registered {} Arsenal Silver weapons with Quicksilver Hands",
                     silverAdded);
@@ -65,16 +67,28 @@ public final class SilverSetBonusCompat {
                 && findById(bonuses, "GBonusWeapon") != null) {
                 int goldAdded = registerTier(equipment, magicInfusedWeapons,
                     createEquip, WeaponTier.GOLD, "ArsenalGold_");
+                goldRegisteredWithSetBonus = goldAdded > 0;
                 NanonaitorsArsenal.LOGGER.info(
                     "Registered {} Arsenal Gold weapons with Magic Infused Weapon",
                     goldAdded);
             }
         } catch (ReflectiveOperationException | LinkageError | RuntimeException exception) {
             registeredWithSetBonus = false;
+            goldRegisteredWithSetBonus = false;
             NanonaitorsArsenal.LOGGER.warn(
-                "Could not register Arsenal Silver weapons with Quicksilver Hands; "
-                    + "using the numeric compatibility fallback", exception);
+                "Could not register Arsenal weapons with the RLCraft equipment sets; "
+                    + "using the Silver numeric compatibility fallback", exception);
         }
+    }
+
+    /**
+     * RLCraft-only Gold set check used by Scimitars. Requiring the detected
+     * SetBonus data prevents an ordinary standalone Gold armor set from
+     * granting RLCraft's Magic Infused Weapon behavior.
+     */
+    public static boolean isMagicInfusedGoldSetActive(EntityLivingBase wearer) {
+        return Loader.isModLoaded("setbonus") && goldRegisteredWithSetBonus
+            && wearsFullGoldArmor(wearer);
     }
 
     private static int registerTier(Collection<Object> equipment, Object weaponSet,
@@ -100,7 +114,10 @@ public final class SilverSetBonusCompat {
                     + weapon.getRegistryName());
                 if (equip != null) equipment.add(equip);
             }
-            if (equip != null && involvedEquips.add(equip)) added++;
+            if (equip != null) {
+                involvedEquips.add(equip);
+                added++;
+            }
         }
         return added;
     }
@@ -167,6 +184,19 @@ public final class SilverSetBonusCompat {
                 "iceandfire:armor_silver_metal_leggings")
             && hasRegistryName(player.getItemStackFromSlot(EntityEquipmentSlot.FEET),
                 "iceandfire:armor_silver_metal_boots");
+    }
+
+    private static boolean wearsFullGoldArmor(EntityLivingBase wearer) {
+        return isGoldArmor(wearer.getItemStackFromSlot(EntityEquipmentSlot.HEAD))
+            && isGoldArmor(wearer.getItemStackFromSlot(EntityEquipmentSlot.CHEST))
+            && isGoldArmor(wearer.getItemStackFromSlot(EntityEquipmentSlot.LEGS))
+            && isGoldArmor(wearer.getItemStackFromSlot(EntityEquipmentSlot.FEET));
+    }
+
+    private static boolean isGoldArmor(ItemStack stack) {
+        return !stack.isEmpty() && stack.getItem() instanceof net.minecraft.item.ItemArmor
+            && ((net.minecraft.item.ItemArmor) stack.getItem()).getArmorMaterial()
+                == net.minecraft.item.ItemArmor.ArmorMaterial.GOLD;
     }
 
     private static boolean hasRegistryName(ItemStack stack, String expected) {

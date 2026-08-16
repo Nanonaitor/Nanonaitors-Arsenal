@@ -23,6 +23,12 @@ public final class ArsenalJeiPlugin implements IModPlugin {
         for (ItemLinkedClaw linkedClaw : ModContent.LINKED_CLAWS.values()) {
             blacklist.addIngredientToBlacklist(new ItemStack(linkedClaw));
         }
+        if (ArsenalCompatManager.hasItem("quark:chain")) {
+            // Prefer Quark's chain when it is available.
+            // Keep Arsenal's standalone fallback registered for old worlds,
+            // but hide the duplicate ingredient when Quark is present.
+            blacklist.addIngredientToBlacklist(new ItemStack(ModContent.IRON_CHAIN_ITEM));
+        }
         for (WeaponTier tier : WeaponTier.values()) {
             if (ArsenalCompatManager.isTierAvailable(tier)) continue;
             blacklist.addIngredientToBlacklist(new ItemStack(ModContent.MORNING_STARS.get(tier)));

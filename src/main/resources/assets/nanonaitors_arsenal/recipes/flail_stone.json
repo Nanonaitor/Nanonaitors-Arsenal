@@ -15,7 +15,8 @@
                           "ore":  "stickWood"
                       },
                 "C":  {
-                          "item":  "nanonaitors_arsenal:iron_chain"
+                          "type":  "forge:ore_dict",
+                          "ore":  "chainIron"
                       }
             },
     "result":  {

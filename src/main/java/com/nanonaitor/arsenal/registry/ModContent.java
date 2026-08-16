@@ -21,7 +21,9 @@ import net.minecraft.enchantment.Enchantment;
 import net.minecraft.block.Block;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemBlock;
+import net.minecraft.item.ItemStack;
 import net.minecraft.potion.Potion;
+import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.client.event.ModelRegistryEvent;
 import net.minecraftforge.client.model.ModelLoader;
 import net.minecraftforge.event.RegistryEvent;
@@ -29,6 +31,8 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
+import net.minecraftforge.fml.common.registry.ForgeRegistries;
+import net.minecraftforge.oredict.OreDictionary;
 
 @Mod.EventBusSubscriber(modid = NanonaitorsArsenal.MOD_ID)
 public final class ModContent {
@@ -65,6 +69,7 @@ public final class ModContent {
         IRON_CHAIN_ITEM = new ItemBlock(IRON_CHAIN);
         IRON_CHAIN_ITEM.setRegistryName(IRON_CHAIN.getRegistryName());
         event.getRegistry().register(IRON_CHAIN_ITEM);
+        registerChainOreEntries();
         SUN_WAR_BULWARK = new ItemSunWarBulwark();
         event.getRegistry().register(SUN_WAR_BULWARK);
         for (WeaponTier tier : WeaponTier.values()) {
@@ -85,6 +90,25 @@ public final class ModContent {
             event.getRegistry().registerAll(morningStar, scimitar, claws, flail,
                 batteringRam, ballAndChain, linkedClaw);
         }
+    }
+
+    /**
+     * Prefer Quark's chain while retaining Arsenal's standalone chain as the
+     * recipe fallback. Quark's chain is registered first so recipe viewers
+     * present it as the primary ingredient when Quark is installed.
+     */
+    private static void registerChainOreEntries() {
+        Item external = ForgeRegistries.ITEMS.getValue(
+            new ResourceLocation("quark", "chain"));
+        if (external != null) registerOreOnce("chainIron", new ItemStack(external));
+        registerOreOnce("chainIron", new ItemStack(IRON_CHAIN_ITEM));
+    }
+
+    private static void registerOreOnce(String name, ItemStack candidate) {
+        for (ItemStack existing : OreDictionary.getOres(name, false)) {
+            if (OreDictionary.itemMatches(existing, candidate, false)) return;
+        }
+        OreDictionary.registerOre(name, candidate);
     }
 
     @SubscribeEvent
