@@ -5,7 +5,9 @@ import com.nanonaitor.arsenal.compat.ArsenalCompatManager;
 import com.nanonaitor.arsenal.registry.ModContent;
 import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.init.Items;
+import net.minecraft.enchantment.EnchantmentData;
 import net.minecraft.item.ItemStack;
+import net.minecraft.item.ItemEnchantedBook;
 import net.minecraft.util.NonNullList;
 
 public final class ArsenalCreativeTab extends CreativeTabs {
@@ -41,6 +43,14 @@ public final class ArsenalCreativeTab extends CreativeTabs {
         }
         for (WeaponTier tier : WeaponTier.values()) {
             if (ArsenalCompatManager.isTierAvailable(tier)) add(items, ModContent.BALLS_AND_CHAINS.get(tier));
+        }
+        if (ModContent.LONG_CHAIN != null) {
+            items.add(ItemEnchantedBook.getEnchantedItemStack(new EnchantmentData(
+                ModContent.LONG_CHAIN, ModContent.LONG_CHAIN.getMaxLevel())));
+        }
+        if (ModContent.ROTATION_FORCE != null) {
+            items.add(ItemEnchantedBook.getEnchantedItemStack(new EnchantmentData(
+                ModContent.ROTATION_FORCE, ModContent.ROTATION_FORCE.getMaxLevel())));
         }
     }
 

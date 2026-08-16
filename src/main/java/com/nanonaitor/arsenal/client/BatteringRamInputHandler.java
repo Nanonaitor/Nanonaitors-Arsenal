@@ -1,6 +1,7 @@
 package com.nanonaitor.arsenal.client;
 
 import com.nanonaitor.arsenal.NanonaitorsArsenal;
+import com.nanonaitor.arsenal.compat.ArsenalCompatManager;
 import com.nanonaitor.arsenal.item.ItemBatteringRam;
 import com.nanonaitor.arsenal.network.BatteringRamChargeMessage;
 import com.nanonaitor.arsenal.network.ModNetwork;
@@ -28,7 +29,7 @@ public final class BatteringRamInputHandler {
             return cameraLocked
                 && minecraft.gameSettings.keyBindAttack.isKeyDown()
                 && player.getHeldItemMainhand().getItem() instanceof ItemBatteringRam
-                && player.getHeldItemOffhand().isEmpty();
+                && ArsenalCompatManager.canUseTwoHanded(player);
         }
         return player.isHandActive()
             && player.getActiveItemStack() == player.getHeldItemMainhand();
@@ -48,7 +49,7 @@ public final class BatteringRamInputHandler {
         boolean holdingRam = player.getHeldItemMainhand().getItem() instanceof ItemBatteringRam;
         boolean hasChargeEnergy = player.capabilities.isCreativeMode
             || player.getFoodStats().getFoodLevel() > 6;
-        boolean canCharge = holdingRam && player.getHeldItemOffhand().isEmpty()
+        boolean canCharge = holdingRam && ArsenalCompatManager.canUseTwoHanded(player)
             && hasChargeEnergy
             && minecraft.currentScreen == null
             && minecraft.gameSettings.keyBindAttack.isKeyDown();

@@ -1,6 +1,7 @@
 package com.nanonaitor.arsenal.combat;
 
 import com.nanonaitor.arsenal.NanonaitorsArsenal;
+import com.nanonaitor.arsenal.compat.ArsenalCompatManager;
 import com.nanonaitor.arsenal.item.ItemBatteringRam;
 import com.nanonaitor.arsenal.item.WeaponTier;
 import java.util.HashSet;
@@ -46,7 +47,7 @@ public final class BatteringRamCombat {
     public static void markCharging(EntityPlayerMP player) {
         ItemStack stack = player.getHeldItemMainhand();
         if (!(stack.getItem() instanceof ItemBatteringRam)
-            || !player.getHeldItemOffhand().isEmpty() || player.isSpectator()
+            || !ArsenalCompatManager.canUseTwoHanded(player) || player.isSpectator()
             || !hasChargeEnergy(player)) {
             return;
         }
@@ -74,7 +75,7 @@ public final class BatteringRamCombat {
         long now = player.world.getTotalWorldTime();
         boolean active = state != null && now - state.lastHeartbeatTick <= 3L
             && stack.getItem() instanceof ItemBatteringRam
-            && player.getHeldItemOffhand().isEmpty() && player.isEntityAlive()
+            && ArsenalCompatManager.canUseTwoHanded(player) && player.isEntityAlive()
             && !player.isSpectator() && hasChargeEnergy(player);
         if (!active) {
             if (state != null) {

@@ -1,5 +1,6 @@
 package com.nanonaitor.arsenal.item;
 
+import com.nanonaitor.arsenal.compat.ArsenalCompatManager;
 import java.util.List;
 import net.minecraft.client.util.ITooltipFlag;
 import net.minecraft.entity.Entity;
@@ -27,7 +28,7 @@ public final class ItemBatteringRam extends ItemArsenalWeapon {
 
     @Override
     public boolean onLeftClickEntity(ItemStack stack, EntityPlayer player, Entity entity) {
-        return !player.getHeldItemOffhand().isEmpty();
+        return !ArsenalCompatManager.canUseTwoHanded(player);
     }
 
     @Override
@@ -37,7 +38,7 @@ public final class ItemBatteringRam extends ItemArsenalWeapon {
         tooltip.add(TextFormatting.GOLD + "Hold left-click to charge forward.");
         tooltip.add(TextFormatting.GRAY + getBreakDescription());
         tooltip.add(TextFormatting.GRAY + "Costs 1 durability per block or enemy hit.");
-        tooltip.add(TextFormatting.DARK_GRAY + "Requires an empty offhand.");
+        tooltip.add(TextFormatting.DARK_GRAY + "Requires an empty offhand (XAT Titans exempt).");
     }
 
     private String getBreakDescription() {

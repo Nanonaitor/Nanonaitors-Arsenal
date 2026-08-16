@@ -42,7 +42,6 @@ import net.minecraftforge.fml.common.network.NetworkRegistry;
 public final class BallAndChainCombat {
     public static final int SWING_INTERVAL_TICKS = 25;
     public static final int RELEASE_ANIMATION_TICKS = 16;
-    public static final int RETURN_HIT_TICK = RELEASE_ANIMATION_TICKS / 2;
     public static final double WINDUP_REACH = 3.0D;
     public static final double THROW_REACH_PER_CHARGE = 4.0D;
     private static final double LINE_RADIUS = 0.55D;
@@ -143,17 +142,17 @@ public final class BallAndChainCombat {
         ItemStack current = player.getHeldItemMainhand();
         if (current != state.weapon || !(current.getItem() instanceof ItemBallAndChain)
             || ((ItemBallAndChain) current.getItem()).getTier() != state.tier
-            || !player.getHeldItemOffhand().isEmpty()) {
+            || !ArsenalCompatManager.canUseTwoHanded(player)) {
             THROWS.remove(player);
             if (player.isHandActive()) player.resetActiveHand();
             return false;
         }
         long age = player.world.getTotalWorldTime() - state.startTick;
-        if (!state.returnHitDone && age >= RETURN_HIT_TICK) {
+        if (!state.returnHitDone && age >= state.durationTicks / 2) {
             state.returnHitDone = true;
             performThrowPass(player, state, true);
         }
-        if (age >= RELEASE_ANIMATION_TICKS || player.isDead) {
+        if (age >= state.durationTicks || player.isDead) {
             THROWS.remove(player);
             if (player.isHandActive()) {
                 player.resetActiveHand();
@@ -169,7 +168,7 @@ public final class BallAndChainCombat {
 
     private static boolean isValidWielder(EntityPlayerMP player, ItemStack stack) {
         return stack.getItem() instanceof ItemBallAndChain
-            && player.getHeldItemOffhand().isEmpty() && player.isEntityAlive()
+            && ArsenalCompatManager.canUseTwoHanded(player) && player.isEntityAlive()
             && !player.isSpectator();
     }
 
@@ -222,11 +221,14 @@ public final class BallAndChainCombat {
         float multiplier = RELEASE_DAMAGE_MULTIPLIER[effectiveCharge];
         float baseDamage = (float) player.getEntityAttribute(
             SharedMonsterAttributes.ATTACK_DAMAGE).getAttributeValue() * multiplier;
+        int durationTicks = ChainWeaponStats.ballReleaseAnimationTicks(player, weapon);
         ThrowState state = new ThrowState(player.world.getTotalWorldTime(),
-            weapon, item.getTier(), effectiveCharge, start, end, direction, baseDamage);
+            durationTicks, weapon, item.getTier(), effectiveCharge, start, end,
+            direction, baseDamage);
         THROWS.put(player, state);
         player.setActiveHand(EnumHand.MAIN_HAND);
-        sendReleaseAnimation(player, effectiveCharge, (float) start.distanceTo(end));
+        sendReleaseAnimation(player, effectiveCharge, (float) start.distanceTo(end),
+            durationTicks);
         performThrowPass(player, state, false);
         if (end.distanceTo(intendedEnd) > 0.05D) {
             player.world.playSound(null, end.x, end.y, end.z,
@@ -350,10 +352,10 @@ public final class BallAndChainCombat {
     }
 
     private static void sendReleaseAnimation(EntityPlayerMP player, int charge,
-                                             float distance) {
+                                             float distance, int durationTicks) {
         BallAndChainReleaseAnimationMessage message =
             new BallAndChainReleaseAnimationMessage(player.getEntityId(), charge,
-                distance, player.rotationYaw, player.rotationPitch);
+                distance, player.rotationYaw, player.rotationPitch, durationTicks);
         ModNetwork.CHANNEL.sendToAllAround(message, new NetworkRegistry.TargetPoint(
             player.dimension, player.posX, player.posY, player.posZ, 64.0D));
     }
@@ -440,6 +442,7 @@ public final class BallAndChainCombat {
 
     private static final class ThrowState {
         private final long startTick;
+        private final int durationTicks;
         private final ItemStack weapon;
         private final WeaponTier tier;
         private final int charge;
@@ -449,10 +452,11 @@ public final class BallAndChainCombat {
         private final float baseDamage;
         private boolean returnHitDone;
 
-        private ThrowState(long startTick, ItemStack weapon, WeaponTier tier,
+        private ThrowState(long startTick, int durationTicks, ItemStack weapon, WeaponTier tier,
                            int charge, Vec3d start, Vec3d end, Vec3d direction,
                            float baseDamage) {
             this.startTick = startTick;
+            this.durationTicks = durationTicks;
             this.weapon = weapon;
             this.tier = tier;
             this.charge = charge;

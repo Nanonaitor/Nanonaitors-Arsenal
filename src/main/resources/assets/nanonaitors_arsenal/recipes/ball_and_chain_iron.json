@@ -3,13 +3,9 @@
     "pattern":  [
                     "  B",
                     " C ",
-                    "SC "
+                    "C  "
                 ],
     "key":  {
-                "S":  {
-                          "type":  "forge:ore_dict",
-                          "ore":  "stickWood"
-                      },
                 "C":  {
                           "item":  "nanonaitors_arsenal:iron_chain"
                       },

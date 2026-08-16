@@ -3,6 +3,7 @@ package com.nanonaitor.arsenal.client;
 import com.nanonaitor.arsenal.NanonaitorsArsenal;
 import com.nanonaitor.arsenal.combat.BallAndChainCombat;
 import com.nanonaitor.arsenal.combat.ChainWeaponStats;
+import com.nanonaitor.arsenal.compat.ArsenalCompatManager;
 import com.nanonaitor.arsenal.item.ItemBallAndChain;
 import java.util.Iterator;
 import java.util.Map;
@@ -27,7 +28,7 @@ public final class BallAndChainAnimationHandler {
     private BallAndChainAnimationHandler() {}
 
     public static void startReleaseAnimation(int entityId, int charge, float distance,
-                                             float yaw, float pitch) {
+                                             float yaw, float pitch, int durationTicks) {
         Minecraft minecraft = Minecraft.getMinecraft();
         if (minecraft.world == null) {
             return;
@@ -40,7 +41,8 @@ public final class BallAndChainAnimationHandler {
         WINDUPS.remove(player);
         player.getEntityData().setBoolean("ArsenalBallAndChainActive", true);
         RELEASES.put(player, new ReleaseState(minecraft.world.getTotalWorldTime(),
-            Math.max(1, Math.min(3, charge)), Math.max(0.0F, distance), yaw, pitch));
+            Math.max(1, Math.min(3, charge)), Math.max(0.0F, distance), yaw, pitch,
+            Math.max(3, durationTicks)));
         if (player.getHeldItemMainhand().getItem() instanceof ItemBallAndChain) {
             player.setActiveHand(EnumHand.MAIN_HAND);
         }
@@ -72,7 +74,7 @@ public final class BallAndChainAnimationHandler {
             }
             boolean localInput = player == minecraft.player
                 && minecraft.currentScreen == null
-                && player.getHeldItemOffhand().isEmpty()
+                && ArsenalCompatManager.canUseTwoHanded(player)
                 && !RELEASES.containsKey(player)
                 && minecraft.gameSettings.keyBindAttack.isKeyDown();
             boolean remoteActive = player != minecraft.player && player.isHandActive()
@@ -100,7 +102,7 @@ public final class BallAndChainAnimationHandler {
             RELEASES.entrySet().iterator();
         while (releaseIterator.hasNext()) {
             Map.Entry<EntityPlayer, ReleaseState> entry = releaseIterator.next();
-            if (now - entry.getValue().startTick > BallAndChainCombat.RELEASE_ANIMATION_TICKS
+            if (now - entry.getValue().startTick > entry.getValue().durationTicks
                 || entry.getKey().isDead) {
                 EntityPlayer player = entry.getKey();
                 releaseIterator.remove();
@@ -164,7 +166,7 @@ public final class BallAndChainAnimationHandler {
         RenderFrame frame = getFrame(player, partialTicks, state.yaw, state.pitch);
         double age = player.world.getTotalWorldTime() - state.startTick + partialTicks;
         double progress = Math.max(0.0D, Math.min(1.0D,
-            age / BallAndChainCombat.RELEASE_ANIMATION_TICKS));
+            age / state.durationTicks));
         double distance = state.distance * Math.sin(progress * Math.PI);
         double ballX = frame.anchorX + frame.forwardX * distance;
         double ballY = frame.anchorY + frame.forwardY * distance;
@@ -221,14 +223,16 @@ public final class BallAndChainAnimationHandler {
         private final float distance;
         private final float yaw;
         private final float pitch;
+        private final int durationTicks;
 
         private ReleaseState(long startTick, int charge, float distance,
-                             float yaw, float pitch) {
+                             float yaw, float pitch, int durationTicks) {
             this.startTick = startTick;
             this.charge = charge;
             this.distance = distance;
             this.yaw = yaw;
             this.pitch = pitch;
+            this.durationTicks = durationTicks;
         }
     }
 

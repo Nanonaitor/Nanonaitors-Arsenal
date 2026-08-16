@@ -52,7 +52,8 @@ public final class ItemBallAndChain extends ItemArsenalWeapon {
         tooltip.add(TextFormatting.DARK_RED + "Full-charge throw pierces "
             + getTier().getArmorPiercePercent() + "% armor.");
         tooltip.add(TextFormatting.DARK_GRAY + "Throw hits fracture armor.");
-        tooltip.add(TextFormatting.DARK_GRAY + "Requires an empty offhand.");
+        tooltip.add(TextFormatting.DARK_GRAY
+            + "Requires an empty offhand (XAT Titans exempt).");
     }
 
 }

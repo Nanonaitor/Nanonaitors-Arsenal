@@ -13,16 +13,18 @@ public final class BallAndChainReleaseAnimationMessage implements IMessage {
     private float distance;
     private float yaw;
     private float pitch;
+    private int durationTicks;
 
     public BallAndChainReleaseAnimationMessage() {}
 
     public BallAndChainReleaseAnimationMessage(int entityId, int charge, float distance,
-                                               float yaw, float pitch) {
+                                               float yaw, float pitch, int durationTicks) {
         this.entityId = entityId;
         this.charge = charge;
         this.distance = distance;
         this.yaw = yaw;
         this.pitch = pitch;
+        this.durationTicks = durationTicks;
     }
 
     @Override
@@ -32,6 +34,7 @@ public final class BallAndChainReleaseAnimationMessage implements IMessage {
         distance = buffer.readFloat();
         yaw = buffer.readFloat();
         pitch = buffer.readFloat();
+        durationTicks = buffer.readUnsignedByte();
     }
 
     @Override
@@ -41,6 +44,7 @@ public final class BallAndChainReleaseAnimationMessage implements IMessage {
         buffer.writeFloat(distance);
         buffer.writeFloat(yaw);
         buffer.writeFloat(pitch);
+        buffer.writeByte(durationTicks);
     }
 
     public static final class Handler
@@ -51,7 +55,7 @@ public final class BallAndChainReleaseAnimationMessage implements IMessage {
             Minecraft.getMinecraft().addScheduledTask(() ->
                 BallAndChainAnimationHandler.startReleaseAnimation(
                     message.entityId, message.charge, message.distance,
-                    message.yaw, message.pitch));
+                    message.yaw, message.pitch, message.durationTicks));
             return null;
         }
     }

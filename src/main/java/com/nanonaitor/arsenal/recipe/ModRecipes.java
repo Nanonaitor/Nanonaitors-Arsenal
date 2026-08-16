@@ -44,37 +44,45 @@ public final class ModRecipes {
             'M', m, 'V', v);
         recipe(e, "scimitar", t, ModContent.SCIMITARS, venom?" VM":" MM", "MM ", "S  ", 'M', m, 'V', v);
         recipe(e, "claws", t, ModContent.CLAWS, venom?"V V":"M M", "MWM", " S ", 'M', m, 'V', v, 'W', "plankWood");
-        recipe(e, "flail", t, ModContent.FLAILS, venom?"V V":" M ",
+        recipe(e, "flail", t, ModContent.FLAILS, venom?"V V":"MM ",
             " C ", " S ", 'M', m, 'V', v,
             'C', new ItemStack(ModContent.IRON_CHAIN));
-        Object block = blockIngredient(t, m);
-        if (block != null) {
-            recipe(e, "battering_ram", t, ModContent.BATTERING_RAMS, venom?" VM":"  M", "LLL", " S ", 'M', block, 'V', v, 'L', "logWood");
+        Object heavyMaterial = t == WeaponTier.BRONZE ? m : blockIngredient(t);
+        if (heavyMaterial != null) {
+            recipe(e, "battering_ram", t, ModContent.BATTERING_RAMS, venom?" VM":"  M", "LLL", " S ", 'M', heavyMaterial, 'V', v, 'L', "logWood");
         }
-        if (block != null) {
+        if (heavyMaterial != null) {
             recipe(e, "ball_and_chain", t, ModContent.BALLS_AND_CHAINS,
-                "  B", venom ? "VC " : " C ", "SC ", 'B', block, 'V', v,
+                "  B", " C ", "C  ", 'B', heavyMaterial,
                 'C', new ItemStack(ModContent.IRON_CHAIN));
         }
     }
-    private static Object blockIngredient(WeaponTier t, Object fallback) {
+    private static Object blockIngredient(WeaponTier t) {
         String id = t.getId();
         if (id.contains("dragonbone")) {
             ItemStack dragonboneBlock = ArsenalCompatManager.itemStack("iceandfire:dragon_bone_block");
             return dragonboneBlock.isEmpty() ? null : dragonboneBlock;
         }
-        if (id.contains("desert_myrmex") || id.contains("desert_venom")) {
+        if (id.contains("desert_venom")) {
+            ItemStack cocoon = ArsenalCompatManager.itemStack("iceandfire:desert_myrmex_cocoon");
+            return cocoon.isEmpty() ? null : cocoon;
+        }
+        if (id.contains("jungle_venom")) {
+            ItemStack cocoon = ArsenalCompatManager.itemStack("iceandfire:jungle_myrmex_cocoon");
+            return cocoon.isEmpty() ? null : cocoon;
+        }
+        if (id.contains("desert_myrmex")) {
             ItemStack resin = ArsenalCompatManager.itemStack(
                 "iceandfire:myrmex_desert_resin_block");
-            return resin.isEmpty() ? fallback : resin;
+            return resin.isEmpty() ? null : resin;
         }
-        if (id.contains("jungle_myrmex") || id.contains("jungle_venom")) {
+        if (id.contains("jungle_myrmex")) {
             ItemStack resin = ArsenalCompatManager.itemStack(
                 "iceandfire:myrmex_jungle_resin_block");
-            return resin.isEmpty() ? fallback : resin;
+            return resin.isEmpty() ? null : resin;
         }
         String ore = "block" + Character.toUpperCase(id.charAt(0)) + id.substring(1);
-        return ArsenalCompatManager.hasOre(ore) ? ore : fallback;
+        return ArsenalCompatManager.hasOre(ore) ? ore : null;
     }
     private static void registerLiving(RegistryEvent.Register<IRecipe> e) {
         WeaponTier t = WeaponTier.LIVING;
@@ -91,9 +99,14 @@ public final class ModRecipes {
         living(e, "morning_star", ModContent.MORNING_STARS.get(t), " F ", "FCF", " H ", f,c,h);
         living(e, "scimitar", ModContent.SCIMITARS.get(t), " FF", "FC ", "H  ", f,c,h);
         living(e, "claws", ModContent.CLAWS.get(t), "F F", "FCF", " H ", f,c,h);
-        living(e, "flail", ModContent.FLAILS.get(t), " C ", " T ", " H ", f,c,h, 'T',tendon);
+        living(e, "flail", ModContent.FLAILS.get(t), "FC ", " T ", " H ", f,c,h, 'T',tendon);
         living(e, "battering_ram", ModContent.BATTERING_RAMS.get(t), "  C", "VVV", " H ", f,c,h, 'V',shell);
-        living(e, "ball_and_chain", ModContent.BALLS_AND_CHAINS.get(t), " FC", " TF", "H  ", f,c,h, 'T',tendon);
+        ItemStack hivesteel = ArsenalCompatManager.itemStack("srparasites:parasiterubble", 6);
+        if (!hivesteel.isEmpty()) {
+            recipe(e, "ball_and_chain", t, ModContent.BALLS_AND_CHAINS,
+                "  B", " C ", "C  ", 'B', hivesteel,
+                'C', tendon);
+        }
     }
     private static void living(RegistryEvent.Register<IRecipe> e, String family,
                                ItemArsenalWeapon out, String a,String b,String c,
@@ -138,7 +151,9 @@ public final class ModRecipes {
             char key=(Character)keys[i]; if (a.indexOf(key)<0 && b.indexOf(key)<0 && c.indexOf(key)<0) continue;
             args.add(key);args.add(keys[i+1]);
         }
-        args.add('S');args.add(new ItemStack(Items.STICK));
+        if (a.indexOf('S') >= 0 || b.indexOf('S') >= 0 || c.indexOf('S') >= 0) {
+            args.add('S');args.add(new ItemStack(Items.STICK));
+        }
         ShapedOreRecipe r = new ShapedOreRecipe(new ResourceLocation(NanonaitorsArsenal.MOD_ID,"compat"),
             new ItemStack(map.get(t)), args.toArray());
         r.setRegistryName(NanonaitorsArsenal.MOD_ID, family + "_" + t.getId()); e.getRegistry().register(r);

@@ -2,7 +2,9 @@ package com.nanonaitor.arsenal.compat;
 
 import com.nanonaitor.arsenal.item.WeaponTier;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.Locale;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityList;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.init.Items;
@@ -15,6 +17,10 @@ import net.minecraftforge.fml.common.registry.ForgeRegistries;
 import net.minecraftforge.oredict.OreDictionary;
 
 public final class ArsenalCompatManager {
+    private static boolean xatRaceApiResolved;
+    private static Method xatRaceRegistryName;
+    private static Method xatRaceName;
+
     private ArsenalCompatManager() {}
 
     public static boolean isTierAvailable(WeaponTier tier) {
@@ -40,6 +46,10 @@ public final class ArsenalCompatManager {
     public static ItemStack itemStack(String id) {
         Item item = ForgeRegistries.ITEMS.getValue(new ResourceLocation(id));
         return item == null || item == Items.AIR ? ItemStack.EMPTY : new ItemStack(item);
+    }
+    public static ItemStack itemStack(String id, int metadata) {
+        Item item = ForgeRegistries.ITEMS.getValue(new ResourceLocation(id));
+        return item == null || item == Items.AIR ? ItemStack.EMPTY : new ItemStack(item, 1, metadata);
     }
     public static boolean hasOre(String name) {
         return OreDictionary.doesOreNameExist(name) && !OreDictionary.getOres(name, false).isEmpty();
@@ -76,6 +86,49 @@ public final class ArsenalCompatManager {
         } catch (ReflectiveOperationException | LinkageError ignored) {
             ResourceLocation id = EntityList.getKey(entity);
             return id != null && "srparasites".equals(id.getResourceDomain());
+        }
+    }
+
+    /**
+     * XAT Titans are large enough to handle Arsenal's two-handed equipment in
+     * one hand. Reflection keeps XAT optional and avoids a startup dependency.
+     */
+    public static boolean canUseTwoHanded(EntityLivingBase entity) {
+        return entity != null && (entity.getHeldItemOffhand().isEmpty() || isXatTitan(entity));
+    }
+
+    public static boolean isXatTitan(Entity entity) {
+        if (entity == null || !Loader.isModLoaded("xat")) return false;
+        resolveXatRaceApi();
+        String registryName = invokeRaceMethod(xatRaceRegistryName, entity);
+        if (registryName != null) {
+            String normalized = registryName.toLowerCase(Locale.ROOT);
+            if ("titan".equals(normalized) || normalized.endsWith(":titan")) return true;
+        }
+        String raceName = invokeRaceMethod(xatRaceName, entity);
+        return raceName != null && "titan".equalsIgnoreCase(raceName.trim());
+    }
+
+    private static synchronized void resolveXatRaceApi() {
+        if (xatRaceApiResolved) return;
+        xatRaceApiResolved = true;
+        try {
+            Class<?> helper = Class.forName("xzeroair.trinkets.api.EntityApiHelper");
+            xatRaceRegistryName = helper.getMethod("getEntityRaceRegistryName", Entity.class);
+            xatRaceName = helper.getMethod("getEntityRace", Entity.class);
+        } catch (ReflectiveOperationException | LinkageError ignored) {
+            xatRaceRegistryName = null;
+            xatRaceName = null;
+        }
+    }
+
+    private static String invokeRaceMethod(Method method, Entity entity) {
+        if (method == null) return null;
+        try {
+            Object result = method.invoke(null, entity);
+            return result instanceof String ? (String) result : null;
+        } catch (ReflectiveOperationException | LinkageError ignored) {
+            return null;
         }
     }
 

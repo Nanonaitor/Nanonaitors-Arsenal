@@ -22,19 +22,22 @@ public final class ItemScimitar extends ItemArsenalWeapon {
     @Override
     public boolean hitEntity(ItemStack stack, EntityLivingBase target, EntityLivingBase attacker) {
         if (!attacker.world.isRemote) {
-            ScimitarCombat.applyWeakness(target, this);
+            ScimitarCombat.applyWeakness(target, attacker, this);
         }
         return super.hitEntity(stack, target, attacker);
     }
 
     @Override
     public void addInformation(ItemStack stack, World world, List<String> tooltip, ITooltipFlag flag) {
-        if (getTier() == WeaponTier.LIVING) {
+        if (getTier() == WeaponTier.GOLD) {
             tooltip.add(TextFormatting.DARK_PURPLE
-                + "Hits inflict Weakness II for 10 secs.");
+                + "Hits inflict Weakness I, or Weakness II with a full Gold armor set.");
         } else if (getTier() == WeaponTier.SENTIENT) {
             tooltip.add(TextFormatting.DARK_PURPLE
                 + "Hits inflict Weakness III for 10 secs.");
+        } else if (ScimitarCombat.getBaseWeaknessAmplifier(getTier()) == 1) {
+            tooltip.add(TextFormatting.DARK_PURPLE
+                + "Hits inflict Weakness II for 10 secs.");
         } else {
             tooltip.add(TextFormatting.DARK_PURPLE
                 + "Hits inflict Weakness I for 10 secs.");

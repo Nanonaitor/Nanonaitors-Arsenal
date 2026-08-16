@@ -1,6 +1,7 @@
 package com.nanonaitor.arsenal.combat;
 
 import com.nanonaitor.arsenal.NanonaitorsArsenal;
+import com.nanonaitor.arsenal.compat.ArsenalCompatManager;
 import com.nanonaitor.arsenal.item.ItemArsenalShield;
 import com.nanonaitor.arsenal.item.ItemSunWarBulwark;
 import java.util.List;
@@ -46,7 +47,7 @@ public final class ShieldCombat {
 
     public static boolean isBulwarkReady(EntityPlayer player) {
         return player.getHeldItemMainhand().getItem() instanceof ItemSunWarBulwark
-            && player.getHeldItemOffhand().isEmpty();
+            && ArsenalCompatManager.canUseTwoHanded(player);
     }
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
@@ -67,7 +68,7 @@ public final class ShieldCombat {
     public static void preventDisabledBulwarkAttack(AttackEntityEvent event) {
         EntityPlayer player = event.getEntityPlayer();
         if (!(player.getHeldItemMainhand().getItem() instanceof ItemSunWarBulwark)) return;
-        if (!player.getHeldItemOffhand().isEmpty()) {
+        if (!ArsenalCompatManager.canUseTwoHanded(player)) {
             event.setCanceled(true);
             return;
         }

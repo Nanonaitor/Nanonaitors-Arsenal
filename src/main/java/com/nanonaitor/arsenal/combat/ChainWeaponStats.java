@@ -1,6 +1,7 @@
 package com.nanonaitor.arsenal.combat;
 
 import com.nanonaitor.arsenal.registry.ModContent;
+import com.nanonaitor.arsenal.item.ItemArsenalWeapon;
 import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.entity.SharedMonsterAttributes;
 import net.minecraft.entity.ai.attributes.IAttributeInstance;
@@ -33,6 +34,15 @@ public final class ChainWeaponStats {
 
     public static int swingIntervalTicks(EntityPlayer player, ItemStack stack) {
         return Math.max(1, (int) Math.round(20.0D / attackSpeed(player, stack)));
+    }
+
+    public static int ballReleaseAnimationTicks(EntityPlayer player, ItemStack stack) {
+        double baseSpeed = stack.getItem() instanceof ItemArsenalWeapon
+            ? ((ItemArsenalWeapon) stack.getItem()).getDisplayedAttackSpeed()
+            : attackSpeed(player, stack);
+        double speedRatio = baseSpeed / attackSpeed(player, stack);
+        return Math.max(3, (int) Math.round(
+            BallAndChainCombat.RELEASE_ANIMATION_TICKS * speedRatio));
     }
 
     public static double attackSpeed(EntityPlayer player, ItemStack stack) {

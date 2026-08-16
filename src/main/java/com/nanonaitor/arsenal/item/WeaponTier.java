@@ -73,6 +73,10 @@ public enum WeaponTier {
     public boolean isVenom() { return this == DESERT_VENOM || this == JUNGLE_VENOM; }
     public boolean isDragonBlooded() { return this == FLAMED_DRAGONBONE
         || this == ICED_DRAGONBONE || this == ELECTRIC_DRAGONBONE; }
+    public boolean isOrganic() { return family == Family.ICE_AND_FIRE
+        || family == Family.FIRE_DRAGONBONE || family == Family.ICE_DRAGONBONE
+        || family == Family.LIGHTNING_DRAGONBONE || family == Family.DESERT_MYRMEX
+        || family == Family.JUNGLE_MYRMEX || family == Family.SRP; }
     public int getArmorPiercePercent() {
         if (this == WOOD) return 25;
         if (this == STONE || this == GOLD || this == BRONZE) return 50;

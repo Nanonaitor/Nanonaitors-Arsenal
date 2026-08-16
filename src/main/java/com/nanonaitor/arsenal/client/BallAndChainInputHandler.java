@@ -1,6 +1,7 @@
 package com.nanonaitor.arsenal.client;
 
 import com.nanonaitor.arsenal.NanonaitorsArsenal;
+import com.nanonaitor.arsenal.compat.ArsenalCompatManager;
 import com.nanonaitor.arsenal.item.ItemBallAndChain;
 import com.nanonaitor.arsenal.network.BallAndChainSwingMessage;
 import com.nanonaitor.arsenal.network.ModNetwork;
@@ -41,7 +42,7 @@ public final class BallAndChainInputHandler {
         boolean holdingWeapon = player.getHeldItemMainhand().getItem()
             instanceof ItemBallAndChain;
         boolean retrieving = BallAndChainAnimationHandler.isReleaseAnimationActive(player);
-        boolean canSwing = holdingWeapon && player.getHeldItemOffhand().isEmpty()
+        boolean canSwing = holdingWeapon && ArsenalCompatManager.canUseTwoHanded(player)
             && !retrieving
             && minecraft.currentScreen == null
             && minecraft.gameSettings.keyBindAttack.isKeyDown();

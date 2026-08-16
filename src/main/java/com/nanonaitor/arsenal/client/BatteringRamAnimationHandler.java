@@ -1,6 +1,7 @@
 package com.nanonaitor.arsenal.client;
 
 import com.nanonaitor.arsenal.NanonaitorsArsenal;
+import com.nanonaitor.arsenal.compat.ArsenalCompatManager;
 import com.nanonaitor.arsenal.item.ItemBatteringRam;
 import com.nanonaitor.arsenal.item.ItemSunWarBulwark;
 import java.util.Map;
@@ -25,7 +26,7 @@ public final class BatteringRamAnimationHandler {
         EntityPlayer player = event.getEntityPlayer();
         boolean ram = player.getHeldItemMainhand().getItem() instanceof ItemBatteringRam;
         boolean bulwark = player.getHeldItemMainhand().getItem() instanceof ItemSunWarBulwark;
-        if ((!ram && !bulwark) || !player.getHeldItemOffhand().isEmpty()) return;
+        if ((!ram && !bulwark) || !ArsenalCompatManager.canUseTwoHanded(player)) return;
         ModelPlayer model = event.getRenderer().getMainModel();
         PREVIOUS.put(player, new PreviousPose(model));
         boolean active = ram ? BatteringRamInputHandler.isCharging(player)
