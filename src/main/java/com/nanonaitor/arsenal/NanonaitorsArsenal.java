@@ -23,7 +23,7 @@ import net.minecraftforge.fml.common.event.FMLServerStartedEvent;
 public final class NanonaitorsArsenal {
     public static final String MOD_ID = "nanonaitors_arsenal";
     public static final String NAME = "Nanonaitor's Arsenal";
-    public static final String VERSION = "1.1.4";
+    public static final String VERSION = "1.1.5";
     public static final Logger LOGGER = LogManager.getLogger(NAME);
     public static final CreativeTabs CREATIVE_TAB = new ArsenalCreativeTab();
 
@@ -40,6 +40,6 @@ public final class NanonaitorsArsenal {
 
     @Mod.EventHandler
     public void serverStarted(FMLServerStartedEvent event) {
-        SilverSetBonusCompat.registerQuicksilverHandsEquipment();
+        SilverSetBonusCompat.registerRlcraftEquipmentSets();
     }
 }

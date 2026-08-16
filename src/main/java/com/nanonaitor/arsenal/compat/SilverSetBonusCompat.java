@@ -21,7 +21,7 @@ import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent;
 import net.minecraftforge.fml.common.registry.ForgeRegistries;
 
-/** Registers Arsenal Silver weapons with RLCraft's Quicksilver Hands set. */
+/** Registers Arsenal material tiers with RLCraft's configured SetBonus sets. */
 @Mod.EventBusSubscriber(modid = NanonaitorsArsenal.MOD_ID)
 public final class SilverSetBonusCompat {
     private static final UUID ATTACK_SPEED_UUID = UUID.fromString(
@@ -36,53 +36,73 @@ public final class SilverSetBonusCompat {
      * (Quicksilver Hands) mainhand pool. The SetBonus classes are accessed by
      * reflection so the mod remains optional outside RLCraft installations.
      */
-    public static void registerQuicksilverHandsEquipment() {
+    public static void registerRlcraftEquipmentSets() {
         if (!Loader.isModLoaded("setbonus")) return;
         try {
             Class<?> dataClass = Class.forName("com.fantasticsource.setbonus.SetBonusData");
             Object serverData = dataClass.getField("SERVER_DATA").get(null);
             Collection<Object> equipment = collectionField(dataClass, serverData, "equipment");
             Collection<Object> sets = collectionField(dataClass, serverData, "sets");
+            Collection<Object> bonuses = collectionField(dataClass, serverData, "bonuses");
             Class<?> equipClass = Class.forName(
                 "com.fantasticsource.setbonus.common.bonusrequirements.setrequirement.Equip");
             Method createEquip = equipClass.getMethod("getInstance", String.class);
 
+            // These IDs and pairings come from RLCraft's custom SetBonus data.
+            // Their presence is the pack detection; other packs are untouched.
             Object quicksilverHands = findById(sets, "SSetW");
-            if (quicksilverHands == null) {
-                NanonaitorsArsenal.LOGGER.warn(
-                    "SetBonus is loaded, but SSetW (Quicksilver Hands) was not found");
-                return;
+            if (quicksilverHands != null && findById(bonuses, "SBonusW") != null) {
+                int silverAdded = registerTier(equipment, quicksilverHands,
+                    createEquip, WeaponTier.SILVER, "ArsenalSilver_");
+                registeredWithSetBonus = true;
+                NanonaitorsArsenal.LOGGER.info(
+                    "Registered {} Arsenal Silver weapons with Quicksilver Hands",
+                    silverAdded);
             }
-            Field slotDataField = quicksilverHands.getClass().getField("slotData");
-            Collection<?> slots = (Collection<?>) slotDataField.get(quicksilverHands);
-            if (slots.isEmpty()) return;
-            Object mainhandSlot = slots.iterator().next();
-            Field involvedField = mainhandSlot.getClass().getField("involvedEquips");
-            @SuppressWarnings("unchecked")
-            Collection<Object> involvedEquips =
-                (Collection<Object>) involvedField.get(mainhandSlot);
 
-            int added = 0;
-            for (ItemArsenalWeapon weapon : arsenalSilverWeapons()) {
-                String path = weapon.getRegistryName().getResourcePath();
-                String equipId = "ArsenalSilver_" + path;
-                Object equip = findById(equipment, equipId);
-                if (equip == null) {
-                    equip = createEquip.invoke(null, equipId + ", "
-                        + weapon.getRegistryName());
-                    if (equip != null) equipment.add(equip);
-                }
-                if (equip != null && involvedEquips.add(equip)) added++;
+            Object magicInfusedWeapons = findById(sets, "GSetW");
+            if (magicInfusedWeapons != null
+                && findById(bonuses, "GBonusWeapon") != null) {
+                int goldAdded = registerTier(equipment, magicInfusedWeapons,
+                    createEquip, WeaponTier.GOLD, "ArsenalGold_");
+                NanonaitorsArsenal.LOGGER.info(
+                    "Registered {} Arsenal Gold weapons with Magic Infused Weapon",
+                    goldAdded);
             }
-            registeredWithSetBonus = true;
-            NanonaitorsArsenal.LOGGER.info(
-                "Registered {} Arsenal Silver weapons with Quicksilver Hands", added);
         } catch (ReflectiveOperationException | LinkageError | RuntimeException exception) {
             registeredWithSetBonus = false;
             NanonaitorsArsenal.LOGGER.warn(
                 "Could not register Arsenal Silver weapons with Quicksilver Hands; "
                     + "using the numeric compatibility fallback", exception);
         }
+    }
+
+    private static int registerTier(Collection<Object> equipment, Object weaponSet,
+                                    Method createEquip, WeaponTier tier,
+                                    String equipPrefix)
+        throws ReflectiveOperationException {
+        Field slotDataField = weaponSet.getClass().getField("slotData");
+        Collection<?> slots = (Collection<?>) slotDataField.get(weaponSet);
+        if (slots.isEmpty()) return 0;
+        Object mainhandSlot = slots.iterator().next();
+        Field involvedField = mainhandSlot.getClass().getField("involvedEquips");
+        @SuppressWarnings("unchecked")
+        Collection<Object> involvedEquips =
+            (Collection<Object>) involvedField.get(mainhandSlot);
+
+        int added = 0;
+        for (ItemArsenalWeapon weapon : arsenalWeapons(tier)) {
+            String path = weapon.getRegistryName().getResourcePath();
+            String equipId = equipPrefix + path;
+            Object equip = findById(equipment, equipId);
+            if (equip == null) {
+                equip = createEquip.invoke(null, equipId + ", "
+                    + weapon.getRegistryName());
+                if (equip != null) equipment.add(equip);
+            }
+            if (equip != null && involvedEquips.add(equip)) added++;
+        }
+        return added;
     }
 
     @SubscribeEvent
@@ -121,11 +141,11 @@ public final class SilverSetBonusCompat {
         return null;
     }
 
-    private static Collection<ItemArsenalWeapon> arsenalSilverWeapons() {
+    private static Collection<ItemArsenalWeapon> arsenalWeapons(WeaponTier tier) {
         Collection<ItemArsenalWeapon> result = new LinkedHashSet<>();
         for (net.minecraft.item.Item item : ForgeRegistries.ITEMS.getValuesCollection()) {
             if (item instanceof ItemArsenalWeapon
-                && ((ItemArsenalWeapon) item).getTier() == WeaponTier.SILVER) {
+                && ((ItemArsenalWeapon) item).getTier() == tier) {
                 result.add((ItemArsenalWeapon) item);
             }
         }
