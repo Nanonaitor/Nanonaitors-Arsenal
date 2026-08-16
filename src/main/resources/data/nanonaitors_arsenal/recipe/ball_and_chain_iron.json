@@ -3,13 +3,12 @@
   "category": "equipment",
   "key": {
     "B": "minecraft:iron_block",
-    "C": "minecraft:iron_chain",
-    "S": "minecraft:stick"
+    "C": "minecraft:iron_chain"
   },
   "pattern": [
     "  B",
     " C ",
-    "SC "
+    "C  "
   ],
   "result": {
     "id": "nanonaitors_arsenal:ball_and_chain_iron"

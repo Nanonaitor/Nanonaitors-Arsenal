@@ -7,9 +7,9 @@
     "S": "minecraft:stick"
   },
   "pattern": [
-    " M ",
+    "MM ",
     " C ",
-    " S "
+    "  S"
   ],
   "result": {
     "id": "nanonaitors_arsenal:flail_iron"

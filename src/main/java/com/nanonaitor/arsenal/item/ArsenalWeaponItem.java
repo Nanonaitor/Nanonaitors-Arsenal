@@ -53,7 +53,9 @@ public class ArsenalWeaponItem extends Item {
                 lines.accept(Component.literal("Fully charged hits fracture 20% armor per stack.").withStyle(ChatFormatting.GOLD));
                 lines.accept(Component.literal("Caps at " + tier.fractureCap + " stacks; 30 secs on mobs, 10 secs on players.").withStyle(ChatFormatting.GRAY));
             }
-            case SCIMITAR -> lines.accept(Component.literal("Hits inflict Weakness II for 10 secs.").withStyle(ChatFormatting.DARK_PURPLE));
+            case SCIMITAR -> lines.accept(Component.literal("Hits inflict Weakness "
+                + (tier.ramBreakLevel >= 3 ? "II" : "I") + " for 10 secs.")
+                .withStyle(ChatFormatting.DARK_PURPLE));
             case CLAWS -> {
                 lines.accept(Component.literal("Left click: main claw. Right click: linked claw.").withStyle(ChatFormatting.GOLD));
                 lines.accept(Component.literal("Alternate fully charged hits to pierce invulnerability frames.").withStyle(ChatFormatting.GRAY));

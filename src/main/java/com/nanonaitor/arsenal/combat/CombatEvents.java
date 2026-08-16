@@ -119,7 +119,9 @@ public final class CombatEvents {
             if (attacker.level() instanceof ServerLevel level) VisualEffects.armorFracture(level, target, next);
         }
         if (arsenal.kind() == WeaponKind.SCIMITAR) {
-            target.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 200, 1, false, true, true));
+            int amplifier = arsenal.tier().ramBreakLevel >= 3 ? 1 : 0;
+            target.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 200,
+                amplifier, false, true, true));
         }
         if (arsenal.kind() == WeaponKind.CLAWS) updateClawChain(event, attacker, target, pending);
     }
@@ -137,15 +139,18 @@ public final class CombatEvents {
         }
         if (!(player.getMainHandItem().getItem() instanceof ArsenalWeaponItem weapon)) return false;
         if (weapon.kind() == WeaponKind.FLAIL || weapon.kind() == WeaponKind.BALL_AND_CHAIN) return true;
+        boolean piercedFrames = weapon.kind() == WeaponKind.CLAWS
+            && event.getTarget() instanceof LivingEntity target
+            && !player.level().isClientSide() && player.getAttackStrengthScale(0.5F) >= 0.9F
+            && player.getPersistentData().getIntOr(CLAW_LAST_HAND, -1) == 1
+            && player.getPersistentData().getIntOr(CLAW_LAST_TARGET, -1) == target.getId();
+        if (piercedFrames && event.getTarget() instanceof LivingEntity target) target.invulnerableTime = 0;
         if (!player.level().isClientSide() && (weapon.kind() == WeaponKind.MORNING_STAR
             || weapon.kind() == WeaponKind.CLAWS)) {
             PENDING_MELEE.put(player.getUUID(), new PendingMeleeAttack(event.getTarget().getId(),
-                player.level().getGameTime(), weapon.kind(), player.getAttackStrengthScale(0.5F) >= 0.9F, 0));
+                player.level().getGameTime(), weapon.kind(), player.getAttackStrengthScale(0.5F) >= 0.9F, 0,
+                piercedFrames));
         }
-        if (weapon.kind() == WeaponKind.CLAWS && event.getTarget() instanceof LivingEntity target
-            && !player.level().isClientSide() && player.getAttackStrengthScale(0.5F) >= 0.9F
-            && player.getPersistentData().getIntOr(CLAW_LAST_HAND, -1) == 1
-            && player.getPersistentData().getIntOr(CLAW_LAST_TARGET, -1) == target.getId()) target.invulnerableTime = 0;
         return false;
     }
 
@@ -201,7 +206,7 @@ public final class CombatEvents {
         damage = EnchantmentHelper.modifyDamage(level, linkedStack, target, source, damage);
         float enchantedKnockback = EnchantmentHelper.modifyKnockback(level, linkedStack, target, source, 0.0F);
         PENDING_MELEE.put(player.getUUID(), new PendingMeleeAttack(target.getId(), now,
-            WeaponKind.CLAWS, strength >= 0.9F, 1));
+            WeaponKind.CLAWS, strength >= 0.9F, 1, pierceFrames));
         if (target.hurtServer(level, source, damage)) {
             if (enchantedKnockback > 0.0F) {
                 double yaw = Math.toRadians(player.getYRot());
@@ -211,8 +216,6 @@ public final class CombatEvents {
             player.getMainHandItem().hurtAndBreak(1, player, EquipmentSlot.MAINHAND);
             syncClawPair(player);
             level.playSound(null, player.blockPosition(), SoundEvents.PLAYER_ATTACK_STRONG, SoundSource.PLAYERS, 1.0F, 1.15F);
-            if (pierceFrames) level.playSound(null, target.blockPosition(), SoundEvents.PLAYER_ATTACK_CRIT,
-                SoundSource.PLAYERS, 0.9F, 1.35F);
         }
     }
 
@@ -657,12 +660,20 @@ public final class CombatEvents {
                     SoundSource.PLAYERS, 1.0F, 1.15F);
             }
         }
+        if (pending != null && pending.piercedFrames && attacker.level() instanceof ServerLevel level) {
+            level.sendParticles(ParticleTypes.CRIT, target.getX(), target.getY(0.6D), target.getZ(),
+                8, target.getBbWidth() * 0.25D, target.getBbHeight() * 0.20D,
+                target.getBbWidth() * 0.25D, 0.12D);
+            level.playSound(null, target.blockPosition(), SoundEvents.PLAYER_ATTACK_CRIT,
+                SoundSource.PLAYERS, 0.9F, 1.35F);
+        }
         attacker.getPersistentData().putInt(CLAW_CRIT_CHAIN, chain);
         attacker.getPersistentData().putInt(CLAW_LAST_HAND, pending == null ? 0 : pending.hand);
         attacker.getPersistentData().putInt(CLAW_LAST_TARGET, target.getId());
     }
 
-    private record PendingMeleeAttack(int targetId, long gameTime, WeaponKind kind, boolean fullyCharged, int hand) {}
+    private record PendingMeleeAttack(int targetId, long gameTime, WeaponKind kind, boolean fullyCharged,
+        int hand, boolean piercedFrames) {}
     private record PendingBulwarkAttack(int targetId, long gameTime, float chargeMultiplier) {}
     private CombatEvents() {}
 }
