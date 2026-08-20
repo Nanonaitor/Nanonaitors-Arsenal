@@ -12,6 +12,7 @@ import net.minecraft.entity.ai.attributes.AttributeModifier;
 import net.minecraft.entity.ai.attributes.IAttributeInstance;
 import net.minecraft.util.EnumHand;
 import net.minecraftforge.event.entity.player.AttackEntityEvent;
+import net.minecraftforge.client.event.MouseEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.eventhandler.EventPriority;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
@@ -26,6 +27,25 @@ public final class BallAndChainInputHandler {
     private static boolean wasSwinging;
 
     private BallAndChainInputHandler() {}
+
+    /**
+     * Send the release on the physical mouse-up event as well as the client-tick
+     * transition.  Some 1.12 combat/input mods consume the attack key transition,
+     * which used to leave the server charging forever and never start the throw.
+     */
+    @SubscribeEvent(priority = EventPriority.HIGHEST, receiveCanceled = true)
+    public static void onMouseRelease(MouseEvent event) {
+        if (event.getButton() != 0 || event.isButtonstate() || !wasSwinging) {
+            return;
+        }
+        EntityPlayer player = Minecraft.getMinecraft().player;
+        if (player != null && player.getHeldItemMainhand().getItem()
+            instanceof ItemBallAndChain) {
+            ModNetwork.CHANNEL.sendToServer(new BallAndChainSwingMessage(false));
+            wasSwinging = false;
+            lastHeartbeatTick = Long.MIN_VALUE;
+        }
+    }
 
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
@@ -53,6 +73,7 @@ public final class BallAndChainInputHandler {
             if (wasSwinging) {
                 ModNetwork.CHANNEL.sendToServer(new BallAndChainSwingMessage(false));
                 wasSwinging = false;
+                lastHeartbeatTick = Long.MIN_VALUE;
             }
             if (holdingWeapon && !retrieving && player.isHandActive()
                 && player.getActiveHand() == EnumHand.MAIN_HAND) {

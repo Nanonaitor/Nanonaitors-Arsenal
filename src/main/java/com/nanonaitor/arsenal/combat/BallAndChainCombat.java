@@ -2,6 +2,7 @@ package com.nanonaitor.arsenal.combat;
 
 import com.nanonaitor.arsenal.NanonaitorsArsenal;
 import com.nanonaitor.arsenal.compat.ArsenalCompatManager;
+import com.nanonaitor.arsenal.compat.ReskillableCompat;
 import com.nanonaitor.arsenal.item.ItemBallAndChain;
 import com.nanonaitor.arsenal.item.WeaponTier;
 import com.nanonaitor.arsenal.network.BallAndChainReleaseAnimationMessage;
@@ -169,12 +170,14 @@ public final class BallAndChainCombat {
     private static boolean isValidWielder(EntityPlayerMP player, ItemStack stack) {
         return stack.getItem() instanceof ItemBallAndChain
             && ArsenalCompatManager.canUseTwoHanded(player) && player.isEntityAlive()
+            && ReskillableCompat.canUse(player, stack)
             && !player.isSpectator();
     }
 
     private static void performWindupSweep(EntityPlayerMP player, ItemStack weapon,
                                            int charge) {
-        Vec3d start = new Vec3d(player.posX, player.posY + 0.9D, player.posZ);
+        Vec3d start = new Vec3d(player.posX, player.posY + player.height * 0.5D,
+            player.posZ);
         Vec3d forward = horizontalLook(player);
         double reach = ChainWeaponStats.ballWindupReach(player, weapon);
         Vec3d end = stopAtSolidBlock(player, start,
@@ -212,7 +215,8 @@ public final class BallAndChainCombat {
         ItemBallAndChain item = (ItemBallAndChain) weapon.getItem();
         int charge = Math.min(maxCharges(item.getTier()), swing.charge);
         int effectiveCharge = item.getTier() == WeaponTier.GOLD && charge >= 2 ? 3 : charge;
-        Vec3d start = new Vec3d(player.posX, player.posY + 1.25D, player.posZ);
+        Vec3d start = new Vec3d(player.posX, player.posY + player.getEyeHeight() * 0.75D,
+            player.posZ);
         Vec3d direction = player.getLookVec().normalize();
         double throwReach = ChainWeaponStats.ballThrowReach(player, weapon,
             effectiveCharge);
@@ -330,10 +334,29 @@ public final class BallAndChainCombat {
 
     private static Vec3d stopAtSolidBlock(EntityPlayerMP player, Vec3d start,
                                           Vec3d intendedEnd) {
-        RayTraceResult hit = player.world.rayTraceBlocks(
-            start, intendedEnd, false, true, false);
-        return hit != null && hit.typeOfHit == RayTraceResult.Type.BLOCK
-            ? hit.hitVec : intendedEnd;
+        Vec3d travel = intendedEnd.subtract(start);
+        double length = travel.lengthVector();
+        if (length <= 0.0001D) return intendedEnd;
+        Vec3d direction = travel.scale(1.0D / length);
+        Vec3d side = new Vec3d(-direction.z, 0.0D, direction.x);
+        if (side.lengthSquared() > 0.0001D) side = side.normalize().scale(0.35D);
+        Vec3d[] offsets = {
+            new Vec3d(0.0D, 0.0D, 0.0D),
+            new Vec3d(0.0D, -0.45D, 0.0D),
+            new Vec3d(0.0D, 0.35D, 0.0D),
+            side,
+            side.scale(-1.0D)
+        };
+        double closest = length;
+        for (Vec3d offset : offsets) {
+            Vec3d rayStart = start.add(offset);
+            RayTraceResult hit = player.world.rayTraceBlocks(rayStart,
+                intendedEnd.add(offset), false, true, false);
+            if (hit != null && hit.typeOfHit == RayTraceResult.Type.BLOCK) {
+                closest = Math.min(closest, rayStart.distanceTo(hit.hitVec));
+            }
+        }
+        return closest < length ? start.add(direction.scale(closest)) : intendedEnd;
     }
 
     private static AxisAlignedBB sweptBox(Vec3d start, Vec3d end,

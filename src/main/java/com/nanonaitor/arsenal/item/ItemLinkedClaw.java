@@ -18,4 +18,14 @@ public final class ItemLinkedClaw extends ItemArsenalWeapon {
     public boolean isEnchantable(ItemStack stack) {
         return false;
     }
+
+    @Override
+    public boolean shouldCauseReequipAnimation(ItemStack oldStack,
+                                                ItemStack newStack,
+                                                boolean slotChanged) {
+        // Durability, enchantment, and Quality data are mirrored from the main
+        // claw. Those synchronization-only NBT changes must not restart the
+        // first-person equip animation every tick.
+        return slotChanged || oldStack.getItem() != newStack.getItem();
+    }
 }

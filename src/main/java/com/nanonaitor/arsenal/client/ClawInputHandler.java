@@ -72,6 +72,8 @@ public final class ClawInputHandler {
         player.swingingHand = EnumHand.OFF_HAND;
         player.swingProgressInt = -1;
         player.isSwingInProgress = true;
+        player.playSound(net.minecraft.init.SoundEvents.ENTITY_PLAYER_ATTACK_SWEEP,
+            0.8F, 1.15F);
     }
 
     @SubscribeEvent(priority = EventPriority.LOWEST, receiveCanceled = true)
@@ -122,9 +124,14 @@ public final class ClawInputHandler {
             }
         }
 
-        rlCombatPlayer = player;
-        rlCombatHiddenLinkedClaw = player.getHeldItemOffhand();
-        player.inventory.offHandInventory.set(0, ItemStack.EMPTY);
+        // Only hide the generated partner while the compatibility mod is
+        // actually trying to perform a held offhand attack. Hiding/restoring it
+        // every idle client tick caused the linked claw to jitter in first person.
+        if (isOffhandAttackHeld(minecraft)) {
+            rlCombatPlayer = player;
+            rlCombatHiddenLinkedClaw = player.getHeldItemOffhand();
+            player.inventory.offHandInventory.set(0, ItemStack.EMPTY);
+        }
     }
 
     @SubscribeEvent(priority = EventPriority.LOWEST)

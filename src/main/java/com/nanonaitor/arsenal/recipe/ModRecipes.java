@@ -6,8 +6,6 @@ import com.nanonaitor.arsenal.item.ItemArsenalWeapon;
 import com.nanonaitor.arsenal.item.WeaponTier;
 import com.nanonaitor.arsenal.registry.ModContent;
 import java.util.Map;
-import net.minecraft.init.Blocks;
-import net.minecraft.init.Items;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.crafting.IRecipe;
 import net.minecraft.util.ResourceLocation;
@@ -44,7 +42,7 @@ public final class ModRecipes {
             'M', m, 'V', v);
         recipe(e, "scimitar", t, ModContent.SCIMITARS, venom?" VM":" MM", "MM ", "S  ", 'M', m, 'V', v);
         recipe(e, "claws", t, ModContent.CLAWS, venom?"V V":"M M", "MWM", " S ", 'M', m, 'V', v, 'W', "plankWood");
-        recipe(e, "flail", t, ModContent.FLAILS, venom?"V V":"MM ",
+        recipe(e, "flail", t, ModContent.FLAILS, venom?"VM ":"MM ",
             " C ", " S ", 'M', m, 'V', v,
             'C', "chainIron");
         Object heavyMaterial = t == WeaponTier.BRONZE ? m : blockIngredient(t);
@@ -101,11 +99,13 @@ public final class ModRecipes {
         living(e, "claws", ModContent.CLAWS.get(t), "F F", "FCF", " H ", f,c,h);
         living(e, "flail", ModContent.FLAILS.get(t), "FC ", " T ", " H ", f,c,h, 'T',tendon);
         living(e, "battering_ram", ModContent.BATTERING_RAMS.get(t), "  C", "VVV", " H ", f,c,h, 'V',shell);
-        ItemStack hivesteel = ArsenalCompatManager.itemStack("srparasites:parasiterubble", 6);
-        if (!hivesteel.isEmpty()) {
+        ItemStack bolsterHusk = ArsenalCompatManager.itemStack(
+            "srparasites:ada_bolster_drop");
+        if (!bolsterHusk.isEmpty() && c instanceof ItemStack
+            && !((ItemStack) c).isEmpty()) {
             recipe(e, "ball_and_chain", t, ModContent.BALLS_AND_CHAINS,
-                "  B", " C ", "C  ", 'B', hivesteel,
-                'C', tendon);
+                " HC", " TH", "T  ", 'C', c, 'H', bolsterHusk,
+                'T', tendon);
         }
     }
     private static void living(RegistryEvent.Register<IRecipe> e, String family,
@@ -152,11 +152,19 @@ public final class ModRecipes {
             args.add(key);args.add(keys[i+1]);
         }
         if (a.indexOf('S') >= 0 || b.indexOf('S') >= 0 || c.indexOf('S') >= 0) {
-            args.add('S');args.add(new ItemStack(Items.STICK));
+            args.add('S');args.add(handleIngredient(t));
         }
         ShapedOreRecipe r = new ShapedOreRecipe(new ResourceLocation(NanonaitorsArsenal.MOD_ID,"compat"),
             new ItemStack(map.get(t)), args.toArray());
         r.setRegistryName(NanonaitorsArsenal.MOD_ID, family + "_" + t.getId()); e.getRegistry().register(r);
+    }
+    private static Object handleIngredient(WeaponTier tier) {
+        if (tier.isMyrmex()) {
+            ItemStack witherbone = ArsenalCompatManager.itemStack(
+                "spartanfire:witherbone_handle");
+            if (!witherbone.isEmpty()) return witherbone;
+        }
+        return "handleWeapon";
     }
     private static Object ingredient(String descriptor) {
         if (descriptor.startsWith("ore:")) return descriptor.substring(4);

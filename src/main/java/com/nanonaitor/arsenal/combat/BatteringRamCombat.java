@@ -2,6 +2,7 @@ package com.nanonaitor.arsenal.combat;
 
 import com.nanonaitor.arsenal.NanonaitorsArsenal;
 import com.nanonaitor.arsenal.compat.ArsenalCompatManager;
+import com.nanonaitor.arsenal.compat.ReskillableCompat;
 import com.nanonaitor.arsenal.item.ItemBatteringRam;
 import com.nanonaitor.arsenal.item.WeaponTier;
 import java.util.HashSet;
@@ -48,6 +49,7 @@ public final class BatteringRamCombat {
         ItemStack stack = player.getHeldItemMainhand();
         if (!(stack.getItem() instanceof ItemBatteringRam)
             || !ArsenalCompatManager.canUseTwoHanded(player) || player.isSpectator()
+            || !ReskillableCompat.canUse(player, stack)
             || !hasChargeEnergy(player)) {
             return;
         }
@@ -76,6 +78,7 @@ public final class BatteringRamCombat {
         boolean active = state != null && now - state.lastHeartbeatTick <= 3L
             && stack.getItem() instanceof ItemBatteringRam
             && ArsenalCompatManager.canUseTwoHanded(player) && player.isEntityAlive()
+            && ReskillableCompat.canUse(player, stack)
             && !player.isSpectator() && hasChargeEnergy(player);
         if (!active) {
             if (state != null) {

@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.1.6 - 2026-08-17
+
+- Added optional Reskillable attack requirements matching equivalent Spartan Weaponry tiers while leaving Wood, Stone, Living, and Sentient unrestricted.
+- Prevented custom Flail, Ball & Chain, Battering Ram, and linked-Claw attacks from bypassing active Reskillable requirements.
+- Added Spartan Weaponry handles to applicable recipes and Spartan Fire Witherbone Handles to Myrmex recipes when those mods are installed.
+- Corrected Myrmex Stinger Flails to use one matching Stinger and one matching Chitin.
+- Reworked the Living Ball & Chain recipe around a Living Core, Bolster Husks, and Dried Tendons.
+- Improved Ball & Chain close-block collision checks and clarified Gold's two-rotation full charge.
+- Confirmed that attack speed, Haste, and Rotation Force scale Ball & Chain wind-up, outward travel, return travel, hit timing, and animation speed.
+
 ## 1.1.0 - 2026-08-13
 
 - Added a guaranteed critical to every fourth fully charged, correctly alternating Claw hit.

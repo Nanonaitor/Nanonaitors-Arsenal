@@ -2,6 +2,7 @@ package com.nanonaitor.arsenal.combat;
 
 import com.nanonaitor.arsenal.NanonaitorsArsenal;
 import com.nanonaitor.arsenal.item.ItemFlail;
+import com.nanonaitor.arsenal.compat.ReskillableCompat;
 import com.nanonaitor.arsenal.network.FlailAnimationMessage;
 import com.nanonaitor.arsenal.network.ModNetwork;
 import java.util.List;
@@ -57,7 +58,8 @@ public final class FlailCombat {
     public static void tryServerSwing(EntityPlayerMP player) {
         ItemStack weapon = player.getHeldItemMainhand();
         if (!(weapon.getItem() instanceof ItemFlail) || !player.isEntityAlive()
-            || player.isSpectator() || isBlockingConventionalShield(player)) {
+            || player.isSpectator() || !ReskillableCompat.canUse(player, weapon)
+            || isBlockingConventionalShield(player)) {
             return;
         }
         long now = player.world.getTotalWorldTime();

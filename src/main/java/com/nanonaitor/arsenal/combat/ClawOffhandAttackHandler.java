@@ -1,6 +1,7 @@
 package com.nanonaitor.arsenal.combat;
 
 import com.nanonaitor.arsenal.item.ItemClaws;
+import com.nanonaitor.arsenal.compat.ReskillableCompat;
 import java.util.Map;
 import java.util.WeakHashMap;
 import net.minecraft.enchantment.EnchantmentHelper;
@@ -9,7 +10,6 @@ import net.minecraft.entity.SharedMonsterAttributes;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.init.SoundEvents;
 import net.minecraft.item.ItemStack;
-import net.minecraft.util.SoundEvent;
 import net.minecraft.util.DamageSource;
 import net.minecraft.util.EnumHand;
 import net.minecraft.util.math.MathHelper;
@@ -25,6 +25,7 @@ public final class ClawOffhandAttackHandler {
         if (!(main.getItem() instanceof ItemClaws)) {
             return;
         }
+        if (!ReskillableCompat.canUse(player, main)) return;
         ItemClaws claws = (ItemClaws) main.getItem();
         if (!ClawPairHandler.hasMatchingLinkedClaw(player, claws)) {
             return;
@@ -102,10 +103,12 @@ public final class ClawOffhandAttackHandler {
         // Match the normal main-hand weapon feedback instead of using the
         // sweeping sound for every linked-claw hit. Playing from the server with
         // no excluded player makes the wielder and nearby players hear it once.
-        SoundEvent sound = fullyCharged ? SoundEvents.ENTITY_PLAYER_ATTACK_STRONG
-            : SoundEvents.ENTITY_PLAYER_ATTACK_WEAK;
-        player.world.playSound(null, player.posX, player.posY, player.posZ,
-            sound, player.getSoundCategory(), 1.0F, fullyCharged ? 1.0F : 1.1F);
+        // The wielder receives the immediate blade-swing sound client-side.
+        // Broadcast the matching sound to everyone else without doubling it for
+        // that player.
+        player.world.playSound(player, player.posX, player.posY, player.posZ,
+            SoundEvents.ENTITY_PLAYER_ATTACK_SWEEP, player.getSoundCategory(),
+            0.8F, 1.15F);
         if (canPierce || critical) {
             player.world.playSound(null, target.posX, target.posY, target.posZ,
                 SoundEvents.ENTITY_PLAYER_ATTACK_CRIT, target.getSoundCategory(),

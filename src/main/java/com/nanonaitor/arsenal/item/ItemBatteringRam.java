@@ -38,7 +38,7 @@ public final class ItemBatteringRam extends ItemArsenalWeapon {
         tooltip.add(TextFormatting.GOLD + "Hold left-click to charge forward.");
         tooltip.add(TextFormatting.GRAY + getBreakDescription());
         tooltip.add(TextFormatting.GRAY + "Costs 1 durability per block or enemy hit.");
-        tooltip.add(TextFormatting.DARK_GRAY + "Requires an empty offhand (XAT Titans exempt).");
+        tooltip.add(TextFormatting.DARK_GRAY + "Requires an empty offhand.");
     }
 
     private String getBreakDescription() {

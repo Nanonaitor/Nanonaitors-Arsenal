@@ -12,7 +12,7 @@
                       },
                 "S":  {
                           "type":  "forge:ore_dict",
-                          "ore":  "stickWood"
+                          "ore":  "handleWeapon"
                       },
                 "C":  {
                           "type":  "forge:ore_dict",

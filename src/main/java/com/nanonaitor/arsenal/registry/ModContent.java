@@ -22,6 +22,7 @@ import net.minecraft.block.Block;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemBlock;
 import net.minecraft.item.ItemStack;
+import net.minecraft.init.Items;
 import net.minecraft.potion.Potion;
 import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.client.event.ModelRegistryEvent;
@@ -70,6 +71,7 @@ public final class ModContent {
         IRON_CHAIN_ITEM.setRegistryName(IRON_CHAIN.getRegistryName());
         event.getRegistry().register(IRON_CHAIN_ITEM);
         registerChainOreEntries();
+        registerHandleOreEntry();
         SUN_WAR_BULWARK = new ItemSunWarBulwark();
         event.getRegistry().register(SUN_WAR_BULWARK);
         for (WeaponTier tier : WeaponTier.values()) {
@@ -102,6 +104,20 @@ public final class ModContent {
             new ResourceLocation("quark", "chain"));
         if (external != null) registerOreOnce("chainIron", new ItemStack(external));
         registerOreOnce("chainIron", new ItemStack(IRON_CHAIN_ITEM));
+    }
+
+    /**
+     * Spartan Weaponry's Handle replaces the vanilla stick in Arsenal recipes
+     * when available. Keeping the choice behind an ore key preserves fully
+     * standalone recipes without making Spartan Weaponry a hard dependency.
+     */
+    private static void registerHandleOreEntry() {
+        Item spartanHandle = ForgeRegistries.ITEMS.getValue(
+            new ResourceLocation("spartanweaponry", "material"));
+        ItemStack handle = spartanHandle == null || spartanHandle == Items.AIR
+            ? new ItemStack(Items.STICK)
+            : new ItemStack(spartanHandle, 1, 0);
+        registerOreOnce("handleWeapon", handle);
     }
 
     private static void registerOreOnce(String name, ItemStack candidate) {

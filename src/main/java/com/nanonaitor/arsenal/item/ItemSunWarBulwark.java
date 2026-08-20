@@ -47,6 +47,6 @@ public final class ItemSunWarBulwark extends ItemArsenalShield {
         line(tooltip, TextFormatting.DARK_GRAY, "Guard and attack for a 4-block area bash");
         line(tooltip, TextFormatting.GRAY, "40% slower while carried; 75% slower while guarding");
         line(tooltip, TextFormatting.DARK_RED,
-            "Requires an empty offhand for every ability (XAT Titans exempt)");
+            "Requires an empty offhand for every ability");
     }
 }
