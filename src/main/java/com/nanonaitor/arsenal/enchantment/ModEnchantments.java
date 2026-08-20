@@ -1,6 +1,7 @@
 package com.nanonaitor.arsenal.enchantment;
 
 import com.nanonaitor.arsenal.ArsenalMod;
+import com.nanonaitor.arsenal.config.ArsenalConfig;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
@@ -15,7 +16,11 @@ public final class ModEnchantments {
 
     public static int level(LivingEntity owner, ItemStack stack, ResourceKey<Enchantment> enchantment) {
         var registry = owner.level().registryAccess().lookupOrThrow(Registries.ENCHANTMENT);
-        return EnchantmentHelper.getItemEnchantmentLevel(registry.getOrThrow(enchantment), stack);
+        int level = EnchantmentHelper.getItemEnchantmentLevel(registry.getOrThrow(enchantment), stack);
+        int cap = enchantment.equals(LONG_CHAIN) ? ArsenalConfig.LONG_CHAIN_MAX_LEVEL.get()
+            : enchantment.equals(ROTATION_FORCE) ? ArsenalConfig.ROTATION_FORCE_MAX_LEVEL.get()
+            : level;
+        return Math.min(level, cap);
     }
 
     private static ResourceKey<Enchantment> key(String path) {

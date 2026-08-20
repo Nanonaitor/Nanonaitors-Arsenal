@@ -3,6 +3,7 @@ package com.nanonaitor.arsenal.client;
 import com.nanonaitor.arsenal.item.ArsenalShieldItem;
 import com.nanonaitor.arsenal.item.ArsenalWeaponItem;
 import com.nanonaitor.arsenal.item.WeaponKind;
+import com.nanonaitor.arsenal.combat.ChainWeaponStats;
 import com.nanonaitor.arsenal.network.ModNetwork;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
@@ -22,8 +23,8 @@ public final class ClientControls {
     private static boolean ramLocked;
     private static float lockedYaw, lockedPitch;
     private static long flailVisualUntil = Long.MIN_VALUE, ballStarted = Long.MIN_VALUE,
-        ballReleaseStarted = Long.MIN_VALUE;
-    private static int releasedCharge;
+        ballReleaseStarted = Long.MIN_VALUE, nextBallSwing = Long.MIN_VALUE;
+    private static int releasedCharge, ballCharge, ballReleaseDuration = 16;
     private static double releasedDistance;
     private static ItemStack activeFlailSprite = ItemStack.EMPTY, activeBallSprite = ItemStack.EMPTY;
 
@@ -69,22 +70,35 @@ public final class ClientControls {
         }
         flailWasDown = flailDown;
         if (weapon.kind() == WeaponKind.BALL_AND_CHAIN) {
-            boolean releasing = within(now, ballReleaseStarted, 16L);
+            boolean releasing = within(now, ballReleaseStarted, ballReleaseDuration);
             boolean down = attack && emptyOffhand && !releasing;
-            if (down && !ballWasDown) ballStarted = now;
+            if (down && !ballWasDown) {
+                ballStarted = now;
+                nextBallSwing = now;
+                ballCharge = 0;
+            }
+            if (down && now >= nextBallSwing) {
+                int maxCharges = weapon.tier() == com.nanonaitor.arsenal.item.WeaponTier.GOLD ? 2 : 3;
+                ballCharge = Math.min(maxCharges, ballCharge + 1);
+                nextBallSwing = now + ChainWeaponStats.swingIntervalTicks(player, player.getMainHandItem());
+            }
             if (down && (lastHeartbeat == Long.MIN_VALUE || now < lastHeartbeat || now - lastHeartbeat >= 2)) {
                 lastHeartbeat = now; ModNetwork.send(ModNetwork.BALL_CHAIN, true);
             }
             if (!down && ballWasDown) {
                 int maxCharges = weapon.tier() == com.nanonaitor.arsenal.item.WeaponTier.GOLD ? 2 : 3;
-                releasedCharge = Math.max(1, Math.min(maxCharges, (int)((now - ballStarted) / 25) + 1));
+                releasedCharge = Math.max(1, Math.min(maxCharges, ballCharge));
                 int effectiveCharge = weapon.tier() == com.nanonaitor.arsenal.item.WeaponTier.GOLD
                     && releasedCharge >= 2 ? 3 : releasedCharge;
-                releasedDistance = effectiveCharge * 4.0D;
+                releasedDistance = ChainWeaponStats.ballThrowReach(player,
+                    player.getMainHandItem(), effectiveCharge);
+                ballReleaseDuration = ChainWeaponStats.ballReleaseAnimationTicks(player,
+                    player.getMainHandItem());
                 ballReleaseStarted = now;
                 ModNetwork.send(ModNetwork.BALL_CHAIN, false);
             }
-            updateBallSprite(player.getMainHandItem(), down || within(now, ballReleaseStarted, 16L));
+            updateBallSprite(player.getMainHandItem(), down
+                || within(now, ballReleaseStarted, ballReleaseDuration));
             ballWasDown = down;
         } else if (ballWasDown) {
             ModNetwork.send(ModNetwork.BALL_CHAIN, false); ballWasDown = false; clearBallSprite();
@@ -149,10 +163,11 @@ public final class ClientControls {
     static boolean flailVisual(long now) { return now <= flailVisualUntil; }
     static boolean flailActive() { return flailWasDown; }
     static boolean ramActive() { return ramLocked; }
-    static boolean ballWindup(long now) { return ballWasDown && !within(now, ballReleaseStarted, 16L); }
+    static boolean ballWindup(long now) { return ballWasDown && !within(now, ballReleaseStarted, ballReleaseDuration); }
     static long ballStarted() { return ballStarted; }
-    static boolean ballRelease(long now) { return within(now, ballReleaseStarted, 16L); }
+    static boolean ballRelease(long now) { return within(now, ballReleaseStarted, ballReleaseDuration); }
     static long ballReleaseStarted() { return ballReleaseStarted; }
+    static int ballReleaseDuration() { return ballReleaseDuration; }
     static int releasedCharge() { return releasedCharge; }
     static double releasedDistance() { return releasedDistance; }
     private static boolean within(long now, long started, long duration) {

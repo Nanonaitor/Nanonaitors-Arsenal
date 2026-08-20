@@ -349,6 +349,7 @@ public final class CombatEvents {
             cancelBall(player); return;
         }
         state.releasing = true; state.releaseTick = player.level().getGameTime();
+        state.releaseDuration = ChainWeaponStats.ballReleaseAnimationTicks(player, player.getMainHandItem());
         state.direction = player.getLookAngle().normalize();
         WeaponTier tier = state.tier;
         int maxCharges = maxBallCharges(tier);
@@ -368,7 +369,7 @@ public final class CombatEvents {
             cancelBall(player); return;
         }
         long age = player.level().getGameTime() - state.releaseTick;
-        if (age == 8 && !state.returned) {
+        if (age >= state.releaseDuration / 2 && !state.returned) {
             state.returned = true;
             WeaponTier tier = state.tier;
             lineAttack(player, state.distance, ballDamageMultiplier(tier, state.charge),
@@ -376,10 +377,10 @@ public final class CombatEvents {
             ((ServerLevel)player.level()).playSound(null, player.blockPosition(), SoundEvents.TRIDENT_RETURN,
                 SoundSource.PLAYERS, 0.9F, 0.78F);
         }
-        if (age >= 16) { BALLS.remove(player.getUUID()); player.stopUsingItem(); }
+        if (age >= state.releaseDuration) { BALLS.remove(player.getUUID()); player.stopUsingItem(); }
         else {
             WeaponTier tier = state.tier;
-            double progress = age / 16.0D;
+            double progress = age / (double)state.releaseDuration;
             VisualEffects.ballRelease((ServerLevel)player.level(), player, tier, state, progress);
         }
     }
@@ -400,7 +401,9 @@ public final class CombatEvents {
         ItemStack weapon = player.getMainHandItem();
         DamageSource source = weapon.getDamageSource(player, () -> player.damageSources().playerAttack(player));
         for (LivingEntity target : level.getEntitiesOfClass(LivingEntity.class, box, target -> validTarget(player, target))) {
-            if (!target.getBoundingBox().inflate(0.7D, 1.0D, 0.7D).clip(start, end).isPresent()) continue;
+            AABB targetBox = target.getBoundingBox().inflate(0.85D, 1.0D, 0.85D);
+            if (!targetBox.contains(start) && !targetBox.contains(end)
+                && targetBox.clip(start, end).isEmpty()) continue;
             target.invulnerableTime = 0;
             float damage = applyEnchantments
                 ? EnchantmentHelper.modifyDamage(level, weapon, target, source, base)
@@ -613,9 +616,50 @@ public final class CombatEvents {
         return target != player && target.isAlive() && !player.isAlliedTo(target);
     }
     private static double stopDistance(ServerLevel level, Vec3 start, Vec3 direction, double distance) {
-        HitResult hit = level.clip(new net.minecraft.world.level.ClipContext(start, start.add(direction.scale(distance)),
-            net.minecraft.world.level.ClipContext.Block.COLLIDER, net.minecraft.world.level.ClipContext.Fluid.NONE, playerForClip(start, level)));
-        return hit instanceof BlockHitResult block ? start.distanceTo(block.getLocation()) : distance;
+        Vec3 normalized = direction.normalize();
+        Vec3 side = new Vec3(-normalized.z, 0.0D, normalized.x);
+        if (side.lengthSqr() > 0.0001D) side = side.normalize().scale(0.35D);
+        Vec3[] offsets = {
+            Vec3.ZERO,
+            new Vec3(0.0D, -0.45D, 0.0D),
+            new Vec3(0.0D, 0.35D, 0.0D),
+            side,
+            side.scale(-1.0D)
+        };
+        double closest = distance;
+        for (Vec3 offset : offsets) {
+            Vec3 rayStart = start.add(offset);
+            closest = Math.min(closest,
+                blockingDistance(level, rayStart, normalized, distance));
+        }
+        return closest;
+    }
+
+    /**
+     * Finds the first meaningful obstruction while allowing chain attacks to
+     * pass through grass, flowers and other replaceable/non-colliding plants.
+     * Re-clipping from just beyond an ignored shape preserves collision with a
+     * real wall immediately behind it.
+     */
+    private static double blockingDistance(ServerLevel level, Vec3 start,
+            Vec3 direction, double distance) {
+        Vec3 end = start.add(direction.scale(distance));
+        Vec3 cursor = start;
+        for (int ignored = 0; ignored < 16 && cursor.distanceToSqr(end) > 0.0001D;
+             ignored++) {
+            HitResult hit = level.clip(new net.minecraft.world.level.ClipContext(cursor,
+                end, net.minecraft.world.level.ClipContext.Block.COLLIDER,
+                net.minecraft.world.level.ClipContext.Fluid.NONE,
+                playerForClip(start, level)));
+            if (!(hit instanceof BlockHitResult block)) return distance;
+            BlockState state = level.getBlockState(block.getBlockPos());
+            if (!state.canBeReplaced()
+                && !state.getCollisionShape(level, block.getBlockPos()).isEmpty()) {
+                return start.distanceTo(block.getLocation());
+            }
+            cursor = block.getLocation().add(direction.scale(0.05D));
+        }
+        return distance;
     }
     private static net.minecraft.world.phys.shapes.CollisionContext playerForClip(Vec3 start, ServerLevel level) {
         return net.minecraft.world.phys.shapes.CollisionContext.empty();
@@ -627,7 +671,8 @@ public final class CombatEvents {
 
     public static final class BallState {
         final WeaponTier tier;
-        long started, lastHeartbeat, nextSwing, releaseTick; int charge; boolean releasing, returned; double distance; Vec3 direction;
+        long started, lastHeartbeat, nextSwing, releaseTick; int charge, releaseDuration = 16;
+        boolean releasing, returned; double distance; Vec3 direction;
         BallState(long tick, WeaponTier tier) { started = lastHeartbeat = nextSwing = tick; this.tier = tier; }
         public int charge() { return charge; }
         public double distance() { return distance; }

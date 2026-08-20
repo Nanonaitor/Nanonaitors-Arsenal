@@ -60,7 +60,8 @@ public final class ClientWeaponRenderer {
                     -sinBody * localBallZ, 1.2D + Math.sin(angle) * 0.72D * scale,
                     cosBody * localBallZ, 0.48F, true);
             } else if (local && ClientControls.ballRelease(now)) {
-                double progress = (now - ClientControls.ballReleaseStarted() + partial) / 16.0D;
+                double progress = (now - ClientControls.ballReleaseStarted() + partial)
+                    / ClientControls.ballReleaseDuration();
                 double travel = Math.sin(progress * Math.PI);
                 double distance = ClientControls.releasedDistance() * travel;
                 Vec3 look = player.getViewVector((float)partial);
@@ -111,7 +112,8 @@ public final class ClientWeaponRenderer {
                 0.04D, -0.12D + Math.sin(angle) * 0.44D * scale,
                 -1.18D + Math.cos(angle) * 0.50D * scale, 0.22F, 0.12F, true);
         } else if (weapon.kind() == WeaponKind.BALL_AND_CHAIN && ClientControls.ballRelease(now)) {
-            double progress = (now - ClientControls.ballReleaseStarted() + partial) / 16.0D;
+            double progress = (now - ClientControls.ballReleaseStarted() + partial)
+                / ClientControls.ballReleaseDuration();
             double distance = ClientControls.releasedDistance() * Math.sin(progress * Math.PI);
             renderChain(event.getPoseStack(), event.getNodeCollector(), event.getPackedLight(), 0,
                 weapon.tier(), 0.50D, -0.40D, -0.72D,

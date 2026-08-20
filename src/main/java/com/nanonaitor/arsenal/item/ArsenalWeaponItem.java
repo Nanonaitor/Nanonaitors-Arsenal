@@ -56,21 +56,15 @@ public class ArsenalWeaponItem extends Item {
             case SCIMITAR -> lines.accept(Component.literal("Hits inflict Weakness "
                 + (tier.ramBreakLevel >= 3 ? "II" : "I") + " for 10 secs.")
                 .withStyle(ChatFormatting.DARK_PURPLE));
-            case CLAWS -> {
-                lines.accept(Component.literal("Left click: main claw. Right click: linked claw.").withStyle(ChatFormatting.GOLD));
-                lines.accept(Component.literal("Alternate fully charged hits to pierce invulnerability frames.").withStyle(ChatFormatting.GRAY));
-                lines.accept(Component.literal("Every 4th fully charged alternating hit is a guaranteed critical.").withStyle(ChatFormatting.YELLOW));
-                lines.accept(Component.literal("Other offhand items disable pairing; both claws share durability and enchantments.").withStyle(ChatFormatting.DARK_GRAY));
-            }
+            case CLAWS -> lines.accept(Component.literal(
+                "Alternate hits to pierce invulnerability!")
+                .withStyle(ChatFormatting.GOLD));
             case LINKED_CLAWS -> lines.accept(Component.literal("Linked to the matching main-hand claws.").withStyle(ChatFormatting.DARK_GRAY));
             case FLAIL -> {
                 lines.accept(Component.literal("Hold attack to strike every target within 4 blocks.").withStyle(ChatFormatting.GOLD));
-                lines.accept(Component.literal("Reach modifiers and Long Chain extend the attack area.").withStyle(ChatFormatting.GRAY));
-                lines.accept(Component.literal("Cannot mine blocks while spinning.").withStyle(ChatFormatting.DARK_GRAY));
-                lines.accept(Component.literal("Cannot spin while blocking with a conventional shield.").withStyle(ChatFormatting.DARK_GRAY));
             }
             case BATTERING_RAM -> {
-                lines.accept(Component.literal("Two-Handed: hold attack to charge and smash a forward 3x3 path.").withStyle(ChatFormatting.RED));
+                lines.accept(Component.literal("2-Handed").withStyle(ChatFormatting.RED));
                 lines.accept(Component.literal("Entity damage uses the attack charge present when the ram begins.").withStyle(ChatFormatting.YELLOW));
                 lines.accept(Component.literal(switch (tier) {
                     case WOOD -> "Breaks soft terrain, foliage, wool and glass.";
@@ -79,20 +73,15 @@ public class ArsenalWeaponItem extends Item {
                     case DIAMOND -> "Also breaks common stone, deepslate and masonry.";
                     case NETHERITE -> "Breaks every Battering Ram material tier.";
                 }).withStyle(ChatFormatting.GRAY));
-                lines.accept(Component.literal("Costs 1 durability per block or enemy hit; requires an empty offhand.").withStyle(ChatFormatting.DARK_RED));
             }
             case BALL_AND_CHAIN -> {
                 int charges = tier == WeaponTier.GOLD ? 2 : 3;
-                int reach = 4;
-                lines.accept(Component.literal("Two-Handed: hold attack for up to " + charges + " charges, then release.").withStyle(ChatFormatting.RED));
-                if (tier == WeaponTier.GOLD) {
-                    lines.accept(Component.literal("Second charge jumps to full 12-block reach.").withStyle(ChatFormatting.GOLD));
-                } else {
-                    lines.accept(Component.literal("Throws " + reach + " blocks per charge and hits both outward and returning.").withStyle(ChatFormatting.GOLD));
-                }
-                lines.accept(Component.literal("Reach modifiers and Long Chain add to every attack.").withStyle(ChatFormatting.GRAY));
-                lines.accept(Component.literal("Full charge pierces " + tier.armorPiercePercent() + "% armor.").withStyle(ChatFormatting.DARK_RED));
-                lines.accept(Component.literal("Full charge fractures armor once per throw; requires an empty offhand.").withStyle(ChatFormatting.DARK_GRAY));
+                lines.accept(Component.literal(
+                    "2-Handed: Hold Attack to Swing, let go to release.")
+                    .withStyle(ChatFormatting.RED));
+                lines.accept(Component.literal("Full charge with " + charges
+                    + " swings to pierce all armor.")
+                    .withStyle(ChatFormatting.GOLD));
             }
         }
     }

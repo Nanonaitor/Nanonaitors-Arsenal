@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.1.6 - 2026-08-17
+
+- Ball & Chain outward and returning travel now accelerates or slows with the wielder's live attack speed, Haste, and Rotation Force.
+- Kept client and server charge, return-hit timing, sounds, and 3D travel animation synchronized at altered speeds.
+- Added explicit Haste scaling to Flail and Ball & Chain rotation speed.
+- Expanded Ball & Chain solid-block collision sampling across its width and height so close or slightly offset blocks are not skipped.
+- Added common-config effective-level caps for Long Chain and Rotation Force; datapacks can provide higher natural enchantment levels when desired.
+- Clarified that Gold Ball & Chain's second rotation reaches both full 12-block base reach and full throw damage.
+
 ## 1.1.3 - 2026-07-26
 
 - Flail combat links now use connected segments of Minecraft's 3D Iron Chain block model instead of the flat Iron Chain item sprite.

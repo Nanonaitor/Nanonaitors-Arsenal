@@ -2,6 +2,7 @@ package com.nanonaitor.arsenal;
 
 import com.nanonaitor.arsenal.client.ClientControls;
 import com.nanonaitor.arsenal.combat.CombatEvents;
+import com.nanonaitor.arsenal.config.ArsenalConfig;
 import com.nanonaitor.arsenal.network.ModNetwork;
 import com.nanonaitor.arsenal.registry.ModItems;
 import com.nanonaitor.arsenal.registry.ModEffects;
@@ -14,6 +15,7 @@ import net.minecraftforge.event.entity.player.AttackEntityEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.entity.EntityJoinLevelEvent;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.config.ModConfig;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.fml.loading.FMLEnvironment;
 
@@ -25,6 +27,7 @@ public final class ArsenalMod {
         ModItems.ITEMS.register(group);
         ModEffects.EFFECTS.register(group);
         ModTabs.TABS.register(group);
+        context.registerConfig(ModConfig.Type.COMMON, ArsenalConfig.SPEC);
         ModNetwork.init();
         LivingAttackEvent.BUS.addListener(CombatEvents::onLivingAttack);
         LivingHurtEvent.BUS.addListener(CombatEvents::onLivingHurt);
