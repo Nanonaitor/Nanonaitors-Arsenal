@@ -15,7 +15,7 @@ repositories {
 apply plugin: 'net.minecraftforge.gradle'
 apply plugin: 'eclipse'
 
-version = '1.1.6'
+version = '1.2.0'
 group = 'com.nanonaitor.arsenal'
 archivesBaseName = 'nanonaitors-arsenal-1.12.2'
 

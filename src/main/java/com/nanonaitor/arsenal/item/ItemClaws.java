@@ -12,8 +12,6 @@ import net.minecraft.util.text.TextFormatting;
 import net.minecraft.world.World;
 
 public final class ItemClaws extends ItemArsenalWeapon {
-    private static final String LAST_HAND_TAG = "LastConfirmedClaw";
-    private static final String LAST_TARGET_TAG = "LastConfirmedClawTarget";
     private static final String CRIT_CHAIN_TAG = "ClawCriticalChain";
 
     public ItemClaws(WeaponTier tier) {
@@ -23,7 +21,7 @@ public final class ItemClaws extends ItemArsenalWeapon {
     @Override
     public boolean onLeftClickEntity(ItemStack stack, EntityPlayer player, Entity entity) {
         if (!player.world.isRemote && entity instanceof EntityLivingBase) {
-            boolean fullyCharged = player.getCooledAttackStrength(0.5F) >= 0.95F;
+            boolean fullyCharged = player.getCooledAttackStrength(0.5F) >= 1.0F;
             ClawCombat.prepareMainHandAttack(player, (EntityLivingBase) entity,
                 this, stack, fullyCharged);
         }
@@ -38,55 +36,28 @@ public final class ItemClaws extends ItemArsenalWeapon {
         return super.hitEntity(stack, target, attacker);
     }
 
-    public int getLastConfirmedHand(ItemStack stack) {
-        return stack.hasTagCompound() && stack.getTagCompound().hasKey(LAST_HAND_TAG)
-            ? stack.getTagCompound().getInteger(LAST_HAND_TAG) : -1;
-    }
-
-    public void confirmHand(ItemStack stack, int hand) {
-        NBTTagCompound tag = tag(stack);
-        tag.setInteger(LAST_HAND_TAG, hand);
-    }
-
-    public int getLastConfirmedTarget(ItemStack stack) {
-        return stack.hasTagCompound() && stack.getTagCompound().hasKey(LAST_TARGET_TAG)
-            ? stack.getTagCompound().getInteger(LAST_TARGET_TAG) : -1;
-    }
-
-    public boolean willGuaranteeCritical(ItemStack stack, int hand, int targetId,
-                                         boolean fullyCharged) {
+    public boolean willGuaranteeCritical(ItemStack stack, boolean fullyCharged) {
         if (!fullyCharged) return false;
-        int previousHand = getLastConfirmedHand(stack);
-        int previousTarget = getLastConfirmedTarget(stack);
         int chain = stack.hasTagCompound()
             ? stack.getTagCompound().getInteger(CRIT_CHAIN_TAG) : 0;
-        int next = previousTarget == targetId && previousHand >= 0 && previousHand != hand
-            ? chain + 1 : 1;
-        return next >= 4;
+        return chain + 1 >= 4;
     }
 
-    public boolean confirmChargedAlternatingHit(ItemStack stack, int hand,
-                                                int targetId, boolean fullyCharged) {
+    public boolean confirmChargedPairedHit(ItemStack stack, boolean fullyCharged) {
         NBTTagCompound tag = tag(stack);
-        int chain = 0;
-        if (fullyCharged) {
-            int previousHand = getLastConfirmedHand(stack);
-            int previousTarget = getLastConfirmedTarget(stack);
-            chain = previousTarget == targetId && previousHand >= 0 && previousHand != hand
-                ? tag.getInteger(CRIT_CHAIN_TAG) + 1 : 1;
-        }
+        int chain = fullyCharged ? tag.getInteger(CRIT_CHAIN_TAG) + 1 : 0;
         boolean critical = chain >= 4;
         if (critical) chain = 0;
         tag.setInteger(CRIT_CHAIN_TAG, chain);
-        tag.setInteger(LAST_HAND_TAG, hand);
-        tag.setInteger(LAST_TARGET_TAG, targetId);
         return critical;
     }
 
     public void resetPair(ItemStack stack) {
         if (stack.hasTagCompound()) {
-            stack.getTagCompound().removeTag(LAST_HAND_TAG);
-            stack.getTagCompound().removeTag(LAST_TARGET_TAG);
+            // Remove the old alternation data as well so existing claws cleanly
+            // migrate to the paired auto-attack combo system.
+            stack.getTagCompound().removeTag("LastConfirmedClaw");
+            stack.getTagCompound().removeTag("LastConfirmedClawTarget");
             stack.getTagCompound().removeTag(CRIT_CHAIN_TAG);
         }
     }
@@ -94,9 +65,9 @@ public final class ItemClaws extends ItemArsenalWeapon {
     @Override
     public void addInformation(ItemStack stack, World world, List<String> tooltip, ITooltipFlag flag) {
         tooltip.add(TextFormatting.GOLD + "Automatically equips its paired offhand claw.");
-        tooltip.add(TextFormatting.GRAY + "Left-click: main claw. Right-click: offhand claw.");
-        tooltip.add(TextFormatting.GRAY + "Fully charged alternating hits pierce i-frames.");
-        tooltip.add(TextFormatting.YELLOW + "Every 4th fully charged alternating hit is a critical.");
+        tooltip.add(TextFormatting.GRAY + "Hold left/right click to auto-attack with each claw.");
+        tooltip.add(TextFormatting.GRAY + "Fully charged paired hits pierce i-frames.");
+        tooltip.add(TextFormatting.YELLOW + "Every 4th fully charged paired hit is a critical.");
         tooltip.add(TextFormatting.DARK_GRAY + "A different offhand item disables all paired abilities.");
     }
 

@@ -37,11 +37,10 @@ public final class ClawOffhandAttackHandler {
             : MathHelper.clamp((float) ((now - last + 0.5D) / cooldownTicks), 0.0F, 1.0F);
         LAST_ATTACK_TICK.put(player, now);
 
-        boolean fullyCharged = strength >= 0.95F;
-        boolean canPierce = fullyCharged && claws.getLastConfirmedHand(main) == 0
-            && claws.getLastConfirmedTarget(main) == target.getEntityId();
-        boolean guaranteedCritical = claws.willGuaranteeCritical(main, 1,
-            target.getEntityId(), fullyCharged);
+        boolean fullyCharged = strength >= 1.0F;
+        boolean canPierce = fullyCharged;
+        boolean guaranteedCritical = claws.willGuaranteeCritical(main,
+            fullyCharged);
         int previousResistance = target.hurtResistantTime;
         if (canPierce) {
             target.hurtResistantTime = 0;
@@ -82,8 +81,7 @@ public final class ClawOffhandAttackHandler {
         // default weakerOffhand rule keys off the active swing hand and would
         // otherwise halve this paired-weapon attack.
         player.swingArm(EnumHand.OFF_HAND);
-        boolean critical = claws.confirmChargedAlternatingHit(main, 1,
-            target.getEntityId(), fullyCharged);
+        boolean critical = claws.confirmChargedPairedHit(main, fullyCharged);
         main.damageItem(1, player);
         player.addExhaustion(0.1F);
 
@@ -100,13 +98,10 @@ public final class ClawOffhandAttackHandler {
         EnchantmentHelper.applyThornEnchantments(target, player);
         EnchantmentHelper.applyArthropodEnchantments(player, target);
 
-        // Match the normal main-hand weapon feedback instead of using the
-        // sweeping sound for every linked-claw hit. Playing from the server with
-        // no excluded player makes the wielder and nearby players hear it once.
-        // The wielder receives the immediate blade-swing sound client-side.
-        // Broadcast the matching sound to everyone else without doubling it for
-        // that player.
-        player.world.playSound(player, player.posX, player.posY, player.posZ,
+        // Play impact feedback only after the server confirms damage. Using no
+        // excluded player lets the wielder and nearby players hear it exactly
+        // once; whiffs remain silent while still animating on the client.
+        player.world.playSound(null, player.posX, player.posY, player.posZ,
             SoundEvents.ENTITY_PLAYER_ATTACK_SWEEP, player.getSoundCategory(),
             0.8F, 1.15F);
         if (canPierce || critical) {

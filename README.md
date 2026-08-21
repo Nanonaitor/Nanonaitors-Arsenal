@@ -49,12 +49,12 @@ seconds; higher tiers inflict Weakness II and III respectively.
 ### Claws
 
 Paired weapons that automatically equip a hidden linked claw in an empty
-offhand. Left-click attacks with the main claw; right-clicking a living target
-attacks with the offhand claw on an independent cooldown. A fully charged hit
-can pierce normal damage invulnerability frames only when the previous
-confirmed hit used the opposite hand. Both claws share durability and
-enchantments. Every 4th fully charged, correctly alternating hit against the
-same target is a guaranteed critical. 
+offhand. Hold left-click to auto-attack with the main claw and right-click to
+auto-attack with the linked claw on its independent cooldown. Manual attacks
+remain available, but only completely charged paired attacks pierce normal
+damage invulnerability frames or advance the combo. Both claws share durability
+and enchantments, paired strikes use reduced knockback, and every fourth fully
+charged paired hit is a guaranteed critical.
 
 A real offhand item is allowed, but it disables every paired Claw ability until
 the offhand is empty again. Linked Claws are deleted immediately if they become 

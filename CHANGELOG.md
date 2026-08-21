@@ -1,5 +1,23 @@
 # Changelog
 
+## 1.2.0 - 2026-08-21
+
+- Added native hold-to-auto-attack controls for both paired Claws: left-click
+  controls the main claw and right-click controls the linked claw.
+- Required a completely charged attack for automatic strikes, i-frame piercing,
+  and progress toward the guaranteed fourth-hit critical; rapid manual attacks
+  remain possible but cannot trigger those charged bonuses.
+- Removed the alternating-hand requirement while retaining the matching paired
+  claw and empty-offhand requirements.
+- Reduced paired-Claw knockback by 50% so consecutive strikes can remain in range.
+- Made main- and offhand held attacks animate on whiffs without playing false hit
+  sounds; linked-claw impact audio now plays only after confirmed damage.
+- Straightened the standalone Iron Chain sprite and all repeated animated chain
+  links used by Flails and Balls & Chains.
+- Leveled the Flail's third-person orbit to match the modern horizontal swing
+  instead of climbing diagonally above the player.
+- Added the standalone Iron Chain item to Arsenal's creative tab.
+
 ## 1.1.6 - 2026-08-17
 
 - Added optional Reskillable attack requirements matching equivalent Spartan Weaponry tiers while leaving Wood, Stone, Living, and Sentient unrestricted.

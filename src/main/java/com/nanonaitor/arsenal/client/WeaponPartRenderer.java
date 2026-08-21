@@ -46,13 +46,14 @@ public final class WeaponPartRenderer {
         float tilt = (float) Math.toDegrees(Math.atan2(horizontal, dy));
         for (int index = 1; index < links; index++) {
             double t = index / (double) links;
-            ItemStack chain = animationPart(held, straightLinks
-                ? CHAIN_LINK_UPRIGHT
-                : (index % 2 == 0 ? CHAIN_LINK_FLAT : CHAIN_LINK_UPRIGHT));
+            // The 1.12 renderer uses a flat item sprite for each link. Rotating
+            // alternating sprites by 90 degrees makes the chain appear jagged or
+            // partially disappear. Keep every centered link on the same axis so
+            // the repeated segments form one clean, straight chain.
+            ItemStack chain = animationPart(held, CHAIN_LINK_UPRIGHT);
             renderPart(chain,
                 anchorX + dx * t, anchorY + dy * t, anchorZ + dz * t,
-                0.26D, yaw, tilt,
-                straightLinks ? 0.0F : (index % 2 == 0 ? 0.0F : 90.0F));
+                0.26D, yaw, tilt, 0.0F);
         }
         renderPart(ball, ballX, ballY, ballZ, ballRadius * 2.0D,
             yaw, 0.0F, 0.0F);

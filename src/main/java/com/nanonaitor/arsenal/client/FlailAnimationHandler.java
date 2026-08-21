@@ -127,8 +127,8 @@ public final class FlailAnimationHandler {
         RenderManager manager = Minecraft.getMinecraft().getRenderManager();
         double px = player.lastTickPosX + (player.posX - player.lastTickPosX) * partialTicks
             - manager.viewerPosX;
-        double py = player.lastTickPosY + (player.posY - player.lastTickPosY) * partialTicks
-            - manager.viewerPosY + (player.isSneaking() ? 1.05D : 1.25D);
+        double baseY = player.lastTickPosY + (player.posY - player.lastTickPosY) * partialTicks
+            - manager.viewerPosY;
         double pz = player.lastTickPosZ + (player.posZ - player.lastTickPosZ) * partialTicks
             - manager.viewerPosZ;
         float yawDegrees = player.prevRenderYawOffset
@@ -139,7 +139,11 @@ public final class FlailAnimationHandler {
         double forwardX = -Math.sin(yaw);
         double forwardZ = Math.cos(yaw);
         double anchorX = px + rightX * 0.38D;
-        double anchorY = py;
+        // Match the modern renderer: the hand sits around 1.20 blocks above
+        // the feet and the head orbits at a constant 1.05 blocks. Previously
+        // orbitY added another height offset to an already-offset py value,
+        // which made the chain climb diagonally upward from the player.
+        double anchorY = baseY + (player.isSneaking() ? 1.00D : 1.20D);
         double anchorZ = pz + rightZ * 0.38D;
 
         double age = player.world.getTotalWorldTime() - state.startTick + partialTicks;
@@ -147,7 +151,7 @@ public final class FlailAnimationHandler {
         int interval = ChainWeaponStats.swingIntervalTicks(player, weapon);
         double radius = ChainWeaponStats.flailReach(player, weapon);
         double angle = age / interval * Math.PI * 2.0D;
-        double orbitY = py + (player.isSneaking() ? 0.72D : 0.95D);
+        double orbitY = baseY + (player.isSneaking() ? 0.85D : 1.05D);
         double ballX = px + rightX * Math.cos(angle) * radius
             + forwardX * Math.sin(angle) * radius;
         double ballY = orbitY;

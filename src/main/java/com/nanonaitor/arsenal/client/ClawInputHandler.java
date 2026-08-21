@@ -25,7 +25,8 @@ import org.lwjgl.input.Mouse;
 public final class ClawInputHandler {
     private static EntityPlayerSP rlCombatPlayer;
     private static ItemStack rlCombatHiddenLinkedClaw = ItemStack.EMPTY;
-    private static long lastEverythingNunchakuAttackTick = Long.MIN_VALUE;
+    private static long lastMainhandAutoAttackTick = Long.MIN_VALUE;
+    private static long lastOffhandAutoAttackTick = Long.MIN_VALUE;
 
     private ClawInputHandler() {}
 
@@ -40,9 +41,7 @@ public final class ClawInputHandler {
         ItemClaws claws = (ItemClaws)main.getItem();
         if (!ClawPairHandler.hasMatchingLinkedClaw(player, claws)) return;
 
-        if (Loader.isModLoaded("everythingnunchaku")) {
-            lastEverythingNunchakuAttackTick = player.world.getTotalWorldTime();
-        }
+        lastOffhandAutoAttackTick = player.world.getTotalWorldTime();
 
         // Consume the physical right-click before vanilla or RLCombat can turn it
         // into an item interaction or a second offhand attack.
@@ -72,8 +71,6 @@ public final class ClawInputHandler {
         player.swingingHand = EnumHand.OFF_HAND;
         player.swingProgressInt = -1;
         player.isSwingInProgress = true;
-        player.playSound(net.minecraft.init.SoundEvents.ENTITY_PLAYER_ATTACK_SWEEP,
-            0.8F, 1.15F);
     }
 
     @SubscribeEvent(priority = EventPriority.LOWEST, receiveCanceled = true)
@@ -84,19 +81,13 @@ public final class ClawInputHandler {
     }
 
     /**
-     * Everything Nunchaku invokes RLCombat directly from its client tick handler
-     * while the use button is held. Letting that path run beside Arsenal's paired
-     * claw packet produces a second generic offhand hit, whose reduced damage may
-     * consume the victim's invulnerability frames first. This bridge preserves
-     * the mod's hold-to-attack control while routing each linked-claw strike
-     * through Arsenal's full-damage/shared-enchantment implementation.
+     * Native paired-claw auto-attacks. Everything Nunchaku already handles the
+     * main hand because claws are swords, so Arsenal only supplies the main-hand
+     * loop when that mod is absent. The linked claw always uses Arsenal's custom
+     * packet so its synchronized damage, enchantments and durability stay intact.
      */
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onClientTickStart(TickEvent.ClientTickEvent event) {
-        if (!Loader.isModLoaded("everythingnunchaku")) return;
-
-        // Everything Nunchaku listens without a phase filter. Hide the generated
-        // partner during both START and END dispatches, then restore it at LOWEST.
         restoreRlCombatOffhand();
         Minecraft minecraft = Minecraft.getMinecraft();
         EntityPlayerSP player = minecraft.player;
@@ -106,11 +97,31 @@ public final class ClawInputHandler {
         ItemClaws claws = (ItemClaws) main.getItem();
         if (!ClawPairHandler.hasMatchingLinkedClaw(player, claws)) return;
 
-        if (event.phase == TickEvent.Phase.END && isOffhandAttackHeld(minecraft)) {
-            long now = player.world.getTotalWorldTime();
-            double cooldownTicks = 20.0D / claws.getDisplayedAttackSpeed();
-            if (lastEverythingNunchakuAttackTick == Long.MIN_VALUE
-                || now - lastEverythingNunchakuAttackTick + 0.5D >= cooldownTicks) {
+        long now = player.world.getTotalWorldTime();
+        double cooldownTicks = 20.0D / claws.getDisplayedAttackSpeed();
+        if (event.phase == TickEvent.Phase.END
+            && isMainhandAttackHeld(minecraft)
+            && player.getCooledAttackStrength(0.5F) >= 1.0F
+            && minecraft.playerController != null
+            && (lastMainhandAutoAttackTick == Long.MIN_VALUE
+                || now - lastMainhandAutoAttackTick + 0.5D >= cooldownTicks)) {
+            RayTraceResult hit = minecraft.objectMouseOver;
+            // Always animate a fully charged held attack, including whiffs.
+            // Everything Nunchaku supplies the actual main-hand attack when
+            // installed; Arsenal supplies it in standalone profiles.
+            player.swingArm(EnumHand.MAIN_HAND);
+            if (!Loader.isModLoaded("everythingnunchaku")
+                && hit != null && hit.typeOfHit == RayTraceResult.Type.ENTITY
+                && hit.entityHit instanceof EntityLivingBase) {
+                minecraft.playerController.attackEntity(player, hit.entityHit);
+            }
+            lastMainhandAutoAttackTick = now;
+        }
+
+        boolean offhandHeld = isOffhandAttackHeld(minecraft);
+        if (event.phase == TickEvent.Phase.END && offhandHeld) {
+            if (lastOffhandAutoAttackTick == Long.MIN_VALUE
+                || now - lastOffhandAutoAttackTick + 0.5D >= cooldownTicks) {
                 RayTraceResult hit = minecraft.objectMouseOver;
                 if (hit != null && hit.typeOfHit == RayTraceResult.Type.ENTITY
                     && hit.entityHit instanceof EntityLivingBase) {
@@ -120,14 +131,14 @@ public final class ClawInputHandler {
                 player.swingingHand = EnumHand.OFF_HAND;
                 player.swingProgressInt = -1;
                 player.isSwingInProgress = true;
-                lastEverythingNunchakuAttackTick = now;
+                lastOffhandAutoAttackTick = now;
             }
         }
 
-        // Only hide the generated partner while the compatibility mod is
-        // actually trying to perform a held offhand attack. Hiding/restoring it
-        // every idle client tick caused the linked claw to jitter in first person.
-        if (isOffhandAttackHeld(minecraft)) {
+        // Prevent Everything Nunchaku/RLCombat from issuing a second generic
+        // weaker-offhand hit beside Arsenal's packet. Keep the item visible when
+        // idle so synchronization does not cause first-person jitter.
+        if (Loader.isModLoaded("everythingnunchaku") && offhandHeld) {
             rlCombatPlayer = player;
             rlCombatHiddenLinkedClaw = player.getHeldItemOffhand();
             player.inventory.offHandInventory.set(0, ItemStack.EMPTY);
@@ -136,9 +147,18 @@ public final class ClawInputHandler {
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onClientTickEnd(TickEvent.ClientTickEvent event) {
-        if (Loader.isModLoaded("everythingnunchaku")) {
-            restoreRlCombatOffhand();
+        restoreRlCombatOffhand();
+    }
+
+    private static boolean isMainhandAttackHeld(Minecraft minecraft) {
+        if (minecraft.gameSettings.keyBindAttack.isKeyDown()) {
+            return true;
         }
+        int keyCode = minecraft.gameSettings.keyBindAttack.getKeyCode();
+        int mouseButton = keyCode + 100;
+        return keyCode < 0 && mouseButton >= 0
+            && mouseButton < Mouse.getButtonCount()
+            && Mouse.isButtonDown(mouseButton);
     }
 
     private static boolean isOffhandAttackHeld(Minecraft minecraft) {

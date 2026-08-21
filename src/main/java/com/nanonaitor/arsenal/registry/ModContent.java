@@ -69,6 +69,10 @@ public final class ModContent {
     public static void registerItems(RegistryEvent.Register<Item> event) {
         IRON_CHAIN_ITEM = new ItemBlock(IRON_CHAIN);
         IRON_CHAIN_ITEM.setRegistryName(IRON_CHAIN.getRegistryName());
+        // ItemBlock does not reliably inherit its block's tab early enough on
+        // every 1.12.2 Forge setup. Set it explicitly so the standalone chain
+        // is always available from Arsenal's creative tab.
+        IRON_CHAIN_ITEM.setCreativeTab(NanonaitorsArsenal.CREATIVE_TAB);
         event.getRegistry().register(IRON_CHAIN_ITEM);
         registerChainOreEntries();
         registerHandleOreEntry();
