@@ -1,11 +1,13 @@
 # Changelog
 
-## Unreleased
+## 1.1.7 - 2026-08-22
 
 - Main-hand Claws can now auto-attack indefinitely even with another item equipped offhand. A matching linked Claw additionally enables held right-click attacks; each hand waits for its own fully charged attack before repeating.
 - Fully charged Claw hits pierce invulnerability frames whenever matching main-hand and linked off-hand Claws are equipped; alternating hands is no longer required.
 - Updated Claw tooltips to explain held auto-attacks and the paired full-charge requirement.
 - Ball & Chain third-person throws now follow live camera aim like the first-person render instead of remaining locked to the original release direction.
+- Improved first-person Ball & Chain travel so the complete 3D ball and links remain aligned with the player's view while turning.
+- Added distinct Ball & Chain impact confirmation for entity and block hits, including a brief 0.5-second shake on the struck block.
 - Reduced Ball & Chain block-impact volume by 30%.
 
 ## 1.1.6 - 2026-08-17
