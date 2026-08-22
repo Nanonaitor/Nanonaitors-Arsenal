@@ -64,6 +64,9 @@ public final class ClientWeaponRenderer {
                     / ClientControls.ballReleaseDuration();
                 double travel = Math.sin(progress * Math.PI);
                 double distance = ClientControls.releasedDistance() * travel;
+                // Third person follows the same live aim shown in first person.
+                // Turning during the throw now bends the visible path toward the
+                // direction used by outgoing/returning collision checks.
                 Vec3 look = player.getViewVector((float)partial);
                 renderChain(event, player.getMainHandItem(), weapon.tier(),
                     handX, handY, handZ,
@@ -110,14 +113,22 @@ public final class ClientWeaponRenderer {
             renderChain(event.getPoseStack(), event.getNodeCollector(), event.getPackedLight(), 0,
                 weapon.tier(), 0.50D, -0.40D, -0.72D,
                 0.04D, -0.12D + Math.sin(angle) * 0.44D * scale,
-                -1.18D + Math.cos(angle) * 0.50D * scale, 0.22F, 0.12F, true);
+                -1.18D + Math.cos(angle) * 0.50D * scale, 0.48F, 0.20F, true);
         } else if (weapon.kind() == WeaponKind.BALL_AND_CHAIN && ClientControls.ballRelease(now)) {
             double progress = (now - ClientControls.ballReleaseStarted() + partial)
                 / ClientControls.ballReleaseDuration();
-            double distance = ClientControls.releasedDistance() * Math.sin(progress * Math.PI);
+            double travel = Math.sin(progress * Math.PI);
+            double distance = ClientControls.releasedDistance() * travel;
+            // RenderHandEvent is already camera-relative. Applying the camera yaw/pitch
+            // again makes the ball rotate twice as fast when the player looks around.
+            Vec3 direction = new Vec3(0.0D, 0.0D, -1.0D);
+            double anchorX = 0.50D, anchorY = -0.40D, anchorZ = -0.72D;
             renderChain(event.getPoseStack(), event.getNodeCollector(), event.getPackedLight(), 0,
-                weapon.tier(), 0.50D, -0.40D, -0.72D,
-                0.0D, -0.08D, -1.05D - distance, 0.20F, 0.12F, true);
+                weapon.tier(), anchorX, anchorY, anchorZ,
+                anchorX * (1.0D - travel) + direction.x * distance,
+                anchorY * (1.0D - travel) + direction.y * distance,
+                anchorZ * (1.0D - travel) + direction.z * distance,
+                0.48F + ClientControls.releasedCharge() * 0.05F, 0.20F, true);
         }
     }
 

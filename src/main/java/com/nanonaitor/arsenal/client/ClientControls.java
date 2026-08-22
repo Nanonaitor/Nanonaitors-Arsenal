@@ -15,7 +15,11 @@ import net.minecraftforge.client.event.InputEvent;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ItemUseAnimation;
 import net.minecraft.world.item.component.CustomModelData;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
 
 public final class ClientControls {
     private static boolean ballWasDown, flailWasDown;
@@ -24,8 +28,11 @@ public final class ClientControls {
     private static float lockedYaw, lockedPitch;
     private static long flailVisualUntil = Long.MIN_VALUE, ballStarted = Long.MIN_VALUE,
         ballReleaseStarted = Long.MIN_VALUE, nextBallSwing = Long.MIN_VALUE;
+    private static long lastMainClawAttack = Long.MIN_VALUE, lastOffhandClawAttack = Long.MIN_VALUE;
+    private static boolean mainClawWasDown, offhandClawWasDown;
     private static int releasedCharge, ballCharge, ballReleaseDuration = 16;
     private static double releasedDistance;
+    private static Vec3 releasedDirection = Vec3.ZERO;
     private static ItemStack activeFlailSprite = ItemStack.EMPTY, activeBallSprite = ItemStack.EMPTY;
 
     public static void register() {
@@ -38,7 +45,8 @@ public final class ClientControls {
     private static void tick(TickEvent.ClientTickEvent.Post event) {
         Minecraft minecraft = Minecraft.getInstance();
         LocalPlayer player = minecraft.player;
-        if (player == null) { clearFlailSprite(); clearBallSprite(); ballWasDown = false; flailWasDown = false; ramLocked = false; return; }
+        if (player == null) { clearFlailSprite(); clearBallSprite(); ballWasDown = false; flailWasDown = false;
+            ramLocked = false; mainClawWasDown = false; offhandClawWasDown = false; return; }
         boolean attack = minecraft.screen == null && minecraft.options.keyAttack.isDown();
         if (attack && player.isUsingItem() && player.getUseItem().getItem() instanceof ArsenalShieldItem shield
             && shield.shieldType() == ArsenalShieldItem.Type.SUN_WAR) {
@@ -49,9 +57,16 @@ public final class ClientControls {
             if (flailWasDown) ModNetwork.send(ModNetwork.FLAIL, false);
             if (ramLocked) ModNetwork.send(ModNetwork.RAM, false);
             clearFlailSprite(); clearBallSprite();
-            ballWasDown = false; flailWasDown = false; ramLocked = false; return;
+            ballWasDown = false; flailWasDown = false; ramLocked = false;
+            mainClawWasDown = false; offhandClawWasDown = false; return;
         }
         long now = player.level().getGameTime();
+        if (weapon.kind() == WeaponKind.CLAWS) {
+            tickClawAutoAttacks(minecraft, player, weapon, now);
+        } else {
+            mainClawWasDown = false;
+            offhandClawWasDown = false;
+        }
         boolean emptyOffhand = player.getOffhandItem().isEmpty();
         boolean flailDown = weapon.kind() == WeaponKind.FLAIL && attack
             && !isBlockingConventionalShield(player);
@@ -90,8 +105,9 @@ public final class ClientControls {
                 releasedCharge = Math.max(1, Math.min(maxCharges, ballCharge));
                 int effectiveCharge = weapon.tier() == com.nanonaitor.arsenal.item.WeaponTier.GOLD
                     && releasedCharge >= 2 ? 3 : releasedCharge;
-                releasedDistance = ChainWeaponStats.ballThrowReach(player,
-                    player.getMainHandItem(), effectiveCharge);
+                releasedDirection = player.getLookAngle().normalize();
+                releasedDistance = visibleThrowDistance(player, releasedDirection,
+                    ChainWeaponStats.ballThrowReach(player, player.getMainHandItem(), effectiveCharge));
                 ballReleaseDuration = ChainWeaponStats.ballReleaseAnimationTicks(player,
                     player.getMainHandItem());
                 ballReleaseStarted = now;
@@ -146,19 +162,60 @@ public final class ClientControls {
         }
         if ((!event.isAttack() && !event.isUseItem()) || player == null || minecraft.screen != null
             || !(player.getMainHandItem().getItem() instanceof ArsenalWeaponItem weapon)
-            || weapon.kind() != WeaponKind.CLAWS
-            || !(player.getOffhandItem().getItem() instanceof ArsenalWeaponItem linked)
-            || linked.kind() != WeaponKind.LINKED_CLAWS) return false;
-        if (event.isAttack()) {
-            player.playSound(net.minecraft.sounds.SoundEvents.PLAYER_ATTACK_NODAMAGE, 0.45F, 1.35F);
-            return false;
-        }
-        if (minecraft.hitResult != null && minecraft.hitResult.getType() == HitResult.Type.BLOCK) return false;
-        player.playSound(net.minecraft.sounds.SoundEvents.PLAYER_ATTACK_NODAMAGE, 0.45F, 1.20F);
+            || weapon.kind() != WeaponKind.CLAWS) return false;
+        boolean paired = hasMatchingLinkedClaw(player, weapon);
+        // Left click always belongs to the main claw. Right click belongs to the
+        // linked claw only when the matching generated partner is equipped; any
+        // other offhand item keeps its normal use behavior.
+        if (event.isUseItem() && !paired) return false;
+        // Both physical buttons are handled once per client tick below. Modern
+        // Minecraft repeatedly emits use interactions while right click is held;
+        // resolving attacks here made the linked claw strike and play whiff audio
+        // every tick instead of respecting its weapon cooldown.
         event.setSwingHand(false);
-        player.swing(net.minecraft.world.InteractionHand.OFF_HAND, true);
-        ModNetwork.send(ModNetwork.CLAW, true);
         return true;
+    }
+    private static void tickClawAutoAttacks(Minecraft minecraft, LocalPlayer player,
+            ArsenalWeaponItem claws, long now) {
+        double speed = Math.max(0.1D, player.getAttributeValue(Attributes.ATTACK_SPEED));
+        double cooldown = 20.0D / speed;
+        boolean paired = hasMatchingLinkedClaw(player, claws);
+        boolean mainDown = minecraft.options.keyAttack.isDown();
+        boolean offhandDown = paired && minecraft.options.keyUse.isDown();
+        boolean fullyCharged = player.getAttackStrengthScale(0.5F) >= 1.0F;
+
+        // A fresh press remains a normal manual attack and may be partially
+        // charged. Continued holding only repeats after the hand is fully ready.
+        if (mainDown && !mainClawWasDown) {
+            player.swing(net.minecraft.world.InteractionHand.MAIN_HAND, true);
+            ModNetwork.send(ModNetwork.CLAW_MAIN, true);
+            lastMainClawAttack = now;
+            player.resetAttackStrengthTicker();
+        } else if (mainDown && fullyCharged && elapsed(now, lastMainClawAttack, cooldown)) {
+            player.swing(net.minecraft.world.InteractionHand.MAIN_HAND, true);
+            ModNetwork.send(ModNetwork.CLAW_MAIN, true);
+            lastMainClawAttack = now;
+            player.resetAttackStrengthTicker();
+        }
+
+        if (offhandDown && !offhandClawWasDown) {
+            player.swing(net.minecraft.world.InteractionHand.OFF_HAND, true);
+            ModNetwork.send(ModNetwork.CLAW, true);
+            lastOffhandClawAttack = now;
+        } else if (offhandDown && elapsed(now, lastOffhandClawAttack, cooldown)) {
+            player.swing(net.minecraft.world.InteractionHand.OFF_HAND, true);
+            ModNetwork.send(ModNetwork.CLAW, true);
+            lastOffhandClawAttack = now;
+        }
+        mainClawWasDown = mainDown;
+        offhandClawWasDown = offhandDown;
+    }
+    private static boolean elapsed(long now, long previous, double cooldown) {
+        return previous == Long.MIN_VALUE || now < previous || now - previous + 0.5D >= cooldown;
+    }
+    private static boolean hasMatchingLinkedClaw(LocalPlayer player, ArsenalWeaponItem claws) {
+        return player.getOffhandItem().getItem() instanceof ArsenalWeaponItem linked
+            && linked.kind() == WeaponKind.LINKED_CLAWS && linked.tier() == claws.tier();
     }
     static boolean flailVisual(long now) { return now <= flailVisualUntil; }
     static boolean flailActive() { return flailWasDown; }
@@ -170,8 +227,28 @@ public final class ClientControls {
     static int ballReleaseDuration() { return ballReleaseDuration; }
     static int releasedCharge() { return releasedCharge; }
     static double releasedDistance() { return releasedDistance; }
+    static Vec3 releasedDirection() { return releasedDirection; }
     private static boolean within(long now, long started, long duration) {
         return started != Long.MIN_VALUE && now >= started && now - started < duration;
+    }
+    private static double visibleThrowDistance(LocalPlayer player, Vec3 direction, double requested) {
+        Vec3 start = player.getEyePosition();
+        Vec3 normalized = direction.normalize();
+        Vec3 side = new Vec3(-normalized.z, 0.0D, normalized.x);
+        if (side.lengthSqr() > 0.0001D) side = side.normalize().scale(0.35D);
+        Vec3[] offsets = { Vec3.ZERO, new Vec3(0.0D, -0.45D, 0.0D),
+            new Vec3(0.0D, 0.35D, 0.0D), side, side.scale(-1.0D) };
+        double closest = requested;
+        for (Vec3 offset : offsets) {
+            Vec3 rayStart = start.add(offset);
+            BlockHitResult hit = player.level().clip(new ClipContext(rayStart,
+                rayStart.add(normalized.scale(requested)), ClipContext.Block.COLLIDER,
+                ClipContext.Fluid.NONE, player));
+            if (hit.getType() == HitResult.Type.BLOCK) {
+                closest = Math.min(closest, rayStart.distanceTo(hit.getLocation()));
+            }
+        }
+        return closest;
     }
     private static boolean isBlockingConventionalShield(LocalPlayer player) {
         if (!player.isUsingItem()) return false;

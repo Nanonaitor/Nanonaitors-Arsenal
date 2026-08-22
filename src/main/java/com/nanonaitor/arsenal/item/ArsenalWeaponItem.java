@@ -56,9 +56,12 @@ public class ArsenalWeaponItem extends Item {
             case SCIMITAR -> lines.accept(Component.literal("Hits inflict Weakness "
                 + (tier.ramBreakLevel >= 3 ? "II" : "I") + " for 10 secs.")
                 .withStyle(ChatFormatting.DARK_PURPLE));
-            case CLAWS -> lines.accept(Component.literal(
-                "Alternate hits to pierce invulnerability!")
-                .withStyle(ChatFormatting.GOLD));
+            case CLAWS -> {
+                lines.accept(Component.literal("Hold left/right click to auto-attack.")
+                    .withStyle(ChatFormatting.GOLD));
+                lines.accept(Component.literal("Fully charged paired hits pierce invulnerability!")
+                    .withStyle(ChatFormatting.GRAY));
+            }
             case LINKED_CLAWS -> lines.accept(Component.literal("Linked to the matching main-hand claws.").withStyle(ChatFormatting.DARK_GRAY));
             case FLAIL -> {
                 lines.accept(Component.literal("Hold attack to strike every target within 4 blocks.").withStyle(ChatFormatting.GOLD));

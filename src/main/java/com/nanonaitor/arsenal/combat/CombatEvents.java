@@ -29,6 +29,7 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.Display;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ItemUseAnimation;
 import net.minecraft.world.item.component.CustomModelData;
@@ -141,14 +142,13 @@ public final class CombatEvents {
         if (weapon.kind() == WeaponKind.FLAIL || weapon.kind() == WeaponKind.BALL_AND_CHAIN) return true;
         boolean piercedFrames = weapon.kind() == WeaponKind.CLAWS
             && event.getTarget() instanceof LivingEntity target
-            && !player.level().isClientSide() && player.getAttackStrengthScale(0.5F) >= 0.9F
-            && player.getPersistentData().getIntOr(CLAW_LAST_HAND, -1) == 1
-            && player.getPersistentData().getIntOr(CLAW_LAST_TARGET, -1) == target.getId();
+            && !player.level().isClientSide() && player.getAttackStrengthScale(0.5F) >= 1.0F
+            && hasMatchingClaws(player);
         if (piercedFrames && event.getTarget() instanceof LivingEntity target) target.invulnerableTime = 0;
         if (!player.level().isClientSide() && (weapon.kind() == WeaponKind.MORNING_STAR
             || weapon.kind() == WeaponKind.CLAWS)) {
             PENDING_MELEE.put(player.getUUID(), new PendingMeleeAttack(event.getTarget().getId(),
-                player.level().getGameTime(), weapon.kind(), player.getAttackStrengthScale(0.5F) >= 0.9F, 0,
+                player.level().getGameTime(), weapon.kind(), player.getAttackStrengthScale(0.5F) >= 1.0F, 0,
                 piercedFrames));
         }
         return false;
@@ -173,16 +173,21 @@ public final class CombatEvents {
         else if (action == ModNetwork.RAM) ramControl(player, active);
         else if (action == ModNetwork.BULWARK_BASH) bulwarkBash(player);
         else if (action == ModNetwork.CLAW) clawAttack(player);
+        else if (action == ModNetwork.CLAW_MAIN) clawMainAttack(player);
+    }
+
+    private static void clawMainAttack(ServerPlayer player) {
+        if (!(player.getMainHandItem().getItem() instanceof ArsenalWeaponItem claws)
+            || claws.kind() != WeaponKind.CLAWS) return;
+        LivingEntity target = clawTarget(player);
+        player.swing(InteractionHand.MAIN_HAND, true);
+        if (target != null) player.attack(target);
     }
 
     private static void clawAttack(ServerPlayer player) {
         if (!(player.getMainHandItem().getItem() instanceof ArsenalWeaponItem claws) || claws.kind() != WeaponKind.CLAWS
             || !(player.getOffhandItem().getItem() instanceof ArsenalWeaponItem linked) || linked.kind() != WeaponKind.LINKED_CLAWS) return;
-        double reach = player.getAttributeValue(Attributes.ENTITY_INTERACTION_RANGE);
-        Vec3 from = player.getEyePosition(), to = from.add(player.getLookAngle().scale(reach));
-        EntityHitResult hitResult = ProjectileUtil.getEntityHitResult(player, from, to,
-            player.getBoundingBox().expandTowards(player.getLookAngle().scale(reach)).inflate(1.0D),
-            entity -> entity instanceof LivingEntity living && validTarget(player, living), reach * reach);
+        LivingEntity target = clawTarget(player);
         player.swing(InteractionHand.OFF_HAND, true);
         long now = player.level().getGameTime();
         long previous = LAST_CLAW_OFFHAND.getOrDefault(player.getUUID(), Long.MIN_VALUE);
@@ -191,10 +196,8 @@ public final class CombatEvents {
         float strength = previous == Long.MIN_VALUE ? 1.0F
             : (float)Math.max(0.0D, Math.min(1.0D, (now - previous + 0.5D) / cooldownTicks));
         LAST_CLAW_OFFHAND.put(player.getUUID(), now);
-        if (hitResult == null || !(hitResult.getEntity() instanceof LivingEntity target)) return;
-        boolean pierceFrames = strength >= 0.9F
-            && player.getPersistentData().getIntOr(CLAW_LAST_HAND, -1) == 0
-            && player.getPersistentData().getIntOr(CLAW_LAST_TARGET, -1) == target.getId();
+        if (target == null) return;
+        boolean pierceFrames = strength >= 1.0F;
         if (pierceFrames) {
             target.invulnerableTime = 0;
         }
@@ -217,6 +220,22 @@ public final class CombatEvents {
             syncClawPair(player);
             level.playSound(null, player.blockPosition(), SoundEvents.PLAYER_ATTACK_STRONG, SoundSource.PLAYERS, 1.0F, 1.15F);
         }
+    }
+
+    private static LivingEntity clawTarget(ServerPlayer player) {
+        double reach = player.getAttributeValue(Attributes.ENTITY_INTERACTION_RANGE);
+        Vec3 from = player.getEyePosition(), to = from.add(player.getLookAngle().scale(reach));
+        EntityHitResult hit = ProjectileUtil.getEntityHitResult(player, from, to,
+            player.getBoundingBox().expandTowards(player.getLookAngle().scale(reach)).inflate(1.0D),
+            entity -> entity instanceof LivingEntity living && validTarget(player, living), reach * reach);
+        return hit != null && hit.getEntity() instanceof LivingEntity living ? living : null;
+    }
+
+    private static boolean hasMatchingClaws(Player player) {
+        if (!(player.getMainHandItem().getItem() instanceof ArsenalWeaponItem main)
+            || main.kind() != WeaponKind.CLAWS) return false;
+        return player.getOffhandItem().getItem() instanceof ArsenalWeaponItem linked
+            && linked.kind() == WeaponKind.LINKED_CLAWS && linked.tier() == main.tier();
     }
 
     public static void onPlayerTick(TickEvent.PlayerTickEvent.Post event) {
@@ -354,10 +373,16 @@ public final class CombatEvents {
         WeaponTier tier = state.tier;
         int maxCharges = maxBallCharges(tier);
         int effectiveCharge = effectiveBallCharge(tier, state.charge);
+        double requestedDistance = ChainWeaponStats.ballThrowReach(player,
+            player.getMainHandItem(), effectiveCharge);
         state.distance = stopDistance((ServerLevel)player.level(), player.getEyePosition(), state.direction,
-            ChainWeaponStats.ballThrowReach(player, player.getMainHandItem(), effectiveCharge));
-        lineAttack(player, state.distance, ballDamageMultiplier(tier, state.charge),
+            requestedDistance);
+        AttackImpact impact = lineAttack(player, state.distance, ballDamageMultiplier(tier, state.charge),
             ballKnockback(tier, state.charge), state.charge >= maxCharges, true, tier);
+        boolean hitBlock = state.distance + 0.05D < requestedDistance;
+        Vec3 blockImpact = player.getEyePosition().add(state.direction.scale(state.distance));
+        playBallImpact(player, impact, hitBlock, blockImpact);
+        if (hitBlock) startBlockShake(player, state, blockImpact);
         ((ServerLevel)player.level()).playSound(null, player.blockPosition(), SoundEvents.TRIDENT_THROW.value(),
             SoundSource.PLAYERS, 0.9F, 0.72F);
     }
@@ -369,15 +394,19 @@ public final class CombatEvents {
             cancelBall(player); return;
         }
         long age = player.level().getGameTime() - state.releaseTick;
+        updateBlockShake(state, age);
         if (age >= state.releaseDuration / 2 && !state.returned) {
             state.returned = true;
             WeaponTier tier = state.tier;
-            lineAttack(player, state.distance, ballDamageMultiplier(tier, state.charge),
+            AttackImpact impact = lineAttack(player, state.distance, ballDamageMultiplier(tier, state.charge),
                 ballKnockback(tier, state.charge), false, true, tier);
+            playBallImpact(player, impact, false, Vec3.ZERO);
             ((ServerLevel)player.level()).playSound(null, player.blockPosition(), SoundEvents.TRIDENT_RETURN,
                 SoundSource.PLAYERS, 0.9F, 0.78F);
         }
-        if (age >= state.releaseDuration) { BALLS.remove(player.getUUID()); player.stopUsingItem(); }
+        if (age >= state.releaseDuration) {
+            clearBlockShake(state); BALLS.remove(player.getUUID()); player.stopUsingItem();
+        }
         else {
             WeaponTier tier = state.tier;
             double progress = age / (double)state.releaseDuration;
@@ -386,11 +415,12 @@ public final class CombatEvents {
     }
 
     private static void cancelBall(ServerPlayer player) {
-        BALLS.remove(player.getUUID());
+        BallState state = BALLS.remove(player.getUUID());
+        if (state != null) clearBlockShake(state);
         if (player.isUsingItem()) player.stopUsingItem();
     }
 
-    private static void lineAttack(ServerPlayer player, double distance, float multiplier,
+    private static AttackImpact lineAttack(ServerPlayer player, double distance, float multiplier,
             float knockback, boolean fracture, boolean applyEnchantments, WeaponTier tier) {
         ServerLevel level = (ServerLevel) player.level();
         Vec3 start = player.getEyePosition().add(0, -0.55D, 0), direction = player.getLookAngle().normalize();
@@ -400,6 +430,7 @@ public final class CombatEvents {
         float base = attributeDamage * multiplier;
         ItemStack weapon = player.getMainHandItem();
         DamageSource source = weapon.getDamageSource(player, () -> player.damageSources().playerAttack(player));
+        Vec3 firstHit = null;
         for (LivingEntity target : level.getEntitiesOfClass(LivingEntity.class, box, target -> validTarget(player, target))) {
             AABB targetBox = target.getBoundingBox().inflate(0.85D, 1.0D, 0.85D);
             if (!targetBox.contains(start) && !targetBox.contains(end)
@@ -412,11 +443,66 @@ public final class CombatEvents {
                 ? EnchantmentHelper.modifyKnockback(level, weapon, target, source, knockback)
                 : knockback;
             if (target.hurtServer(level, source, damage)) {
+                if (firstHit == null) firstHit = target.getBoundingBox().getCenter();
                 target.knockback(finalKnockback, -direction.x, -direction.z);
                 if (applyEnchantments) EnchantmentHelper.doPostAttackEffectsWithItemSource(level, target, source, weapon);
                 player.getMainHandItem().hurtAndBreak(1, player, EquipmentSlot.MAINHAND);
                 if (fracture) fractureArmor(target, tier);
             }
+        }
+        return new AttackImpact(firstHit);
+    }
+
+    private static void playBallImpact(ServerPlayer player, AttackImpact impact, boolean hitBlock,
+            Vec3 blockImpact) {
+        ServerLevel level = (ServerLevel)player.level();
+        if (impact.position != null) {
+            level.playSound(null, BlockPos.containing(impact.position), SoundEvents.PLAYER_ATTACK_STRONG,
+                SoundSource.PLAYERS, 1.0F, 0.78F);
+        }
+        if (hitBlock) {
+            level.playSound(null, BlockPos.containing(blockImpact), SoundEvents.ANVIL_LAND,
+                SoundSource.PLAYERS, 0.525F, 1.25F);
+        }
+    }
+
+    private static void startBlockShake(ServerPlayer player, BallState state, Vec3 impact) {
+        ServerLevel level = (ServerLevel)player.level();
+        BlockPos pos = BlockPos.containing(impact.add(state.direction.scale(0.06D)));
+        BlockState block = level.getBlockState(pos);
+        if (block.isAir()) return;
+        ItemStack visual = new ItemStack(block.getBlock().asItem());
+        if (visual.isEmpty()) return;
+        Display.ItemDisplay display = new Display.ItemDisplay(EntityType.ITEM_DISPLAY, level);
+        display.getSlot(0).set(visual);
+        display.setNoGravity(true);
+        display.setInvulnerable(true);
+        display.setSilent(true);
+        display.setPos(pos.getX() + 0.5D, pos.getY() + 0.5D, pos.getZ() + 0.5D);
+        level.addFreshEntity(display);
+        state.shakeDisplay = display;
+        state.shakePos = pos;
+    }
+
+    private static void updateBlockShake(BallState state, long age) {
+        if (state.shakeDisplay == null) return;
+        if (age >= 10L || !state.shakeDisplay.isAlive()) {
+            clearBlockShake(state); return;
+        }
+        double amount = (age % 2L == 0L ? 1.0D : -1.0D) * 0.045D * (1.0D - age / 10.0D);
+        Vec3 side = new Vec3(-state.direction.z, 0.0D, state.direction.x);
+        if (side.lengthSqr() < 0.0001D) side = new Vec3(1.0D, 0.0D, 0.0D);
+        else side = side.normalize();
+        state.shakeDisplay.setPos(state.shakePos.getX() + 0.5D + side.x * amount,
+            state.shakePos.getY() + 0.5D + (age % 3L == 0L ? 0.025D : 0.0D),
+            state.shakePos.getZ() + 0.5D + side.z * amount);
+    }
+
+    private static void clearBlockShake(BallState state) {
+        if (state.shakeDisplay != null) {
+            state.shakeDisplay.setInvisible(true);
+            state.shakeDisplay.discard();
+            state.shakeDisplay = null;
         }
     }
 
@@ -673,10 +759,12 @@ public final class CombatEvents {
         final WeaponTier tier;
         long started, lastHeartbeat, nextSwing, releaseTick; int charge, releaseDuration = 16;
         boolean releasing, returned; double distance; Vec3 direction;
+        Display.ItemDisplay shakeDisplay; BlockPos shakePos;
         BallState(long tick, WeaponTier tier) { started = lastHeartbeat = nextSwing = tick; this.tier = tier; }
         public int charge() { return charge; }
         public double distance() { return distance; }
     }
+    private record AttackImpact(Vec3 position) {}
     private static final class RamState {
         final float yaw, pitch, damageMultiplier; long lastHeartbeat; final Set<Integer> hit = new HashSet<>();
         RamState(float yaw, float pitch, float damageMultiplier) {
@@ -691,10 +779,10 @@ public final class CombatEvents {
         int previousTarget = attacker.getPersistentData().getIntOr(CLAW_LAST_TARGET, -1);
         int chain = attacker.getPersistentData().getIntOr(CLAW_CRIT_CHAIN, 0);
         boolean valid = pending != null && pending.kind == WeaponKind.CLAWS && pending.fullyCharged
+            && hasMatchingClaws(attacker)
             && pending.targetId == target.getId() && attacker.level().getGameTime() - pending.gameTime <= 1L;
         if (!valid) chain = 0;
-        else if (previousTarget == target.getId() && previousHand != pending.hand) chain++;
-        else chain = 1;
+        else chain++;
         if (chain >= 4) {
             event.setAmount(event.getAmount() * 1.5F);
             chain = 0;
