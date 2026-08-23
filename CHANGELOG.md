@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.1 - 2026-08-23
+
+- Fixed a dedicated-server startup crash caused by the compatibility tooltip
+  event subscriber loading Minecraft's client-only tooltip classes on the server.
+- Restricted compatibility tooltip registration to the physical client without
+  changing any item tooltip content or gameplay behavior.
+
 ## 1.2.0 - 2026-08-21
 
 - Added native hold-to-auto-attack controls for both paired Claws: left-click
