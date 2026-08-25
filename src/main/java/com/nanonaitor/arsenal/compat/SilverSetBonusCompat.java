@@ -5,141 +5,216 @@ import com.nanonaitor.arsenal.item.ItemArsenalWeapon;
 import com.nanonaitor.arsenal.item.WeaponTier;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
-import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.UUID;
-import net.minecraft.entity.SharedMonsterAttributes;
 import net.minecraft.entity.EntityLivingBase;
+import net.minecraft.entity.SharedMonsterAttributes;
 import net.minecraft.entity.ai.attributes.AttributeModifier;
 import net.minecraft.entity.ai.attributes.IAttributeInstance;
 import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.inventory.EntityEquipmentSlot;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
-import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.fml.common.Loader;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent;
 import net.minecraftforge.fml.common.registry.ForgeRegistries;
 
-/** Registers Arsenal material tiers with RLCraft's configured SetBonus sets. */
+/** Integrates Arsenal's Gold and Silver weapons with RLCraft's SetBonus rules. */
 @Mod.EventBusSubscriber(modid = NanonaitorsArsenal.MOD_ID)
 public final class SilverSetBonusCompat {
-    private static final UUID ATTACK_SPEED_UUID = UUID.fromString(
+    private static final UUID SILVER_ATTACK_SPEED_UUID = UUID.fromString(
         "563b78c5-187b-42ec-8698-28d8e906d70a");
+    private static final UUID GOLD_ATTACK_DAMAGE_UUID = UUID.fromString(
+        "91a8e8e7-d6e5-4df3-a121-bf5bb94a6438");
     private static final double SILVER_ATTACK_SPEED_BONUS = 0.50D;
-    private static boolean registeredWithSetBonus;
-    private static boolean goldRegisteredWithSetBonus;
+    private static final double GOLD_ATTACK_DAMAGE_BONUS = 0.50D;
+    private static final String SILVER_EQUIP_PREFIX = "ArsenalSilver_";
+    private static final String GOLD_EQUIP_PREFIX = "ArsenalGold_";
+
+    private static boolean silverBonusDetected;
+    private static boolean goldBonusDetected;
+    private static boolean silverNativeRegistration;
+    private static boolean goldNativeRegistration;
+    private static Object silverArmorSet;
+    private static Object goldArmorSet;
 
     private SilverSetBonusCompat() {}
 
     /**
-     * Adds every registered Arsenal Silver weapon to SetBonus's SSetW
-     * (Quicksilver Hands) mainhand pool. The SetBonus classes are accessed by
-     * reflection so the mod remains optional outside RLCraft installations.
+     * Extends SetBonus's in-memory configuration before SetBonus compiles it
+     * during FMLServerStartingEvent. This makes Arsenal weapons genuine members
+     * of GSetW/SSetW, so SetBonus supplies both mechanics and tooltips itself.
+     * The user's on-disk SetBonus config is not modified.
      */
+    public static void prepareRlcraftEquipmentSets() {
+        if (!Loader.isModLoaded("setbonus")) return;
+        try {
+            Class<?> configClass = Class.forName(
+                "com.fantasticsource.setbonus.config.SetBonusConfig");
+            Object serverSettings = configClass.getField("serverSettings").get(null);
+            if (serverSettings == null) return;
+
+            Field equipmentField = serverSettings.getClass().getField("equipment");
+            Field setsField = serverSettings.getClass().getField("sets");
+            List<String> equipment = new ArrayList<>(Arrays.asList(
+                (String[]) equipmentField.get(serverSettings)));
+            List<String> sets = new ArrayList<>(Arrays.asList(
+                (String[]) setsField.get(serverSettings)));
+
+            int silverAdded = addTierToConfig(equipment, sets, "SSetW",
+                WeaponTier.SILVER, SILVER_EQUIP_PREFIX);
+            int goldAdded = addTierToConfig(equipment, sets, "GSetW",
+                WeaponTier.GOLD, GOLD_EQUIP_PREFIX);
+
+            equipmentField.set(serverSettings, equipment.toArray(new String[0]));
+            setsField.set(serverSettings, sets.toArray(new String[0]));
+            NanonaitorsArsenal.LOGGER.info(
+                "Prepared native SetBonus entries for {} Silver and {} Gold Arsenal weapons",
+                silverAdded, goldAdded);
+        } catch (ReflectiveOperationException | LinkageError | RuntimeException exception) {
+            NanonaitorsArsenal.LOGGER.warn(
+                "Could not prepare native RLCraft Gold/Silver weapon-set entries; "
+                    + "the numeric compatibility fallback will be used", exception);
+        }
+    }
+
+    /** Detects the fully parsed sets after SetBonus has built its server data. */
     public static void registerRlcraftEquipmentSets() {
         if (!Loader.isModLoaded("setbonus")) return;
         try {
             Class<?> dataClass = Class.forName("com.fantasticsource.setbonus.SetBonusData");
             Object serverData = dataClass.getField("SERVER_DATA").get(null);
-            Collection<Object> equipment = collectionField(dataClass, serverData, "equipment");
             Collection<Object> sets = collectionField(dataClass, serverData, "sets");
             Collection<Object> bonuses = collectionField(dataClass, serverData, "bonuses");
-            Class<?> equipClass = Class.forName(
-                "com.fantasticsource.setbonus.common.bonusrequirements.setrequirement.Equip");
-            Method createEquip = equipClass.getMethod("getInstance", String.class);
 
-            // These IDs and pairings come from RLCraft's custom SetBonus data.
-            // Their presence is the pack detection; other packs are untouched.
-            Object quicksilverHands = findById(sets, "SSetW");
-            if (quicksilverHands != null && findById(bonuses, "SBonusW") != null) {
-                int silverAdded = registerTier(equipment, quicksilverHands,
-                    createEquip, WeaponTier.SILVER, "ArsenalSilver_");
-                registeredWithSetBonus = silverAdded > 0;
-                NanonaitorsArsenal.LOGGER.info(
-                    "Registered {} Arsenal Silver weapons with Quicksilver Hands",
-                    silverAdded);
-            }
+            silverArmorSet = findById(sets, "SSet");
+            goldArmorSet = findById(sets, "GSet");
+            Object silverWeaponSet = findById(sets, "SSetW");
+            Object goldWeaponSet = findById(sets, "GSetW");
+            silverBonusDetected = silverArmorSet != null && silverWeaponSet != null
+                && findById(bonuses, "SBonusW") != null;
+            goldBonusDetected = goldArmorSet != null && goldWeaponSet != null
+                && findById(bonuses, "GBonusWeapon") != null;
+            silverNativeRegistration = containsEquipPrefix(
+                silverWeaponSet, SILVER_EQUIP_PREFIX);
+            goldNativeRegistration = containsEquipPrefix(
+                goldWeaponSet, GOLD_EQUIP_PREFIX);
 
-            Object magicInfusedWeapons = findById(sets, "GSetW");
-            if (magicInfusedWeapons != null
-                && findById(bonuses, "GBonusWeapon") != null) {
-                int goldAdded = registerTier(equipment, magicInfusedWeapons,
-                    createEquip, WeaponTier.GOLD, "ArsenalGold_");
-                goldRegisteredWithSetBonus = goldAdded > 0;
-                NanonaitorsArsenal.LOGGER.info(
-                    "Registered {} Arsenal Gold weapons with Magic Infused Weapon",
-                    goldAdded);
-            }
+            NanonaitorsArsenal.LOGGER.info(
+                "RLCraft SetBonus integration: Magic Infused Weapon native={}, "
+                    + "Quicksilver Hands native={}",
+                goldNativeRegistration, silverNativeRegistration);
         } catch (ReflectiveOperationException | LinkageError | RuntimeException exception) {
-            registeredWithSetBonus = false;
-            goldRegisteredWithSetBonus = false;
+            silverBonusDetected = false;
+            goldBonusDetected = false;
+            silverNativeRegistration = false;
+            goldNativeRegistration = false;
+            silverArmorSet = null;
+            goldArmorSet = null;
             NanonaitorsArsenal.LOGGER.warn(
-                "Could not register Arsenal weapons with the RLCraft equipment sets; "
-                    + "using the Silver numeric compatibility fallback", exception);
+                "Could not detect RLCraft's configured Gold/Silver equipment bonuses",
+                exception);
         }
     }
 
-    /**
-     * RLCraft-only Gold set check used by Scimitars. Requiring the detected
-     * SetBonus data prevents an ordinary standalone Gold armor set from
-     * granting RLCraft's Magic Infused Weapon behavior.
-     */
     public static boolean isMagicInfusedGoldSetActive(EntityLivingBase wearer) {
-        return Loader.isModLoaded("setbonus") && goldRegisteredWithSetBonus
-            && wearsFullGoldArmor(wearer);
-    }
-
-    private static int registerTier(Collection<Object> equipment, Object weaponSet,
-                                    Method createEquip, WeaponTier tier,
-                                    String equipPrefix)
-        throws ReflectiveOperationException {
-        Field slotDataField = weaponSet.getClass().getField("slotData");
-        Collection<?> slots = (Collection<?>) slotDataField.get(weaponSet);
-        if (slots.isEmpty()) return 0;
-        Object mainhandSlot = slots.iterator().next();
-        Field involvedField = mainhandSlot.getClass().getField("involvedEquips");
-        @SuppressWarnings("unchecked")
-        Collection<Object> involvedEquips =
-            (Collection<Object>) involvedField.get(mainhandSlot);
-
-        int added = 0;
-        for (ItemArsenalWeapon weapon : arsenalWeapons(tier)) {
-            String path = weapon.getRegistryName().getResourcePath();
-            String equipId = equipPrefix + path;
-            Object equip = findById(equipment, equipId);
-            if (equip == null) {
-                equip = createEquip.invoke(null, equipId + ", "
-                    + weapon.getRegistryName());
-                if (equip != null) equipment.add(equip);
-            }
-            if (equip != null) {
-                involvedEquips.add(equip);
-                added++;
-            }
-        }
-        return added;
+        return Loader.isModLoaded("setbonus") && goldBonusDetected
+            && isSetComplete(goldArmorSet, wearer);
     }
 
     @SubscribeEvent
     public static void onPlayerTick(TickEvent.PlayerTickEvent event) {
         if (event.phase != TickEvent.Phase.START) return;
         EntityPlayer player = event.player;
-        IAttributeInstance speed = player.getEntityAttribute(
-            SharedMonsterAttributes.ATTACK_SPEED);
-        if (speed == null) return;
+        if (player.world.isRemote) return;
 
-        AttributeModifier old = speed.getModifier(ATTACK_SPEED_UUID);
-        if (old != null) speed.removeModifier(old);
-        if (!registeredWithSetBonus && Loader.isModLoaded("setbonus")
-            && holdsArsenalSilverWeapon(player)
-            && wearsFullSilverArmor(player)) {
-            // SetBonus's RLCraft rule is generic.attackSpeed=0.5 @ 1:
-            // +50% of the base attack-speed attribute.
-            speed.applyModifier(new AttributeModifier(ATTACK_SPEED_UUID,
-                "Arsenal Silver Set Bonus compatibility",
-                SILVER_ATTACK_SPEED_BONUS, 1).setSaved(false));
+        WeaponTier heldTier = heldArsenalTier(player);
+        updateModifier(player.getEntityAttribute(SharedMonsterAttributes.ATTACK_SPEED),
+            SILVER_ATTACK_SPEED_UUID, "Quicksilver Hands (Arsenal)",
+            SILVER_ATTACK_SPEED_BONUS,
+            !silverNativeRegistration && silverBonusDetected
+                && heldTier == WeaponTier.SILVER
+                && isSetComplete(silverArmorSet, player));
+        updateModifier(player.getEntityAttribute(SharedMonsterAttributes.ATTACK_DAMAGE),
+            GOLD_ATTACK_DAMAGE_UUID, "Magic Infused Weapon (Arsenal)",
+            GOLD_ATTACK_DAMAGE_BONUS,
+            !goldNativeRegistration && goldBonusDetected
+                && heldTier == WeaponTier.GOLD
+                && isSetComplete(goldArmorSet, player));
+    }
+
+    private static int addTierToConfig(List<String> equipment, List<String> sets,
+                                       String setId, WeaponTier tier,
+                                       String equipPrefix) {
+        int setIndex = findConfigEntry(sets, setId);
+        if (setIndex < 0) return 0;
+        String setLine = sets.get(setIndex);
+        int added = 0;
+        for (Item item : ForgeRegistries.ITEMS.getValuesCollection()) {
+            if (!(item instanceof ItemArsenalWeapon)
+                || ((ItemArsenalWeapon) item).getTier() != tier
+                || item.getRegistryName() == null) continue;
+
+            String equipId = equipPrefix + item.getRegistryName().getResourcePath();
+            if (findConfigEntry(equipment, equipId) < 0) {
+                equipment.add(equipId + ", " + item.getRegistryName());
+            }
+            if (!containsSetMember(setLine, equipId)) {
+                setLine += " | " + equipId;
+            }
+            added++;
+        }
+        sets.set(setIndex, setLine);
+        return added;
+    }
+
+    private static int findConfigEntry(List<String> entries, String id) {
+        for (int i = 0; i < entries.size(); i++) {
+            String value = entries.get(i);
+            if (value != null && value.trim().startsWith(id + ",")) return i;
+        }
+        return -1;
+    }
+
+    private static boolean containsSetMember(String setLine, String equipId) {
+        int equals = setLine.indexOf('=');
+        if (equals < 0) return false;
+        String[] members = setLine.substring(equals + 1).split("[|]");
+        for (String member : members) {
+            if (equipId.equals(member.trim())) return true;
+        }
+        return false;
+    }
+
+    private static boolean containsEquipPrefix(Object weaponSet, String prefix)
+        throws ReflectiveOperationException {
+        if (weaponSet == null) return false;
+        Collection<?> slots = (Collection<?>) weaponSet.getClass()
+            .getField("slotData").get(weaponSet);
+        for (Object slot : slots) {
+            Collection<?> equips = (Collection<?>) slot.getClass()
+                .getField("involvedEquips").get(slot);
+            for (Object equip : equips) {
+                Object id = equip.getClass().getField("id").get(equip);
+                if (id instanceof String && ((String) id).startsWith(prefix)) return true;
+            }
+        }
+        return false;
+    }
+
+    private static void updateModifier(IAttributeInstance attribute, UUID id,
+                                       String name, double amount, boolean active) {
+        if (attribute == null) return;
+        AttributeModifier current = attribute.getModifier(id);
+        if (active && current == null) {
+            attribute.applyModifier(new AttributeModifier(id, name, amount, 1)
+                .setSaved(false));
+        } else if (!active && current != null) {
+            attribute.removeModifier(current);
         }
     }
 
@@ -158,49 +233,23 @@ public final class SilverSetBonusCompat {
         return null;
     }
 
-    private static Collection<ItemArsenalWeapon> arsenalWeapons(WeaponTier tier) {
-        Collection<ItemArsenalWeapon> result = new LinkedHashSet<>();
-        for (net.minecraft.item.Item item : ForgeRegistries.ITEMS.getValuesCollection()) {
-            if (item instanceof ItemArsenalWeapon
-                && ((ItemArsenalWeapon) item).getTier() == tier) {
-                result.add((ItemArsenalWeapon) item);
-            }
-        }
-        return result;
-    }
-
-    private static boolean holdsArsenalSilverWeapon(EntityPlayer player) {
+    private static WeaponTier heldArsenalTier(EntityPlayer player) {
         ItemStack held = player.getHeldItemMainhand();
         return held.getItem() instanceof ItemArsenalWeapon
-            && ((ItemArsenalWeapon) held.getItem()).getTier() == WeaponTier.SILVER;
+            ? ((ItemArsenalWeapon) held.getItem()).getTier() : null;
     }
 
-    private static boolean wearsFullSilverArmor(EntityPlayer player) {
-        return hasRegistryName(player.getItemStackFromSlot(EntityEquipmentSlot.HEAD),
-                "iceandfire:armor_silver_metal_helmet")
-            && hasRegistryName(player.getItemStackFromSlot(EntityEquipmentSlot.CHEST),
-                "iceandfire:armor_silver_metal_chestplate")
-            && hasRegistryName(player.getItemStackFromSlot(EntityEquipmentSlot.LEGS),
-                "iceandfire:armor_silver_metal_leggings")
-            && hasRegistryName(player.getItemStackFromSlot(EntityEquipmentSlot.FEET),
-                "iceandfire:armor_silver_metal_boots");
-    }
-
-    private static boolean wearsFullGoldArmor(EntityLivingBase wearer) {
-        return isGoldArmor(wearer.getItemStackFromSlot(EntityEquipmentSlot.HEAD))
-            && isGoldArmor(wearer.getItemStackFromSlot(EntityEquipmentSlot.CHEST))
-            && isGoldArmor(wearer.getItemStackFromSlot(EntityEquipmentSlot.LEGS))
-            && isGoldArmor(wearer.getItemStackFromSlot(EntityEquipmentSlot.FEET));
-    }
-
-    private static boolean isGoldArmor(ItemStack stack) {
-        return !stack.isEmpty() && stack.getItem() instanceof net.minecraft.item.ItemArmor
-            && ((net.minecraft.item.ItemArmor) stack.getItem()).getArmorMaterial()
-                == net.minecraft.item.ItemArmor.ArmorMaterial.GOLD;
-    }
-
-    private static boolean hasRegistryName(ItemStack stack, String expected) {
-        ResourceLocation name = stack.isEmpty() ? null : stack.getItem().getRegistryName();
-        return name != null && expected.equals(name.toString());
+    private static boolean isSetComplete(Object set, EntityLivingBase wearer) {
+        if (set == null || !(wearer instanceof EntityPlayer)) return false;
+        try {
+            Method equipped = set.getClass().getMethod("getNumberEquipped",
+                EntityPlayer.class);
+            Method maximum = set.getClass().getMethod("getMaxNumber");
+            int equippedCount = ((Number) equipped.invoke(set, wearer)).intValue();
+            int requiredCount = ((Number) maximum.invoke(set)).intValue();
+            return requiredCount > 0 && equippedCount >= requiredCount;
+        } catch (ReflectiveOperationException | LinkageError | RuntimeException ignored) {
+            return false;
+        }
     }
 }

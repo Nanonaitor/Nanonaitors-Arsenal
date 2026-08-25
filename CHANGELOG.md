@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.2.3 - 2026-08-24
+
+- Fixed Gold and Silver Arsenal weapons being detected but not registered as
+  native members of RLCraft's SetBonus weapon sets.
+- Magic Infused Weapon and Quicksilver Hands now activate and display through
+  SetBonus itself, with a numeric fallback for customized pack configurations.
+
+## 1.2.2 - 2026-08-24
+
+- Fixed RLCraft's Magic Infused Weapon and Quicksilver Hands bonuses for all
+  Arsenal Gold and Silver weapons by detecting the pack's exact SetBonus sets
+  and applying their configured +50% damage/attack-speed attribute operations.
+- Added native Fire, Ice, and Lightning Dragonforge upgrades for every
+  Dragonbone Arsenal weapon family while preserving names, enchantments,
+  durability, qualities, and other item data.
+
 ## 1.2.1 - 2026-08-23
 
 - Fixed a dedicated-server startup crash caused by the compatibility tooltip

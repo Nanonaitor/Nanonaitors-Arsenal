@@ -2,6 +2,7 @@ package com.nanonaitor.arsenal;
 
 import com.nanonaitor.arsenal.client.ArsenalCreativeTab;
 import com.nanonaitor.arsenal.compat.SilverSetBonusCompat;
+import com.nanonaitor.arsenal.compat.DragonForgeCompat;
 import com.nanonaitor.arsenal.compat.ReskillableCompat;
 import com.nanonaitor.arsenal.network.ModNetwork;
 import com.nanonaitor.arsenal.recipe.ModSmeltingRecipes;
@@ -20,12 +21,12 @@ import net.minecraftforge.fml.common.event.FMLServerStartedEvent;
     name = NanonaitorsArsenal.NAME,
     version = NanonaitorsArsenal.VERSION,
     acceptedMinecraftVersions = "[1.12.2]",
-    dependencies = "after:setbonus;after:xat;after:quark;after:spartanweaponry;after:spartanfire;after:srparasites;after:reskillable"
+    dependencies = "after:setbonus;after:iceandfire;after:xat;after:quark;after:spartanweaponry;after:spartanfire;after:srparasites;after:reskillable"
 )
 public final class NanonaitorsArsenal {
     public static final String MOD_ID = "nanonaitors_arsenal";
     public static final String NAME = "Nanonaitor's Arsenal";
-    public static final String VERSION = "1.2.1";
+    public static final String VERSION = "1.2.3";
     public static final Logger LOGGER = LogManager.getLogger(NAME);
     public static final CreativeTabs CREATIVE_TAB = new ArsenalCreativeTab();
 
@@ -43,6 +44,8 @@ public final class NanonaitorsArsenal {
     @Mod.EventHandler
     public void postInit(FMLPostInitializationEvent event) {
         ReskillableCompat.registerWeaponRequirements();
+        DragonForgeCompat.register();
+        SilverSetBonusCompat.prepareRlcraftEquipmentSets();
     }
 
     @Mod.EventHandler
