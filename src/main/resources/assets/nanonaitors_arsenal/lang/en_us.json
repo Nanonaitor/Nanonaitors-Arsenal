@@ -1,6 +1,7 @@
 {
   "itemGroup.nanonaitors_arsenal": "Nanonaitor's Arsenal",
   "effect.nanonaitors_arsenal.armor_fracture": "Armor Fracture",
+  "effect.nanonaitors_arsenal.stunned": "Stunned",
   "enchantment.nanonaitors_arsenal.long_chain": "Long Chain",
   "enchantment.nanonaitors_arsenal.rotation_force": "Rotation Force",
   "enchantment.nanonaitors_arsenal.long_chain.desc": "+1 block of Flail and Ball & Chain reach per level.",

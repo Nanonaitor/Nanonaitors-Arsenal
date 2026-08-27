@@ -13,6 +13,8 @@ import net.minecraft.world.item.ItemUseAnimation;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.component.TooltipDisplay;
 import net.minecraft.world.level.Level;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.network.protocol.game.ClientboundSetActionBarTextPacket;
 
 public final class ArsenalShieldItem extends ShieldItem {
     public enum Type { SUN_WAR }
@@ -25,7 +27,14 @@ public final class ArsenalShieldItem extends ShieldItem {
     }
 
     @Override public InteractionResult use(Level level, Player player, InteractionHand hand) {
-        if (type == Type.SUN_WAR && (hand != InteractionHand.MAIN_HAND || !player.getOffhandItem().isEmpty())) return InteractionResult.FAIL;
+        ItemStack opposite = hand == InteractionHand.MAIN_HAND ? player.getOffhandItem() : player.getMainHandItem();
+        if (type == Type.SUN_WAR && !opposite.isEmpty()) {
+            if (player instanceof ServerPlayer server) server.connection.send(
+                new ClientboundSetActionBarTextPacket(Component.literal(
+                    "I need both hands to shield with the bulwark!")
+                    .withStyle(ChatFormatting.RED)));
+            return InteractionResult.FAIL;
+        }
         player.startUsingItem(hand);
         return InteractionResult.CONSUME;
     }
@@ -41,7 +50,8 @@ public final class ArsenalShieldItem extends ShieldItem {
         lines.accept(Component.literal("Damage: 1 + armor points, scaled by attack charge. Guard and attack for a 4-block bash.").withStyle(ChatFormatting.RED));
         lines.accept(Component.literal("Wait about 4 secs between attacks for full damage.").withStyle(ChatFormatting.YELLOW));
         lines.accept(Component.literal("40% slower while carried; 75% slower while guarding.").withStyle(ChatFormatting.GRAY));
-        lines.accept(Component.literal("Requires an empty offhand for every ability.").withStyle(ChatFormatting.DARK_RED));
+        lines.accept(Component.literal("Guarding requires the opposite hand to be empty.").withStyle(ChatFormatting.DARK_RED));
+        lines.accept(Component.literal("An occupied opposite hand halves attack speed.").withStyle(ChatFormatting.DARK_RED));
         lines.accept(Component.literal("Does not stop environmental hazards.").withStyle(ChatFormatting.DARK_GRAY));
     }
 }

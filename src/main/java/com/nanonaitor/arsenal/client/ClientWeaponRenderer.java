@@ -16,6 +16,8 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.world.item.component.CustomModelData;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.client.event.RenderHandEvent;
 import net.minecraftforge.client.event.RenderLivingEvent;
@@ -37,7 +39,8 @@ public final class ClientWeaponRenderer {
         if (!(player.getMainHandItem().getItem() instanceof ArsenalWeaponItem weapon)) return;
         long now = minecraft.level.getGameTime();
         boolean local = player == minecraft.player;
-        int swingTicks = ChainWeaponStats.swingIntervalTicks(player, player.getMainHandItem());
+        int swingTicks = ChainWeaponStats.swingIntervalTicks(player, player.getMainHandItem(),
+            weapon.kind() == WeaponKind.BALL_AND_CHAIN && local && ClientControls.ballWindBoost());
         if (weapon.kind() == WeaponKind.FLAIL && (local ? ClientControls.flailActive() : player.isUsingItem())) {
             double angle = -(now + minecraft.getDeltaTracker().getGameTimeDeltaPartialTick(false)) / swingTicks * Math.PI * 2.0D;
             double reach = ChainWeaponStats.flailReach(player, player.getMainHandItem());
@@ -51,7 +54,19 @@ public final class ClientWeaponRenderer {
             double handX = cosBody * 0.32D - sinBody * 0.12D;
             double handY = 1.2D;
             double handZ = sinBody * 0.32D + cosBody * 0.12D;
-            if (local && ClientControls.ballWindup(now) || !local && player.isUsingItem()) {
+            boolean attackVisual = local
+                ? ClientControls.ballWindup(now) || ClientControls.ballRelease(now)
+                : customModelFlag(player.getMainHandItem());
+            boolean guarding = player.isUsingItem() && player.getUseItem() == player.getMainHandItem()
+                && player.getOffhandItem().isEmpty() && !attackVisual;
+            if (guarding) {
+                // Guarding carries only the large ball between both hands. The
+                // chain and ordinary held sprite are intentionally hidden.
+                renderItem(event.getPoseStack(), event.getNodeCollector(),
+                    event.getState().lightCoords, event.getState().outlineColor,
+                    ballVisualStack(weapon.tier()), -sinBody * 0.28D,
+                    1.18D, cosBody * 0.28D, 0.94F);
+            } else if ((local && ClientControls.ballWindup(now)) || (!local && attackVisual)) {
                 double angle = (now - (local ? ClientControls.ballStarted() : now - player.getTicksUsingItem()) + partial) / swingTicks * Math.PI * 2.0D;
                 double scale = ChainWeaponStats.ballWindupReach(player, player.getMainHandItem()) / 3.0D;
                 double localBallZ = (0.75D + Math.cos(angle) * 0.45D) * scale;
@@ -80,12 +95,30 @@ public final class ClientWeaponRenderer {
 
     public static void renderFirstPerson(RenderHandEvent event) {
         Minecraft minecraft = Minecraft.getInstance();
-        if (event.getHand() != InteractionHand.MAIN_HAND || minecraft.player == null || minecraft.level == null
+        if (minecraft.player == null || minecraft.level == null) return;
+        if (isDualScimitarGuard(minecraft, event.getItemStack())) {
+            // The dedicated using-item model supplies mirrored transforms for a
+            // centered X. Avoid another camera-space transform here.
+            return;
+        }
+        if (event.getHand() != InteractionHand.MAIN_HAND
             || !(event.getItemStack().getItem() instanceof ArsenalWeaponItem weapon)) return;
         long now = minecraft.level.getGameTime();
         double partial = event.getPartialTick();
-        int swingTicks = ChainWeaponStats.swingIntervalTicks(minecraft.player, event.getItemStack());
-        if (weapon.kind() == WeaponKind.BATTERING_RAM && ClientControls.ramActive()) {
+        int swingTicks = ChainWeaponStats.swingIntervalTicks(minecraft.player, event.getItemStack(),
+            weapon.kind() == WeaponKind.BALL_AND_CHAIN && ClientControls.ballWindBoost());
+        if (weapon.kind() == WeaponKind.MORNING_STAR && ClientControls.morningStarCharging()) {
+            float charge = ClientControls.morningStarChargeProgress(now);
+            event.getPoseStack().translate(-0.10D, 0.08D + charge * 0.10D, -0.18D);
+            event.getPoseStack().mulPose(Axis.XP.rotationDegrees(-28.0F - charge * 28.0F));
+            event.getPoseStack().mulPose(Axis.ZP.rotationDegrees(8.0F));
+        } else if (weapon.kind() == WeaponKind.MORNING_STAR && ClientControls.morningStarSwing(now)) {
+            float swing = ClientControls.morningStarSwingProgress(now, (float)partial);
+            float eased = Mth.sin(swing * Mth.PI);
+            event.getPoseStack().translate(-0.18D, -0.03D, -0.20D);
+            event.getPoseStack().mulPose(Axis.YP.rotationDegrees(-105.0F + swing * 210.0F));
+            event.getPoseStack().mulPose(Axis.ZP.rotationDegrees(-18.0F * eased));
+        } else if (weapon.kind() == WeaponKind.BATTERING_RAM && ClientControls.ramActive()) {
             // A steady forward brace for first person. This replaces the vanilla
             // mining/block animation and adds only a small running pulse, so the
             // pointed end visibly drives forward without competing transforms.
@@ -107,6 +140,13 @@ public final class ClientWeaponRenderer {
                 weapon.tier(), 0.38D, -0.42D, -0.15D,
                 Math.cos(relative) * ChainWeaponStats.flailReach(minecraft.player, event.getItemStack()), -0.57D,
                 -Math.sin(relative) * ChainWeaponStats.flailReach(minecraft.player, event.getItemStack()), 0.58F, 0.28F, false);
+        } else if (weapon.kind() == WeaponKind.BALL_AND_CHAIN && minecraft.player.isUsingItem()
+            && minecraft.player.getUseItem() == event.getItemStack()
+            && minecraft.player.getOffhandItem().isEmpty() && !customModelFlag(event.getItemStack())) {
+            // Large and low: only the upper half rises into the first-person view.
+            // No chain is rendered while the ball itself is used as a shield.
+            renderItem(event.getPoseStack(), event.getNodeCollector(), event.getPackedLight(), 0,
+                ballVisualStack(weapon.tier()), 0.0D, -0.52D, -0.82D, 0.84F);
         } else if (weapon.kind() == WeaponKind.BALL_AND_CHAIN && ClientControls.ballWindup(now)) {
             double angle = (now - ClientControls.ballStarted() + partial) / swingTicks * Math.PI * 2.0D;
             double scale = ChainWeaponStats.ballWindupReach(minecraft.player, event.getItemStack()) / 3.0D;
@@ -200,6 +240,20 @@ public final class ClientWeaponRenderer {
     }
     private static ItemStack ballVisualStack(WeaponTier tier) {
         return new ItemStack(ModItems.BALL_VISUALS.get(tier).get());
+    }
+
+    private static boolean customModelFlag(ItemStack stack) {
+        CustomModelData data = stack.getOrDefault(DataComponents.CUSTOM_MODEL_DATA, CustomModelData.EMPTY);
+        return !data.flags().isEmpty() && data.flags().get(0);
+    }
+
+    private static boolean isDualScimitarGuard(Minecraft minecraft, ItemStack stack) {
+        if (!minecraft.player.isUsingItem()
+            || !(minecraft.player.getUseItem().getItem() instanceof ArsenalWeaponItem used)
+            || used.kind() != WeaponKind.SCIMITAR) return false;
+        return minecraft.player.getMainHandItem().getItem() instanceof ArsenalWeaponItem main
+            && minecraft.player.getOffhandItem().getItem() instanceof ArsenalWeaponItem off
+            && main.kind() == WeaponKind.SCIMITAR && off.kind() == WeaponKind.SCIMITAR;
     }
     private ClientWeaponRenderer() {}
 }

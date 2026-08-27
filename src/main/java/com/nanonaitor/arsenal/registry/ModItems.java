@@ -21,7 +21,6 @@ public final class ModItems {
     public static final Map<WeaponKind, Map<WeaponTier, RegistryObject<Item>>> WEAPONS = new EnumMap<>(WeaponKind.class);
     public static final Map<String, RegistryObject<Item>> VISIBLE = new LinkedHashMap<>();
     public static final Map<WeaponTier, RegistryObject<Item>> BALL_VISUALS = new EnumMap<>(WeaponTier.class);
-    public static final RegistryObject<Item> CHAIN_LINK_FLAT = visualItem("chain_link_flat");
     public static final RegistryObject<Item> CHAIN_LINK_UPRIGHT = visualItem("chain_link_upright");
 
     public static final RegistryObject<Item> SUN_WAR = registerShield("sun_war_bulwark", ArsenalShieldItem.Type.SUN_WAR,
@@ -64,7 +63,7 @@ public final class ModItems {
     }
 
     /** Ten percent below the old final value, rounded to the nearest half point. */
-    private static float roundedScimitarDamage(WeaponTier tier) {
+    public static float roundedScimitarDamage(WeaponTier tier) {
         float oldFinalDamage = 1.0F + tier.material.attackDamageBonus() + WeaponKind.SCIMITAR.damageBaseline;
         return Math.round(oldFinalDamage * 0.90F * 2.0F) / 2.0F;
     }

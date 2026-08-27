@@ -3,6 +3,7 @@ package com.nanonaitor.arsenal.combat;
 import com.nanonaitor.arsenal.ArsenalMod;
 import com.nanonaitor.arsenal.item.*;
 import com.nanonaitor.arsenal.network.ModNetwork;
+import com.nanonaitor.arsenal.config.ArsenalConfig;
 import com.nanonaitor.arsenal.registry.ModEffects;
 import com.nanonaitor.arsenal.registry.ModItems;
 import java.util.*;
@@ -29,7 +30,6 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.Display;
-import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ItemUseAnimation;
 import net.minecraft.world.item.component.CustomModelData;
@@ -45,6 +45,7 @@ import net.minecraft.world.phys.EntityHitResult;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.living.LivingAttackEvent;
 import net.minecraftforge.event.entity.living.LivingHurtEvent;
+import net.minecraftforge.event.entity.living.LivingKnockBackEvent;
 import net.minecraftforge.event.entity.player.AttackEntityEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.entity.EntityJoinLevelEvent;
@@ -53,6 +54,10 @@ public final class CombatEvents {
     private static final float BULWARK_BASE_DAMAGE = 1.0F;
     private static final float BULWARK_ARMOR_DAMAGE = 1.0F;
     private static final Identifier BULWARK_SLOW = Identifier.fromNamespaceAndPath(ArsenalMod.MOD_ID, "bulwark_slow");
+    private static final Identifier OCCUPIED_HAND_ATTACK_SLOW = Identifier.fromNamespaceAndPath(
+        ArsenalMod.MOD_ID, "occupied_hand_attack_slow");
+    private static final Identifier DUAL_SCIMITAR_ATTACK_SPEED = Identifier.fromNamespaceAndPath(
+        ArsenalMod.MOD_ID, "dual_scimitar_attack_speed");
     private static final TagKey<Block> RAM_WOOD = ramTag("wood");
     private static final TagKey<Block> RAM_STONE = ramTag("stone");
     private static final TagKey<Block> RAM_IRON = ramTag("iron");
@@ -61,7 +66,9 @@ public final class CombatEvents {
     private static final Map<UUID, ItemStack> ACTIVE_FLAIL_SPRITES = new HashMap<>();
     private static final Map<UUID, BallState> BALLS = new HashMap<>();
     private static final Map<UUID, RamState> RAMS = new HashMap<>();
+    private static final Map<UUID, MorningStarState> MORNING_STARS = new HashMap<>();
     private static final Map<UUID, Long> LAST_CLAW_OFFHAND = new HashMap<>();
+    private static final Map<UUID, Long> LAST_SCIMITAR_ATTACK = new HashMap<>();
     private static final Map<UUID, PendingMeleeAttack> PENDING_MELEE = new HashMap<>();
     private static final Map<UUID, PendingBulwarkAttack> PENDING_BULWARK = new HashMap<>();
     private static final Identifier PERMANENT_FRACTURE = Identifier.fromNamespaceAndPath(ArsenalMod.MOD_ID, "ball_chain_fracture");
@@ -71,14 +78,38 @@ public final class CombatEvents {
     public static boolean onLivingAttack(LivingAttackEvent event) {
         if (!(event.getEntity() instanceof Player player)) return false;
         ItemStack active = player.getUseItem();
-        if (!(active.getItem() instanceof ArsenalShieldItem shield)) return false;
         DamageSource source = event.getSource();
-        if (shield.shieldType() != ArsenalShieldItem.Type.SUN_WAR || !player.getOffhandItem().isEmpty()
-            || player.getMainHandItem() != active || !sunWarBlocks(source)) return false;
+        boolean blocked = false;
+        if (active.getItem() instanceof ArsenalShieldItem shield
+            && shield.shieldType() == ArsenalShieldItem.Type.SUN_WAR
+            && otherHandEmpty(player, active) && sunWarBlocks(source)) {
+            blocked = true;
+        } else if (active.getItem() instanceof ArsenalWeaponItem weapon
+            && weapon.kind() == WeaponKind.BALL_AND_CHAIN
+            && player.getMainHandItem() == active && player.getOffhandItem().isEmpty()
+            && !BALLS.containsKey(player.getUUID()) && directedShieldBlocks(player, source)) {
+            blocked = true;
+        } else if (active.getItem() instanceof ArsenalWeaponItem weapon
+            && weapon.kind() == WeaponKind.SCIMITAR && hasDualScimitars(player)
+            && directedShieldBlocks(player, source)) {
+            blocked = true;
+        }
+        if (!blocked) return false;
         if (!player.level().isClientSide()) {
-            damage(active, player, 1);
-            ((ServerLevel)player.level()).playSound(null, player.blockPosition(), SoundEvents.SHIELD_BLOCK.value(),
-                SoundSource.PLAYERS, 0.9F, 0.90F);
+            if (active.getItem() instanceof ArsenalWeaponItem weapon
+                && weapon.kind() == WeaponKind.SCIMITAR && hasDualScimitars(player)) {
+                damage(player.getMainHandItem(), player, 1);
+                damage(player.getOffhandItem(), player, 1);
+            } else damage(active, player, 1);
+            boolean metalGuard = active.getItem() instanceof ArsenalWeaponItem weapon
+                && (weapon.kind() == WeaponKind.BALL_AND_CHAIN
+                    || weapon.kind() == WeaponKind.SCIMITAR && hasDualScimitars(player));
+            var blockSound = metalGuard
+                ? net.minecraft.world.level.block.Blocks.IRON_BARS.defaultBlockState()
+                    .getSoundType().getPlaceSound()
+                : SoundEvents.SHIELD_BLOCK.value();
+            ((ServerLevel)player.level()).playSound(null, player.blockPosition(), blockSound,
+                SoundSource.PLAYERS, metalGuard ? 1.125F : 0.9F, 0.90F);
         }
         return true;
     }
@@ -86,17 +117,13 @@ public final class CombatEvents {
     public static void onLivingHurt(LivingHurtEvent event) {
         if (event.getEntity() instanceof Player player) {
             ItemStack bulwark = equippedShield(player, ArsenalShieldItem.Type.SUN_WAR);
-            if (!bulwark.isEmpty() && player.getMainHandItem() == bulwark && player.getOffhandItem().isEmpty()) {
+            if (!bulwark.isEmpty()) {
                 event.setAmount(event.getAmount() * 0.85F);
             }
         }
         if (!(event.getSource().getEntity() instanceof Player attacker)) return;
         if (attacker.getMainHandItem().getItem() instanceof ArsenalShieldItem shield
             && shield.shieldType() == ArsenalShieldItem.Type.SUN_WAR) {
-            if (!attacker.getOffhandItem().isEmpty()) {
-                event.setAmount(0.0F);
-                return;
-            }
             PendingBulwarkAttack pending = PENDING_BULWARK.remove(attacker.getUUID());
             float chargeMultiplier = pending != null && pending.targetId == event.getEntity().getId()
                 && attacker.level().getGameTime() - pending.gameTime <= 1L
@@ -127,11 +154,17 @@ public final class CombatEvents {
         if (arsenal.kind() == WeaponKind.CLAWS) updateClawChain(event, attacker, target, pending);
     }
 
+    /** Paired claws trade crowd control for combo consistency. */
+    public static void onLivingKnockBack(LivingKnockBackEvent event) {
+        if (event.getEntity().getLastDamageSource() != null
+            && event.getEntity().getLastDamageSource().getEntity() instanceof Player player
+            && hasMatchingClaws(player)) event.setStrength(event.getStrength() * 0.5F);
+    }
+
     public static boolean onAttackEntity(AttackEntityEvent event) {
         Player player = event.getEntity();
         if (player.getMainHandItem().getItem() instanceof ArsenalShieldItem shield
             && shield.shieldType() == ArsenalShieldItem.Type.SUN_WAR) {
-            if (!player.getOffhandItem().isEmpty()) return true;
             if (!player.level().isClientSide()) {
                 PENDING_BULWARK.put(player.getUUID(), new PendingBulwarkAttack(event.getTarget().getId(),
                     player.level().getGameTime(), attackChargeMultiplier(player)));
@@ -139,7 +172,8 @@ public final class CombatEvents {
             return false;
         }
         if (!(player.getMainHandItem().getItem() instanceof ArsenalWeaponItem weapon)) return false;
-        if (weapon.kind() == WeaponKind.FLAIL || weapon.kind() == WeaponKind.BALL_AND_CHAIN) return true;
+        if (weapon.kind() == WeaponKind.FLAIL || weapon.kind() == WeaponKind.BALL_AND_CHAIN
+            || weapon.kind() == WeaponKind.MORNING_STAR) return true;
         boolean piercedFrames = weapon.kind() == WeaponKind.CLAWS
             && event.getTarget() instanceof LivingEntity target
             && !player.level().isClientSide() && player.getAttackStrengthScale(0.5F) >= 1.0F
@@ -156,7 +190,8 @@ public final class CombatEvents {
 
     public static boolean onLeftClickBlock(PlayerInteractEvent.LeftClickBlock event) {
         return event.getEntity().getMainHandItem().getItem() instanceof ArsenalWeaponItem weapon
-            && (weapon.kind() == WeaponKind.FLAIL || weapon.kind() == WeaponKind.BALL_AND_CHAIN);
+            && (weapon.kind() == WeaponKind.FLAIL || weapon.kind() == WeaponKind.BALL_AND_CHAIN
+                || weapon.kind() == WeaponKind.MORNING_STAR);
     }
 
     public static boolean onEntityJoin(EntityJoinLevelEvent event) {
@@ -174,6 +209,11 @@ public final class CombatEvents {
         else if (action == ModNetwork.BULWARK_BASH) bulwarkBash(player);
         else if (action == ModNetwork.CLAW) clawAttack(player);
         else if (action == ModNetwork.CLAW_MAIN) clawMainAttack(player);
+        else if (action == ModNetwork.MORNING_STAR) morningStarControl(player, active);
+        else if (action == ModNetwork.BULWARK_ATTACK) bulwarkAttack(player, active);
+        else if (action == ModNetwork.BULWARK_MENU_GUARD) bulwarkMenuGuard(player, active);
+        else if (action == ModNetwork.SCIMITAR_ATTACK) scimitarAttack(player, active);
+        else if (action == ModNetwork.BALL_WIND_BOOST) ballWindBoost(player, active);
     }
 
     private static void clawMainAttack(ServerPlayer player) {
@@ -222,6 +262,104 @@ public final class CombatEvents {
         }
     }
 
+    private static void bulwarkAttack(ServerPlayer player, boolean offhand) {
+        InteractionHand hand = offhand ? InteractionHand.OFF_HAND : InteractionHand.MAIN_HAND;
+        ItemStack stack = player.getItemInHand(hand);
+        if (!(stack.getItem() instanceof ArsenalShieldItem shield)
+            || shield.shieldType() != ArsenalShieldItem.Type.SUN_WAR
+            || (offhand && !player.getMainHandItem().isEmpty())) return;
+        if (player.getAttackStrengthScale(0.5F) < 0.95F) return;
+        LivingEntity target = clawTarget(player);
+        player.swing(hand, true);
+        if (target != null) {
+            ServerLevel level = (ServerLevel)player.level();
+            float amount = bulwarkDamage(player) * attackChargeMultiplier(player);
+            if (target.hurtServer(level, player.damageSources().playerAttack(player), amount)) {
+                damage(stack, player, 1);
+                level.playSound(null, target.blockPosition(), SoundEvents.SHIELD_BLOCK.value(),
+                    SoundSource.PLAYERS, 0.8F, 0.82F);
+            }
+        }
+        player.resetAttackStrengthTicker();
+    }
+
+    private static void bulwarkMenuGuard(ServerPlayer player, boolean active) {
+        if (!active) {
+            if (player.isUsingItem() && player.getUseItem().getItem() instanceof ArsenalShieldItem shield
+                && shield.shieldType() == ArsenalShieldItem.Type.SUN_WAR) player.stopUsingItem();
+            return;
+        }
+        ItemStack bulwark = equippedShield(player, ArsenalShieldItem.Type.SUN_WAR);
+        if (bulwark.isEmpty() || !otherHandEmpty(player, bulwark)) return;
+        player.startUsingItem(player.getMainHandItem() == bulwark
+            ? InteractionHand.MAIN_HAND : InteractionHand.OFF_HAND);
+    }
+
+    private static void scimitarAttack(ServerPlayer player, boolean offhand) {
+        InteractionHand hand = offhand ? InteractionHand.OFF_HAND : InteractionHand.MAIN_HAND;
+        ItemStack stack = player.getItemInHand(hand);
+        if (!(stack.getItem() instanceof ArsenalWeaponItem weapon)
+            || weapon.kind() != WeaponKind.SCIMITAR) return;
+        boolean dual = hasDualScimitars(player);
+        boolean pairedWithBall = offhand
+            && player.getMainHandItem().getItem() instanceof ArsenalWeaponItem mainBall
+            && mainBall.kind() == WeaponKind.BALL_AND_CHAIN;
+        if (offhand && !dual && !player.getMainHandItem().isEmpty() && !pairedWithBall) return;
+        if (!offhand && !dual) return; // ordinary main-hand scimitars use vanilla attacks
+        long now = player.level().getGameTime();
+        long previous = LAST_SCIMITAR_ATTACK.getOrDefault(player.getUUID(), Long.MIN_VALUE);
+        double attackSpeed = offhand && !dual ? offhandScimitarAttackSpeed(player)
+            : player.getAttributeValue(Attributes.ATTACK_SPEED);
+        double cooldown = dual ? Math.max(10.0D, 20.0D / Math.max(0.1D, attackSpeed))
+            : 20.0D / Math.max(0.1D, attackSpeed);
+        if (previous != Long.MIN_VALUE && now >= previous && now - previous + 0.5D < cooldown) return;
+        if (!dual && player.getAttackStrengthScale(0.5F) < 0.95F) return;
+        LAST_SCIMITAR_ATTACK.put(player.getUUID(), now);
+        LivingEntity target = clawTarget(player);
+        player.swing(hand, true);
+        if (target != null) {
+            ServerLevel level = (ServerLevel)player.level();
+            DamageSource source = stack.getDamageSource(player,
+                () -> player.damageSources().playerAttack(player));
+            float attributeDamage = (float)player.getAttributeValue(Attributes.ATTACK_DAMAGE);
+            if (offhand) {
+                // Preserve Strength and other external attack modifiers while
+                // replacing the main weapon's contribution with this offhand blade.
+                attributeDamage -= mainHandWeaponAddedDamage(player);
+                attributeDamage += ModItems.roundedScimitarDamage(weapon.tier()) - 1.0F;
+            }
+            float amount = EnchantmentHelper.modifyDamage(level, stack, target, source, attributeDamage);
+            if (target.hurtServer(level, source, amount)) {
+                int amplifier = weapon.tier().ramBreakLevel >= 3 ? 1 : 0;
+                target.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 200,
+                    amplifier, false, true, true));
+                EnchantmentHelper.doPostAttackEffectsWithItemSource(level, target, source, stack);
+                damage(stack, player, 1);
+                level.playSound(null, target.blockPosition(), SoundEvents.PLAYER_ATTACK_STRONG,
+                    SoundSource.PLAYERS, 0.85F, offhand ? 1.08F : 0.98F);
+            }
+        }
+        player.resetAttackStrengthTicker();
+    }
+
+    private static float mainHandWeaponAddedDamage(Player player) {
+        if (!(player.getMainHandItem().getItem() instanceof ArsenalWeaponItem main)) return 0.0F;
+        if (main.kind() == WeaponKind.SCIMITAR) {
+            return ModItems.roundedScimitarDamage(main.tier()) - 1.0F;
+        }
+        return main.tier().material.attackDamageBonus() + main.kind().damageBaseline;
+    }
+
+    private static double offhandScimitarAttackSpeed(Player player) {
+        double current = player.getAttributeValue(Attributes.ATTACK_SPEED);
+        double mainBase = 4.0D;
+        if (player.getMainHandItem().getItem() instanceof ArsenalWeaponItem main) {
+            mainBase = Math.max(0.1D, 4.0D + main.kind().speedModifier);
+        }
+        double scimitarBase = 4.0D + WeaponKind.SCIMITAR.speedModifier;
+        return current * scimitarBase / mainBase;
+    }
+
     private static LivingEntity clawTarget(ServerPlayer player) {
         double reach = player.getAttributeValue(Attributes.ENTITY_INTERACTION_RANGE);
         Vec3 from = player.getEyePosition(), to = from.add(player.getLookAngle().scale(reach));
@@ -238,13 +376,193 @@ public final class CombatEvents {
             && linked.kind() == WeaponKind.LINKED_CLAWS && linked.tier() == main.tier();
     }
 
+    private static boolean hasDualScimitars(Player player) {
+        return player.getMainHandItem().getItem() instanceof ArsenalWeaponItem main
+            && player.getOffhandItem().getItem() instanceof ArsenalWeaponItem off
+            && main.kind() == WeaponKind.SCIMITAR && off.kind() == WeaponKind.SCIMITAR;
+    }
+
+    private static boolean otherHandEmpty(Player player, ItemStack held) {
+        return player.getMainHandItem() == held
+            ? player.getOffhandItem().isEmpty() : player.getMainHandItem().isEmpty();
+    }
+
+    private static boolean directedShieldBlocks(Player player, DamageSource source) {
+        Vec3 sourcePosition = source.getSourcePosition();
+        if (sourcePosition == null || !sunWarBlocks(source)) return false;
+        Vec3 incoming = sourcePosition.subtract(player.position()).multiply(1.0D, 0.0D, 1.0D);
+        Vec3 facing = player.getViewVector(1.0F).multiply(1.0D, 0.0D, 1.0D);
+        if (incoming.lengthSqr() < 0.0001D || facing.lengthSqr() < 0.0001D) return true;
+        return incoming.normalize().dot(facing.normalize()) > 0.0D;
+    }
+
+    private static double horizontalDistanceSqr(Player player, LivingEntity target) {
+        double x = target.getX() - player.getX(), z = target.getZ() - player.getZ();
+        return x * x + z * z;
+    }
+
+    /** Adds Long Chain only along the horizontal projection of the attack. */
+    private static Vec3 horizontalLongChainPath(Player player, ItemStack stack, double configuredDistance) {
+        double bonus = Math.min(configuredDistance - 0.01D,
+            ChainWeaponStats.longChainBonus(player, stack));
+        double baseDistance = Math.max(0.01D, configuredDistance - bonus);
+        Vec3 look = player.getLookAngle().normalize();
+        Vec3 horizontal = new Vec3(look.x, 0.0D, look.z);
+        if (horizontal.lengthSqr() < 0.0001D) return look.scale(baseDistance);
+        return look.scale(baseDistance).add(horizontal.normalize().scale(bonus));
+    }
+
     public static void onPlayerTick(TickEvent.PlayerTickEvent.Post event) {
         Player player = event.player();
         if (player.level().isClientSide() || !(player instanceof ServerPlayer server)) return;
         pairClaws(player);
         updateBulwarkMovement(player);
+        updateOccupiedHandAttackPenalty(player);
+        updateDualScimitarAttackSpeed(player);
+        updateScimitarGuardModels(player);
         updateBall(server);
         updateRam(server);
+        updateMorningStar(server);
+    }
+
+    private static int morningStarChargeTicks() {
+        return Math.max(1, (int)Math.ceil(ArsenalConfig.MORNING_STAR_CHARGE_SECONDS.get() * 20.0D));
+    }
+
+    private static void morningStarControl(ServerPlayer player, boolean active) {
+        if (!active) {
+            releaseMorningStar(player);
+            return;
+        }
+        if (!(player.getMainHandItem().getItem() instanceof ArsenalWeaponItem weapon)
+            || weapon.kind() != WeaponKind.MORNING_STAR) return;
+        MorningStarState state = MORNING_STARS.get(player.getUUID());
+        if (state == null) {
+            if (player.getAttackStrengthScale(0.5F) < 1.0F) return;
+            state = new MorningStarState(player.level().getGameTime(), weapon.tier());
+            MORNING_STARS.put(player.getUUID(), state);
+            player.startUsingItem(InteractionHand.MAIN_HAND);
+        }
+        state.lastHeartbeat = player.level().getGameTime();
+    }
+
+    private static void updateMorningStar(ServerPlayer player) {
+        MorningStarState state = MORNING_STARS.get(player.getUUID());
+        if (state == null) return;
+        if (!(player.getMainHandItem().getItem() instanceof ArsenalWeaponItem weapon)
+            || weapon.kind() != WeaponKind.MORNING_STAR || weapon.tier() != state.tier
+            || player.level().getGameTime() - state.lastHeartbeat > 4L) {
+            cancelMorningStar(player);
+            return;
+        }
+        if (!player.isUsingItem()) player.startUsingItem(InteractionHand.MAIN_HAND);
+        if (!state.chimed && player.level().getGameTime() - state.started >= morningStarChargeTicks()) {
+            state.chimed = true;
+            ((ServerLevel)player.level()).playSound(null, player.blockPosition(), SoundEvents.PLAYER_LEVELUP,
+                SoundSource.PLAYERS, 0.55F, 1.55F);
+        }
+        if (player.level().getGameTime() % 3L == 0L) {
+            double progress = Math.min(1.0D, Math.max(0.0D,
+                (player.level().getGameTime() - state.started) / (double)morningStarChargeTicks()));
+            VisualEffects.morningStarCharge((ServerLevel)player.level(), player, progress);
+        }
+    }
+
+    private static void cancelMorningStar(ServerPlayer player) {
+        MORNING_STARS.remove(player.getUUID());
+        if (player.isUsingItem() && player.getUseItem().getItem() instanceof ArsenalWeaponItem weapon
+            && weapon.kind() == WeaponKind.MORNING_STAR) player.stopUsingItem();
+    }
+
+    private static void releaseMorningStar(ServerPlayer player) {
+        MorningStarState state = MORNING_STARS.remove(player.getUUID());
+        if (state == null) return;
+        if (!(player.getMainHandItem().getItem() instanceof ArsenalWeaponItem weapon)
+            || weapon.kind() != WeaponKind.MORNING_STAR || weapon.tier() != state.tier) {
+            player.stopUsingItem();
+            return;
+        }
+        long elapsed = Math.max(0L, player.level().getGameTime() - state.started);
+        int chargeTicks = morningStarChargeTicks();
+        boolean full = elapsed >= chargeTicks;
+        int quarters = Math.min(4, (int)Math.floor(elapsed * 4.0D / chargeTicks));
+        float multiplier = 1.0F + quarters * 0.10F;
+        ServerLevel level = (ServerLevel)player.level();
+        ItemStack stack = player.getMainHandItem();
+        DamageSource source = stack.getDamageSource(player, () -> player.damageSources().playerAttack(player));
+        double reach = player.getAttributeValue(Attributes.ENTITY_INTERACTION_RANGE);
+        Vec3 start = player.getEyePosition(), direction = player.getLookAngle().normalize();
+        Vec3 end = start.add(direction.scale(reach));
+        // Charge widens the strike laterally up to the weapon's current reach.
+        // It never extends the forward axis; reach still governs the ordinary
+        // center-line hit independently of charge.
+        double maximumSweep = Math.max(1.0D, reach);
+        double sweepRange = maximumSweep * quarters / 4.0D;
+        double queryRange = Math.max(reach, sweepRange + 1.0D);
+        AABB area = player.getBoundingBox().inflate(queryRange, 1.25D, queryRange);
+        ArrayList<LivingEntity> targets = new ArrayList<>();
+        for (LivingEntity target : level.getEntitiesOfClass(LivingEntity.class, area,
+                target -> validTarget(player, target) && player.hasLineOfSight(target))) {
+            Vec3 center = target.getBoundingBox().getCenter();
+            Vec3 relative = center.subtract(start);
+            double forward = relative.dot(direction);
+            Vec3 sideways = relative.subtract(direction.scale(forward));
+            double directWidth = 0.55D + target.getBbWidth() * 0.5D;
+            boolean direct = forward >= -0.25D && forward <= reach + target.getBbWidth()
+                && sideways.lengthSqr() <= directWidth * directWidth;
+
+            Vec3 horizontal = center.subtract(player.position()).multiply(1.0D, 0.0D, 1.0D);
+            Vec3 horizontalLook = direction.multiply(1.0D, 0.0D, 1.0D);
+            if (horizontalLook.lengthSqr() > 0.0001D) horizontalLook = horizontalLook.normalize();
+            double horizontalForward = horizontal.dot(horizontalLook);
+            Vec3 horizontalRight = new Vec3(-horizontalLook.z, 0.0D, horizontalLook.x);
+            double lateral = horizontal.dot(horizontalRight);
+            double allowedSweep = sweepRange + target.getBbWidth() * 0.5D;
+            // Charge widens only from side to side. The whole strip reaches as
+            // far forward as the weapon, but charging never lengthens that axis.
+            boolean swept = quarters > 0 && horizontalForward >= -target.getBbWidth() * 0.25D
+                && horizontalForward <= reach + target.getBbWidth() * 0.5D
+                && Math.abs(lateral) <= allowedSweep
+                && Math.abs(center.y - player.getY(0.5D)) <= 1.75D;
+            if (direct || swept) targets.add(target);
+        }
+        targets.sort(Comparator.comparingDouble(player::distanceToSqr));
+        boolean hit = false;
+        float attributeDamage = (float)player.getAttributeValue(Attributes.ATTACK_DAMAGE);
+        for (LivingEntity target : targets) {
+            float damage = EnchantmentHelper.modifyDamage(level, stack, target, source,
+                attributeDamage * multiplier);
+            if (!target.hurtServer(level, source, damage)) continue;
+            hit = true;
+            float knockback = EnchantmentHelper.modifyKnockback(level, stack, target, source, 0.0F);
+            if (knockback > 0.0F) target.knockback(knockback, -direction.x, -direction.z);
+            EnchantmentHelper.doPostAttackEffectsWithItemSource(level, target, source, stack);
+            if (full) {
+                applyMorningStarFracture(level, target, weapon);
+                if (level.getRandom().nextFloat() < 0.20F) {
+                    target.addEffect(new MobEffectInstance(ModEffects.STUNNED.getHolder().orElseThrow(),
+                        60, 0, false, true, true));
+                }
+            }
+        }
+        player.swing(InteractionHand.MAIN_HAND, true);
+        player.stopUsingItem();
+        player.resetAttackStrengthTicker();
+        if (sweepRange > 0.0D) VisualEffects.morningStarSweep(level, player, weapon.tier(),
+            sweepRange, reach);
+        if (hit) stack.hurtAndBreak(1, player, EquipmentSlot.MAINHAND);
+        level.playSound(null, player.blockPosition(), hit ? SoundEvents.PLAYER_ATTACK_SWEEP
+            : SoundEvents.PLAYER_ATTACK_NODAMAGE, SoundSource.PLAYERS, hit ? 1.0F : 0.65F,
+            full ? 0.72F : 0.92F);
+    }
+
+    private static void applyMorningStarFracture(ServerLevel level, LivingEntity target,
+            ArsenalWeaponItem weapon) {
+        MobEffectInstance current = target.getEffect(ModEffects.ARMOR_FRACTURE.getHolder().orElseThrow());
+        int next = Math.min(weapon.tier().fractureCap, current == null ? 1 : current.getAmplifier() + 2);
+        target.addEffect(new MobEffectInstance(ModEffects.ARMOR_FRACTURE.getHolder().orElseThrow(),
+            target instanceof Player ? 200 : 600, next - 1, false, true, true));
+        VisualEffects.armorFracture(level, target, next);
     }
 
     private static void flailControl(ServerPlayer player, boolean active) {
@@ -270,8 +588,12 @@ public final class CombatEvents {
         float attackStrength = player.getAttackStrengthScale(0.5F);
         boolean hit = false;
         double radius = ChainWeaponStats.flailReach(player, flail);
-        for (LivingEntity target : level.getEntitiesOfClass(LivingEntity.class, player.getBoundingBox().inflate(radius),
-                target -> validTarget(player, target) && player.hasLineOfSight(target))) {
+        double vertical = ChainWeaponStats.flailVerticalReach(player);
+        for (LivingEntity target : level.getEntitiesOfClass(LivingEntity.class,
+                player.getBoundingBox().inflate(radius, vertical, radius),
+                target -> validTarget(player, target) && player.hasLineOfSight(target)
+                    && horizontalDistanceSqr(player, target) <= radius * radius
+                    && Math.abs(target.getY(0.5D) - player.getY(0.5D)) <= vertical)) {
             target.invulnerableTime = 0;
             hit |= target.hurtServer(level, source, effectiveMeleeDamage(player, target, source, attackStrength));
         }
@@ -321,10 +643,19 @@ public final class CombatEvents {
     private static void ballControl(ServerPlayer player, boolean active) {
         if (!active) { releaseBall(player); return; }
         if (!(player.getMainHandItem().getItem() instanceof ArsenalWeaponItem weapon)
-            || weapon.kind() != WeaponKind.BALL_AND_CHAIN || !player.getOffhandItem().isEmpty()) return;
+            || weapon.kind() != WeaponKind.BALL_AND_CHAIN) return;
         BallState state = BALLS.computeIfAbsent(player.getUUID(),
             id -> new BallState(player.level().getGameTime(), weapon.tier()));
         state.lastHeartbeat = player.level().getGameTime();
+        setFlailFlag(player.getMainHandItem(), true);
+    }
+
+    private static void ballWindBoost(ServerPlayer player, boolean active) {
+        BallState state = BALLS.get(player.getUUID());
+        if (state == null || state.releasing) return;
+        state.windBoost = active;
+        if (active) state.nextSwing = Math.min(state.nextSwing, player.level().getGameTime()
+            + ChainWeaponStats.swingIntervalTicks(player, player.getMainHandItem(), true));
     }
 
     private static void updateBall(ServerPlayer player) {
@@ -333,7 +664,7 @@ public final class CombatEvents {
         if (state.releasing) { updateBallRelease(player, state); return; }
         if (!(player.getMainHandItem().getItem() instanceof ArsenalWeaponItem weapon)
             || weapon.kind() != WeaponKind.BALL_AND_CHAIN || weapon.tier() != state.tier
-            || !player.getOffhandItem().isEmpty()) {
+            ) {
             cancelBall(player); return;
         }
         long now = player.level().getGameTime();
@@ -342,7 +673,8 @@ public final class CombatEvents {
         if (now >= state.nextSwing) {
             int maxCharges = maxBallCharges(weapon.tier());
             int previousCharge = state.charge;
-            state.nextSwing = now + ChainWeaponStats.swingIntervalTicks(player, player.getMainHandItem());
+            state.nextSwing = now + ChainWeaponStats.swingIntervalTicks(player,
+                player.getMainHandItem(), state.windBoost);
             state.charge = Math.min(maxCharges, state.charge + 1);
             lineAttack(player, ChainWeaponStats.ballWindupReach(player, player.getMainHandItem()), 0.5F,
                 0.3F, false, true, weapon.tier());
@@ -364,7 +696,7 @@ public final class CombatEvents {
         }
         if (!(player.getMainHandItem().getItem() instanceof ArsenalWeaponItem weapon)
             || weapon.kind() != WeaponKind.BALL_AND_CHAIN || weapon.tier() != state.tier
-            || !player.getOffhandItem().isEmpty()) {
+            ) {
             cancelBall(player); return;
         }
         state.releasing = true; state.releaseTick = player.level().getGameTime();
@@ -373,16 +705,19 @@ public final class CombatEvents {
         WeaponTier tier = state.tier;
         int maxCharges = maxBallCharges(tier);
         int effectiveCharge = effectiveBallCharge(tier, state.charge);
-        double requestedDistance = ChainWeaponStats.ballThrowReach(player,
+        double configuredReach = ChainWeaponStats.ballThrowReach(player,
             player.getMainHandItem(), effectiveCharge);
+        Vec3 requestedPath = horizontalLongChainPath(player, player.getMainHandItem(), configuredReach);
+        state.direction = requestedPath.normalize();
+        double requestedDistance = requestedPath.length();
         state.distance = stopDistance((ServerLevel)player.level(), player.getEyePosition(), state.direction,
             requestedDistance);
-        AttackImpact impact = lineAttack(player, state.distance, ballDamageMultiplier(tier, state.charge),
+        AttackImpact impact = lineAttackAlong(player, state.direction, state.distance,
+            ballDamageMultiplier(tier, state.charge),
             ballKnockback(tier, state.charge), state.charge >= maxCharges, true, tier);
         boolean hitBlock = state.distance + 0.05D < requestedDistance;
         Vec3 blockImpact = player.getEyePosition().add(state.direction.scale(state.distance));
         playBallImpact(player, impact, hitBlock, blockImpact);
-        if (hitBlock) startBlockShake(player, state, blockImpact);
         ((ServerLevel)player.level()).playSound(null, player.blockPosition(), SoundEvents.TRIDENT_THROW.value(),
             SoundSource.PLAYERS, 0.9F, 0.72F);
     }
@@ -390,22 +725,23 @@ public final class CombatEvents {
     private static void updateBallRelease(ServerPlayer player, BallState state) {
         if (!(player.getMainHandItem().getItem() instanceof ArsenalWeaponItem weapon)
             || weapon.kind() != WeaponKind.BALL_AND_CHAIN || weapon.tier() != state.tier
-            || !player.getOffhandItem().isEmpty()) {
+            ) {
             cancelBall(player); return;
         }
         long age = player.level().getGameTime() - state.releaseTick;
-        updateBlockShake(state, age);
         if (age >= state.releaseDuration / 2 && !state.returned) {
             state.returned = true;
             WeaponTier tier = state.tier;
-            AttackImpact impact = lineAttack(player, state.distance, ballDamageMultiplier(tier, state.charge),
+            AttackImpact impact = lineAttackAlong(player, state.direction, state.distance,
+                ballDamageMultiplier(tier, state.charge),
                 ballKnockback(tier, state.charge), false, true, tier);
             playBallImpact(player, impact, false, Vec3.ZERO);
             ((ServerLevel)player.level()).playSound(null, player.blockPosition(), SoundEvents.TRIDENT_RETURN,
                 SoundSource.PLAYERS, 0.9F, 0.78F);
         }
         if (age >= state.releaseDuration) {
-            clearBlockShake(state); BALLS.remove(player.getUUID()); player.stopUsingItem();
+            BALLS.remove(player.getUUID());
+            setFlailFlag(player.getMainHandItem(), false); player.stopUsingItem();
         }
         else {
             WeaponTier tier = state.tier;
@@ -415,15 +751,25 @@ public final class CombatEvents {
     }
 
     private static void cancelBall(ServerPlayer player) {
-        BallState state = BALLS.remove(player.getUUID());
-        if (state != null) clearBlockShake(state);
+        BALLS.remove(player.getUUID());
+        if (player.getMainHandItem().getItem() instanceof ArsenalWeaponItem weapon
+            && weapon.kind() == WeaponKind.BALL_AND_CHAIN) setFlailFlag(player.getMainHandItem(), false);
         if (player.isUsingItem()) player.stopUsingItem();
     }
 
     private static AttackImpact lineAttack(ServerPlayer player, double distance, float multiplier,
             float knockback, boolean fracture, boolean applyEnchantments, WeaponTier tier) {
+        Vec3 path = horizontalLongChainPath(player, player.getMainHandItem(), distance);
+        return lineAttackAlong(player, path.normalize(), path.length(), multiplier,
+            knockback, fracture, applyEnchantments, tier);
+    }
+
+    private static AttackImpact lineAttackAlong(ServerPlayer player, Vec3 requestedDirection,
+            double distance, float multiplier, float knockback, boolean fracture,
+            boolean applyEnchantments, WeaponTier tier) {
         ServerLevel level = (ServerLevel) player.level();
-        Vec3 start = player.getEyePosition().add(0, -0.55D, 0), direction = player.getLookAngle().normalize();
+        Vec3 start = player.getEyePosition().add(0, -0.55D, 0);
+        Vec3 direction = requestedDirection.normalize();
         Vec3 end = start.add(direction.scale(stopDistance(level, start, direction, distance)));
         AABB box = new AABB(start, end).inflate(0.75D, 1.0D, 0.75D);
         float attributeDamage = (float)player.getAttributeValue(Attributes.ATTACK_DAMAGE);
@@ -463,46 +809,6 @@ public final class CombatEvents {
         if (hitBlock) {
             level.playSound(null, BlockPos.containing(blockImpact), SoundEvents.ANVIL_LAND,
                 SoundSource.PLAYERS, 0.525F, 1.25F);
-        }
-    }
-
-    private static void startBlockShake(ServerPlayer player, BallState state, Vec3 impact) {
-        ServerLevel level = (ServerLevel)player.level();
-        BlockPos pos = BlockPos.containing(impact.add(state.direction.scale(0.06D)));
-        BlockState block = level.getBlockState(pos);
-        if (block.isAir()) return;
-        ItemStack visual = new ItemStack(block.getBlock().asItem());
-        if (visual.isEmpty()) return;
-        Display.ItemDisplay display = new Display.ItemDisplay(EntityType.ITEM_DISPLAY, level);
-        display.getSlot(0).set(visual);
-        display.setNoGravity(true);
-        display.setInvulnerable(true);
-        display.setSilent(true);
-        display.setPos(pos.getX() + 0.5D, pos.getY() + 0.5D, pos.getZ() + 0.5D);
-        level.addFreshEntity(display);
-        state.shakeDisplay = display;
-        state.shakePos = pos;
-    }
-
-    private static void updateBlockShake(BallState state, long age) {
-        if (state.shakeDisplay == null) return;
-        if (age >= 10L || !state.shakeDisplay.isAlive()) {
-            clearBlockShake(state); return;
-        }
-        double amount = (age % 2L == 0L ? 1.0D : -1.0D) * 0.045D * (1.0D - age / 10.0D);
-        Vec3 side = new Vec3(-state.direction.z, 0.0D, state.direction.x);
-        if (side.lengthSqr() < 0.0001D) side = new Vec3(1.0D, 0.0D, 0.0D);
-        else side = side.normalize();
-        state.shakeDisplay.setPos(state.shakePos.getX() + 0.5D + side.x * amount,
-            state.shakePos.getY() + 0.5D + (age % 3L == 0L ? 0.025D : 0.0D),
-            state.shakePos.getZ() + 0.5D + side.z * amount);
-    }
-
-    private static void clearBlockShake(BallState state) {
-        if (state.shakeDisplay != null) {
-            state.shakeDisplay.setInvisible(true);
-            state.shakeDisplay.discard();
-            state.shakeDisplay = null;
         }
     }
 
@@ -596,17 +902,21 @@ public final class CombatEvents {
     }
 
     private static void bulwarkBash(ServerPlayer player) {
-        if (!(player.getUseItem().getItem() instanceof ArsenalShieldItem shield)
-            || shield.shieldType() != ArsenalShieldItem.Type.SUN_WAR || !player.getOffhandItem().isEmpty()) return;
+        ItemStack active = player.getUseItem();
+        if (!(active.getItem() instanceof ArsenalShieldItem shield)
+            || shield.shieldType() != ArsenalShieldItem.Type.SUN_WAR
+            || !otherHandEmpty(player, active)) return;
         long now = player.level().getGameTime(), ready = player.getPersistentData().getLongOr("ArsenalBulwarkReady", 0);
         if (now < ready) return;
         player.getPersistentData().putLong("ArsenalBulwarkReady", now + 60);
-        player.getCooldowns().addCooldown(player.getMainHandItem(), 60);
+        player.getCooldowns().addCooldown(active, 60);
         player.stopUsingItem();
-        player.swing(InteractionHand.MAIN_HAND, true);
+        InteractionHand hand = player.getMainHandItem() == active
+            ? InteractionHand.MAIN_HAND : InteractionHand.OFF_HAND;
+        player.swing(hand, true);
         float damage = bulwarkDamage(player) * attackChargeMultiplier(player);
         ServerLevel level = (ServerLevel)player.level();
-        ItemStack bulwark = player.getMainHandItem();
+        ItemStack bulwark = active;
         for (LivingEntity target : level.getEntitiesOfClass(LivingEntity.class, player.getBoundingBox().inflate(4.0D),
                 target -> validTarget(player, target) && player.distanceToSqr(target) <= 16.0D)) {
             if (target.hurtServer(level, player.damageSources().playerAttack(player), damage)) {
@@ -623,15 +933,57 @@ public final class CombatEvents {
     private static void updateBulwarkMovement(Player player) {
         var speed = player.getAttribute(Attributes.MOVEMENT_SPEED);
         if (speed == null) return;
-        boolean held = player.getMainHandItem().getItem() instanceof ArsenalShieldItem shield
-            && shield.shieldType() == ArsenalShieldItem.Type.SUN_WAR && player.getOffhandItem().isEmpty();
-        if (!held) {
+        ItemStack held = equippedShield(player, ArsenalShieldItem.Type.SUN_WAR);
+        if (held.isEmpty()) {
             speed.removeModifier(BULWARK_SLOW);
             return;
         }
-        boolean guarding = player.isUsingItem() && player.getUseItem() == player.getMainHandItem();
+        boolean guarding = player.isUsingItem() && player.getUseItem() == held && otherHandEmpty(player, held);
         speed.addOrUpdateTransientModifier(new AttributeModifier(BULWARK_SLOW, guarding ? -0.75D : -0.40D,
             AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));
+    }
+
+    private static void updateOccupiedHandAttackPenalty(Player player) {
+        var speed = player.getAttribute(Attributes.ATTACK_SPEED);
+        if (speed == null) return;
+        ItemStack bulwark = equippedShield(player, ArsenalShieldItem.Type.SUN_WAR);
+        boolean penalizedBulwark = !bulwark.isEmpty() && !otherHandEmpty(player, bulwark);
+        if (!penalizedBulwark) {
+            speed.removeModifier(OCCUPIED_HAND_ATTACK_SLOW);
+            return;
+        }
+        speed.addOrUpdateTransientModifier(new AttributeModifier(OCCUPIED_HAND_ATTACK_SLOW, -0.50D,
+            AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));
+    }
+
+    private static void updateDualScimitarAttackSpeed(Player player) {
+        var speed = player.getAttribute(Attributes.ATTACK_SPEED);
+        if (speed == null) return;
+        if (!hasDualScimitars(player)) {
+            speed.removeModifier(DUAL_SCIMITAR_ATTACK_SPEED);
+            return;
+        }
+        // Raise the normal 1.8 Scimitar speed to the exact 2.0 attacks/second
+        // supported by Minecraft's ten-tick damage-immunity window.
+        double secondBladeSpeed = Math.max(0.0D,
+            2.0D - (4.0D + WeaponKind.SCIMITAR.speedModifier));
+        speed.addOrUpdateTransientModifier(new AttributeModifier(DUAL_SCIMITAR_ATTACK_SPEED,
+            secondBladeSpeed, AttributeModifier.Operation.ADD_VALUE));
+    }
+
+    private static void updateScimitarGuardModels(Player player) {
+        boolean guard = player.isUsingItem() && hasDualScimitars(player)
+            && player.getUseItem().getItem() instanceof ArsenalWeaponItem used
+            && used.kind() == WeaponKind.SCIMITAR;
+        for (int slot = 0; slot < player.getInventory().getContainerSize(); slot++) {
+            ItemStack stack = player.getInventory().getItem(slot);
+            if (stack.getItem() instanceof ArsenalWeaponItem weapon
+                && weapon.kind() == WeaponKind.SCIMITAR) setFlailFlag(stack,
+                    guard && stack == player.getOffhandItem());
+        }
+        ItemStack offhand = player.getOffhandItem();
+        if (offhand.getItem() instanceof ArsenalWeaponItem weapon
+            && weapon.kind() == WeaponKind.SCIMITAR) setFlailFlag(offhand, guard);
     }
 
     private static int maxBallCharges(WeaponTier tier) { return tier == WeaponTier.GOLD ? 2 : 3; }
@@ -758,8 +1110,7 @@ public final class CombatEvents {
     public static final class BallState {
         final WeaponTier tier;
         long started, lastHeartbeat, nextSwing, releaseTick; int charge, releaseDuration = 16;
-        boolean releasing, returned; double distance; Vec3 direction;
-        Display.ItemDisplay shakeDisplay; BlockPos shakePos;
+        boolean releasing, returned, windBoost; double distance; Vec3 direction;
         BallState(long tick, WeaponTier tier) { started = lastHeartbeat = nextSwing = tick; this.tier = tier; }
         public int charge() { return charge; }
         public double distance() { return distance; }
@@ -771,6 +1122,16 @@ public final class CombatEvents {
             this.yaw = yaw;
             this.pitch = pitch;
             this.damageMultiplier = damageMultiplier;
+        }
+    }
+    private static final class MorningStarState {
+        final long started;
+        final WeaponTier tier;
+        long lastHeartbeat;
+        boolean chimed;
+        MorningStarState(long started, WeaponTier tier) {
+            this.started = this.lastHeartbeat = started;
+            this.tier = tier;
         }
     }
     private static void updateClawChain(LivingHurtEvent event, Player attacker, LivingEntity target,

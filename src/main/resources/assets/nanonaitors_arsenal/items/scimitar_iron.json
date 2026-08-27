@@ -1,3 +1,3 @@
 {
-  "model": {"type": "minecraft:model", "model": "nanonaitors_arsenal:item/scimitar_iron"}
+  "model": {"type":"minecraft:condition","property":"minecraft:custom_model_data","index":0,"on_true":{"type":"minecraft:model","model":"nanonaitors_arsenal:item/scimitar_guard_iron"},"on_false":{"type":"minecraft:model","model":"nanonaitors_arsenal:item/scimitar_iron"}}
 }

@@ -79,8 +79,7 @@ public final class ServerWeaponVisuals {
         Rig(ServerLevel level, WeaponTier tier, Vec3 origin) {
             this.level = level; this.ballTier = tier;
             for (int i = 0; i < LINKS; i++) {
-                links.add(spawn(level, new ItemStack((i & 1) == 0
-                    ? ModItems.CHAIN_LINK_FLAT.get() : ModItems.CHAIN_LINK_UPRIGHT.get()), origin));
+                links.add(spawn(level, new ItemStack(ModItems.CHAIN_LINK_UPRIGHT.get()), origin));
             }
             ball = spawn(level, ball(tier), origin);
         }

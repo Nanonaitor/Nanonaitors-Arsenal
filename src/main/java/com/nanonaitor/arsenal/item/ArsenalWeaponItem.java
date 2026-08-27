@@ -10,6 +10,10 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.ItemUseAnimation;
 import net.minecraft.world.item.component.TooltipDisplay;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
 
 public class ArsenalWeaponItem extends Item {
     private final WeaponTier tier;
@@ -28,18 +32,41 @@ public class ArsenalWeaponItem extends Item {
     public void initializeClient(java.util.function.Consumer<net.minecraftforge.client.extensions.common.IClientItemExtensions> consumer) {
         if (kind == WeaponKind.BATTERING_RAM) {
             consumer.accept(new com.nanonaitor.arsenal.client.BatteringRamClientExtensions());
+        } else if (kind == WeaponKind.MORNING_STAR) {
+            consumer.accept(new com.nanonaitor.arsenal.client.MorningStarClientExtensions());
+        } else if (kind == WeaponKind.BALL_AND_CHAIN) {
+            consumer.accept(new com.nanonaitor.arsenal.client.BallChainClientExtensions());
+        } else if (kind == WeaponKind.SCIMITAR) {
+            consumer.accept(new com.nanonaitor.arsenal.client.ScimitarClientExtensions());
         }
+    }
+
+    @Override public InteractionResult use(Level level, Player player, InteractionHand hand) {
+        if (kind == WeaponKind.BALL_AND_CHAIN && hand == InteractionHand.MAIN_HAND
+            && player.getOffhandItem().isEmpty()) {
+            player.startUsingItem(hand);
+            return InteractionResult.CONSUME;
+        }
+        if (kind == WeaponKind.SCIMITAR
+            && player.getMainHandItem().getItem() instanceof ArsenalWeaponItem main
+            && player.getOffhandItem().getItem() instanceof ArsenalWeaponItem off
+            && main.kind() == WeaponKind.SCIMITAR && off.kind() == WeaponKind.SCIMITAR) {
+            player.startUsingItem(hand);
+            return InteractionResult.CONSUME;
+        }
+        return InteractionResult.PASS;
     }
 
     @Override public int getUseDuration(ItemStack stack, LivingEntity user) {
         return kind == WeaponKind.BALL_AND_CHAIN || kind == WeaponKind.BATTERING_RAM
-            || kind == WeaponKind.FLAIL ? 72000 : 0;
+            || kind == WeaponKind.FLAIL || kind == WeaponKind.MORNING_STAR
+            || kind == WeaponKind.SCIMITAR ? 72000 : 0;
     }
     @Override public ItemUseAnimation getUseAnimation(ItemStack stack) {
         // The ram has its own stable two-handed carry/charge poses. BLOCK would
         // layer Minecraft's one-handed shield transform over those poses and make
         // the first-person model fight or snap while the charge is active.
-        return ItemUseAnimation.NONE;
+        return kind == WeaponKind.SCIMITAR ? ItemUseAnimation.BLOCK : ItemUseAnimation.NONE;
     }
 
     @Override public void hurtEnemy(ItemStack stack, LivingEntity target, LivingEntity attacker) {
@@ -50,12 +77,19 @@ public class ArsenalWeaponItem extends Item {
             TooltipDisplay display, Consumer<Component> lines, TooltipFlag flag) {
         switch (kind) {
             case MORNING_STAR -> {
-                lines.accept(Component.literal("Fully charged hits fracture 20% armor per stack.").withStyle(ChatFormatting.GOLD));
+                lines.accept(Component.literal("Hold attack to charge; each quarter adds +10% damage.").withStyle(ChatFormatting.GOLD));
+                lines.accept(Component.literal("Full charge: wide strike, Armor Fracture and 20% Stun chance.").withStyle(ChatFormatting.YELLOW));
                 lines.accept(Component.literal("Caps at " + tier.fractureCap + " stacks; 30 secs on mobs, 10 secs on players.").withStyle(ChatFormatting.GRAY));
             }
-            case SCIMITAR -> lines.accept(Component.literal("Hits inflict Weakness "
-                + (tier.ramBreakLevel >= 3 ? "II" : "I") + " for 10 secs.")
-                .withStyle(ChatFormatting.DARK_PURPLE));
+            case SCIMITAR -> {
+                lines.accept(Component.literal("Hits inflict Weakness "
+                    + (tier.ramBreakLevel >= 3 ? "II" : "I") + " for 10 secs.")
+                    .withStyle(ChatFormatting.DARK_PURPLE));
+                lines.accept(Component.literal("Can attack from either hand; dual wield to auto-alternate.")
+                    .withStyle(ChatFormatting.GOLD));
+                lines.accept(Component.literal("Dual wield and use to cross-guard.")
+                    .withStyle(ChatFormatting.GRAY));
+            }
             case CLAWS -> {
                 lines.accept(Component.literal("Hold left/right click to auto-attack.")
                     .withStyle(ChatFormatting.GOLD));
@@ -79,12 +113,13 @@ public class ArsenalWeaponItem extends Item {
             }
             case BALL_AND_CHAIN -> {
                 int charges = tier == WeaponTier.GOLD ? 2 : 3;
-                lines.accept(Component.literal(
-                    "2-Handed: Hold Attack to Swing, let go to release.")
+                lines.accept(Component.literal("Hold Attack to Swing, let go to release.")
                     .withStyle(ChatFormatting.RED));
                 lines.accept(Component.literal("Full charge with " + charges
                     + " swings to pierce all armor.")
                     .withStyle(ChatFormatting.GOLD));
+                lines.accept(Component.literal("An occupied offhand halves rotation speed.")
+                    .withStyle(ChatFormatting.DARK_RED));
             }
         }
     }

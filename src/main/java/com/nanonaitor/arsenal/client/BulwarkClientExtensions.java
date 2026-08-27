@@ -16,7 +16,9 @@ public final class BulwarkClientExtensions implements IClientItemExtensions {
 
     @Override
     public HumanoidModel.ArmPose getArmPose(LivingEntity entity, InteractionHand hand, ItemStack stack) {
-        if (!entity.getOffhandItem().isEmpty()) return null;
+        ItemStack opposite = entity.getMainHandItem() == stack
+            ? entity.getOffhandItem() : entity.getMainHandItem();
+        if (!opposite.isEmpty()) return null;
         return entity.isUsingItem() && entity.getUseItem() == stack ? OVERHEAD_GUARD : TWO_HANDED_CARRY;
     }
 

@@ -17,6 +17,27 @@ public final class VisualEffects {
                 player.getZ() + Math.sin(angle) * 4.0D, 1, 0, 0, 0, 0);
         }
     }
+    public static void morningStarSweep(ServerLevel level, ServerPlayer player,
+            WeaponTier tier, double range, double forwardReach) {
+        // A sparse line marks the real lateral hitbox without filling the view.
+        Vec3 look = player.getLookAngle().multiply(1.0D, 0.0D, 1.0D).normalize();
+        Vec3 right = new Vec3(-look.z, 0.0D, look.x);
+        for (int i = 0; i <= 8; i++) {
+            double side = -range + range * 2.0D * i / 8.0D;
+            Vec3 point = player.position().add(look.scale(forwardReach)).add(right.scale(side));
+            level.sendParticles(ParticleTypes.SWEEP_ATTACK,
+                point.x, player.getY() + 1.0D, point.z, 1, 0, 0, 0, 0);
+        }
+    }
+    public static void morningStarCharge(ServerLevel level, ServerPlayer player, double progress) {
+        Vec3 look = player.getLookAngle().multiply(1.0D, 0.0D, 1.0D);
+        Vec3 right = new Vec3(-look.z, 0.0D, look.x);
+        Vec3 point = player.position().add(0.0D, 1.85D + progress * 0.25D, 0.0D)
+            .add(right.scale(0.30D)).subtract(look.scale(0.12D));
+        level.sendParticles(progress >= 1.0D ? ParticleTypes.ENCHANTED_HIT : ParticleTypes.CRIT,
+            point.x, point.y, point.z, progress >= 1.0D ? 4 : 2,
+            0.08D, 0.10D, 0.08D, 0.02D);
+    }
     public static void ballWindup(ServerLevel level, ServerPlayer player, WeaponTier tier, int charge) {
         Vec3 look = player.getLookAngle();
         level.sendParticles(ParticleTypes.CRIT, player.getX() + look.x * 1.2D,
