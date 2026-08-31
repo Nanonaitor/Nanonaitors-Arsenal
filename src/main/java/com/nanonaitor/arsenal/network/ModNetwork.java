@@ -12,7 +12,8 @@ import net.minecraftforge.network.SimpleChannel;
 public final class ModNetwork {
     public static final byte FLAIL = 1, BALL_CHAIN = 2, RAM = 3, BULWARK_BASH = 4,
         CLAW = 5, CLAW_MAIN = 6, MORNING_STAR = 7, BULWARK_ATTACK = 8,
-        BULWARK_MENU_GUARD = 9, SCIMITAR_ATTACK = 10, BALL_WIND_BOOST = 11;
+        BULWARK_MENU_GUARD = 9, SCIMITAR_ATTACK = 10, BALL_WIND_BOOST = 11,
+        TARTSY_BASH = 12, BLADE_STAFF_ATTACK = 13, BLADE_STAFF_REFLECT = 14;
     private static SimpleChannel channel;
 
     public static void init() {

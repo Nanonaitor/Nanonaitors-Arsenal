@@ -1,5 +1,24 @@
 # Changelog
 
+## Unreleased
+
+- Added vanilla-tier Blade Staffs with empty-offhand auto-attacks, two-block
+  melee splash damage, and a timed reflection spin that Stuns attackers when
+  reflecting non-melee damage.
+- Added the Tartsy Shield with a custom model, one-hit invulnerable guard,
+  four-second disable, forward shield dash, Stun, and a confirmed-hit critical.
+- Added chargeable Morning Star attacks, the Stunned effect, expanded Scimitar
+  offhand and dual-wield combat, Ball and Chain guarding, and updated Bulwark
+  hand/GUI behavior.
+- Reworked Flail heads with larger crossed spiked-ball sprites and fading motion
+  trails, and updated Morning Star, Scimitar, Flail, and Ball and Chain artwork.
+- Added Shift-expanded weapon tooltips and commissioned artwork credits.
+- Updated Recovery to support every Blade Staff tier and halve both successful
+  and missed-reflection cooldowns; changed its anvil cost to 6 and consolidated
+  its description.
+- Corrected the Tartsy Shield's resting and blocking third-person offhand
+  orientation so its back faces the wielder instead of exposing its edge.
+
 ## 1.1.7 - 2026-08-22
 
 - Main-hand Claws can now auto-attack indefinitely even with another item equipped offhand. A matching linked Claw additionally enables held right-click attacks; each hand waits for its own fully charged attack before repeating.

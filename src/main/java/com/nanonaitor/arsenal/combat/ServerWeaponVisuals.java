@@ -36,31 +36,31 @@ public final class ServerWeaponVisuals {
         double angle = (player.level().getGameTime() % 25L) / 25.0D * Math.PI * 2.0D;
         Vec3 anchor = player.position().add(0.32D, 1.25D, 0.0D);
         Vec3 ball = player.position().add(Math.cos(angle) * 4.0D, 1.05D, Math.sin(angle) * 4.0D);
-        show(player, weapon.tier(), anchor, ball);
+        show(player, weapon.tier(), anchor, ball, true);
     }
     public static void showBallWindup(ServerPlayer player, WeaponTier tier, long started) {
         double angle = (player.level().getGameTime() - started) / 25.0D * Math.PI * 2.0D;
         Vec3 look = horizontalLook(player);
         Vec3 anchor = player.position().add(0.32D, 1.25D, 0.12D);
         Vec3 ball = anchor.add(look.scale(0.75D + Math.cos(angle) * 0.45D)).add(0, Math.sin(angle) * 0.72D, 0);
-        show(player, tier, anchor, ball);
+        show(player, tier, anchor, ball, false);
     }
     public static void showBallRelease(ServerPlayer player, WeaponTier tier, Vec3 direction,
             double maxDistance, double progress) {
         Vec3 anchor = player.position().add(0.32D, 1.25D, 0.12D);
         Vec3 ball = anchor.add(direction.scale(maxDistance * Math.sin(progress * Math.PI)));
-        show(player, tier, anchor, ball);
+        show(player, tier, anchor, ball, false);
     }
     public static void clear(ServerPlayer player) {
         Rig rig = RIGS.remove(player.getUUID());
         if (rig != null) rig.discard();
     }
-    private static void show(ServerPlayer player, WeaponTier tier, Vec3 anchor, Vec3 ball) {
+    private static void show(ServerPlayer player, WeaponTier tier, Vec3 anchor, Vec3 ball, boolean spike) {
         ServerLevel level = (ServerLevel)player.level();
         Rig rig = RIGS.get(player.getUUID());
-        if (rig == null || rig.level != level || rig.ballTier != tier || !rig.alive()) {
+        if (rig == null || rig.level != level || rig.ballTier != tier || rig.spike != spike || !rig.alive()) {
             if (rig != null) rig.discard();
-            rig = new Rig(level, tier, anchor);
+            rig = new Rig(level, tier, anchor, spike);
             RIGS.put(player.getUUID(), rig);
         }
         rig.update(anchor, ball);
@@ -69,19 +69,19 @@ public final class ServerWeaponVisuals {
         double yaw = Math.toRadians(player.getYRot());
         return new Vec3(-Math.sin(yaw), 0.0D, Math.cos(yaw));
     }
-    private static ItemStack ball(WeaponTier tier) {
-        return new ItemStack(ModItems.BALL_VISUALS.get(tier).get());
+    private static ItemStack ball(WeaponTier tier, boolean spike) {
+        return new ItemStack((spike ? ModItems.FLAIL_SPIKE_VISUALS : ModItems.BALL_VISUALS).get(tier).get());
     }
     private static final class Rig {
-        final ServerLevel level; final WeaponTier ballTier;
+        final ServerLevel level; final WeaponTier ballTier; final boolean spike;
         final List<Display.ItemDisplay> links = new ArrayList<>();
         final Display.ItemDisplay ball;
-        Rig(ServerLevel level, WeaponTier tier, Vec3 origin) {
-            this.level = level; this.ballTier = tier;
+        Rig(ServerLevel level, WeaponTier tier, Vec3 origin, boolean spike) {
+            this.level = level; this.ballTier = tier; this.spike = spike;
             for (int i = 0; i < LINKS; i++) {
                 links.add(spawn(level, new ItemStack(ModItems.CHAIN_LINK_UPRIGHT.get()), origin));
             }
-            ball = spawn(level, ball(tier), origin);
+            ball = spawn(level, ball(tier, spike), origin);
         }
         void update(Vec3 anchor, Vec3 end) {
             Vec3 delta = end.subtract(anchor); double length = delta.length();

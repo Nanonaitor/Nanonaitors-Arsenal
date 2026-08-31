@@ -21,6 +21,9 @@ public final class ModItems {
     public static final Map<WeaponKind, Map<WeaponTier, RegistryObject<Item>>> WEAPONS = new EnumMap<>(WeaponKind.class);
     public static final Map<String, RegistryObject<Item>> VISIBLE = new LinkedHashMap<>();
     public static final Map<WeaponTier, RegistryObject<Item>> BALL_VISUALS = new EnumMap<>(WeaponTier.class);
+    public static final Map<WeaponTier, RegistryObject<Item>> FLAIL_SPIKE_VISUALS = new EnumMap<>(WeaponTier.class);
+    public static final Map<WeaponTier, RegistryObject<Item>> FLAIL_SPIKE_TRAIL_NEAR = new EnumMap<>(WeaponTier.class);
+    public static final Map<WeaponTier, RegistryObject<Item>> FLAIL_SPIKE_TRAIL_FAR = new EnumMap<>(WeaponTier.class);
     public static final RegistryObject<Item> CHAIN_LINK_UPRIGHT = visualItem("chain_link_upright");
 
     public static final RegistryObject<Item> SUN_WAR = registerShield("sun_war_bulwark", ArsenalShieldItem.Type.SUN_WAR,
@@ -33,10 +36,15 @@ public final class ModItems {
                 .add(Attributes.ATTACK_SPEED, new AttributeModifier(Item.BASE_ATTACK_SPEED_ID, -3.75D,
                     AttributeModifier.Operation.ADD_VALUE), EquipmentSlotGroup.MAINHAND).build())
             .component(DataComponents.USE_EFFECTS, new UseEffects(false, true, 1.0F)));
+    public static final RegistryObject<Item> TARTSY_SHIELD = registerShield("tartsy_shield", ArsenalShieldItem.Type.TARTSY,
+        new Item.Properties().setId(ITEMS.key("tartsy_shield")).durability(768).enchantable(15));
 
     static {
         for (WeaponTier tier : WeaponTier.values()) {
             BALL_VISUALS.put(tier, visualItem("ball_visual_" + tier.id));
+            FLAIL_SPIKE_VISUALS.put(tier, visualItem("flail_spikeball_visual_" + tier.id));
+            FLAIL_SPIKE_TRAIL_NEAR.put(tier, visualItem("flail_spikeball_visual_" + tier.id + "_trail_near"));
+            FLAIL_SPIKE_TRAIL_FAR.put(tier, visualItem("flail_spikeball_visual_" + tier.id + "_trail_far"));
         }
         for (WeaponKind kind : WeaponKind.values()) {
             Map<WeaponTier, RegistryObject<Item>> tiers = new EnumMap<>(WeaponTier.class);

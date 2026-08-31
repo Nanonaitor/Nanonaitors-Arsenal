@@ -38,6 +38,8 @@ public class ArsenalWeaponItem extends Item {
             consumer.accept(new com.nanonaitor.arsenal.client.BallChainClientExtensions());
         } else if (kind == WeaponKind.SCIMITAR) {
             consumer.accept(new com.nanonaitor.arsenal.client.ScimitarClientExtensions());
+        } else if (kind == WeaponKind.BLADE_STAFF) {
+            consumer.accept(new com.nanonaitor.arsenal.client.BladeStaffClientExtensions());
         }
     }
 
@@ -60,7 +62,7 @@ public class ArsenalWeaponItem extends Item {
     @Override public int getUseDuration(ItemStack stack, LivingEntity user) {
         return kind == WeaponKind.BALL_AND_CHAIN || kind == WeaponKind.BATTERING_RAM
             || kind == WeaponKind.FLAIL || kind == WeaponKind.MORNING_STAR
-            || kind == WeaponKind.SCIMITAR ? 72000 : 0;
+            || kind == WeaponKind.SCIMITAR || kind == WeaponKind.BLADE_STAFF ? 72000 : 0;
     }
     @Override public ItemUseAnimation getUseAnimation(ItemStack stack) {
         // The ram has its own stable two-handed carry/charge poses. BLOCK would
@@ -75,9 +77,14 @@ public class ArsenalWeaponItem extends Item {
 
     @Override public void appendHoverText(ItemStack stack, TooltipContext context,
             TooltipDisplay display, Consumer<Component> lines, TooltipFlag flag) {
+        lines.accept(Component.literal(summary()).withStyle(ChatFormatting.GOLD));
+        if (!com.nanonaitor.arsenal.client.ClientTooltip.expanded()) {
+            lines.accept(Component.literal("Hold SHIFT for details").withStyle(ChatFormatting.DARK_GRAY));
+            return;
+        }
         switch (kind) {
             case MORNING_STAR -> {
-                lines.accept(Component.literal("Hold attack to charge; each quarter adds +10% damage.").withStyle(ChatFormatting.GOLD));
+                lines.accept(Component.literal("Each charge quarter adds +10% damage.").withStyle(ChatFormatting.GOLD));
                 lines.accept(Component.literal("Full charge: wide strike, Armor Fracture and 20% Stun chance.").withStyle(ChatFormatting.YELLOW));
                 lines.accept(Component.literal("Caps at " + tier.fractureCap + " stacks; 30 secs on mobs, 10 secs on players.").withStyle(ChatFormatting.GRAY));
             }
@@ -91,17 +98,13 @@ public class ArsenalWeaponItem extends Item {
                     .withStyle(ChatFormatting.GRAY));
             }
             case CLAWS -> {
-                lines.accept(Component.literal("Hold left/right click to auto-attack.")
-                    .withStyle(ChatFormatting.GOLD));
                 lines.accept(Component.literal("Fully charged paired hits pierce invulnerability!")
                     .withStyle(ChatFormatting.GRAY));
             }
             case LINKED_CLAWS -> lines.accept(Component.literal("Linked to the matching main-hand claws.").withStyle(ChatFormatting.DARK_GRAY));
             case FLAIL -> {
-                lines.accept(Component.literal("Hold attack to strike every target within 4 blocks.").withStyle(ChatFormatting.GOLD));
             }
             case BATTERING_RAM -> {
-                lines.accept(Component.literal("2-Handed").withStyle(ChatFormatting.RED));
                 lines.accept(Component.literal("Entity damage uses the attack charge present when the ram begins.").withStyle(ChatFormatting.YELLOW));
                 lines.accept(Component.literal(switch (tier) {
                     case WOOD -> "Breaks soft terrain, foliage, wool and glass.";
@@ -113,14 +116,32 @@ public class ArsenalWeaponItem extends Item {
             }
             case BALL_AND_CHAIN -> {
                 int charges = tier == WeaponTier.GOLD ? 2 : 3;
-                lines.accept(Component.literal("Hold Attack to Swing, let go to release.")
-                    .withStyle(ChatFormatting.RED));
                 lines.accept(Component.literal("Full charge with " + charges
                     + " swings to pierce all armor.")
                     .withStyle(ChatFormatting.GOLD));
                 lines.accept(Component.literal("An occupied offhand halves rotation speed.")
                     .withStyle(ChatFormatting.DARK_RED));
             }
+            case BLADE_STAFF -> {
+                lines.accept(Component.literal("Empty offhand: hold attack to auto-strike at full charge.").withStyle(ChatFormatting.YELLOW));
+                lines.accept(Component.literal("Melee hits damage other enemies within 2 blocks of the target.").withStyle(ChatFormatting.GOLD));
+                lines.accept(Component.literal("Use to spin for 1 sec and reflect incoming damage before armor.").withStyle(ChatFormatting.AQUA));
+                lines.accept(Component.literal("Reflected non-melee attacks Stun their attacker for 1 sec.").withStyle(ChatFormatting.DARK_PURPLE));
+                lines.accept(Component.literal("Missed reflection: 3 sec cooldown; successful reflection: 0.5 sec.").withStyle(ChatFormatting.GRAY));
+                lines.accept(Component.literal("An occupied offhand disables reflection and halves attack speed.").withStyle(ChatFormatting.DARK_RED));
+            }
         }
+    }
+    private String summary() {
+        return switch (kind) {
+            case MORNING_STAR -> "Hold attack to charge a sweeping strike.";
+            case SCIMITAR -> "Fast blade that inflicts Weakness.";
+            case CLAWS -> "Hold left/right click to auto-attack.";
+            case LINKED_CLAWS -> "Linked to the matching main-hand claws.";
+            case FLAIL -> "Hold attack to strike every target within 4 blocks.";
+            case BATTERING_RAM -> "2-Handed siege weapon.";
+            case BALL_AND_CHAIN -> "Hold Attack to Swing, let go to release.";
+            case BLADE_STAFF -> "Two-ended blade with auto-attacks and timed reflection.";
+        };
     }
 }

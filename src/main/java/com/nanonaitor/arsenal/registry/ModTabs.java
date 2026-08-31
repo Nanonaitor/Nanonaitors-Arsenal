@@ -27,6 +27,7 @@ public final class ModTabs {
             var enchantments = parameters.holders().lookupOrThrow(Registries.ENCHANTMENT);
             addEnchantedBook(output, enchantments.getOrThrow(ModEnchantments.LONG_CHAIN));
             addEnchantedBook(output, enchantments.getOrThrow(ModEnchantments.ROTATION_FORCE));
+            addEnchantedBook(output, enchantments.getOrThrow(ModEnchantments.RECOVERY));
         })
         .build());
 

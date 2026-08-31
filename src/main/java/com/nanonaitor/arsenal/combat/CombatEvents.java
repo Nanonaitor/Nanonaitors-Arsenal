@@ -6,6 +6,7 @@ import com.nanonaitor.arsenal.network.ModNetwork;
 import com.nanonaitor.arsenal.config.ArsenalConfig;
 import com.nanonaitor.arsenal.registry.ModEffects;
 import com.nanonaitor.arsenal.registry.ModItems;
+import com.nanonaitor.arsenal.enchantment.ModEnchantments;
 import java.util.*;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
@@ -21,6 +22,7 @@ import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EquipmentSlot;
@@ -33,6 +35,7 @@ import net.minecraft.world.entity.Display;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ItemUseAnimation;
 import net.minecraft.world.item.component.CustomModelData;
+import net.minecraft.world.item.component.ItemAttributeModifiers;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.Block;
@@ -71,14 +74,55 @@ public final class CombatEvents {
     private static final Map<UUID, Long> LAST_SCIMITAR_ATTACK = new HashMap<>();
     private static final Map<UUID, PendingMeleeAttack> PENDING_MELEE = new HashMap<>();
     private static final Map<UUID, PendingBulwarkAttack> PENDING_BULWARK = new HashMap<>();
+    private static final Map<UUID, Long> TARTSY_DASH_UNTIL = new HashMap<>();
+    private static final Map<UUID, Set<Integer>> TARTSY_DASH_HITS = new HashMap<>();
+    private static final Map<UUID, Long> BLADE_STAFF_REFLECT_UNTIL = new HashMap<>();
+    private static final ThreadLocal<Boolean> REFLECTING_DAMAGE = ThreadLocal.withInitial(() -> false);
+    private static final ThreadLocal<Boolean> BLADE_STAFF_AOE_DAMAGE = ThreadLocal.withInitial(() -> false);
+    private static final String TARTSY_CRIT = "ArsenalTartsyCritical";
     private static final Identifier PERMANENT_FRACTURE = Identifier.fromNamespaceAndPath(ArsenalMod.MOD_ID, "ball_chain_fracture");
     private static final String CLAW_LAST_HAND = "ArsenalClawLastHand", CLAW_LAST_TARGET = "ArsenalClawLastTarget",
         CLAW_CRIT_CHAIN = "ArsenalClawCritChain";
 
     public static boolean onLivingAttack(LivingAttackEvent event) {
         if (!(event.getEntity() instanceof Player player)) return false;
+        long now = player.level().getGameTime();
+        if (TARTSY_DASH_UNTIL.getOrDefault(player.getUUID(), Long.MIN_VALUE) >= now) return true;
         ItemStack active = player.getUseItem();
+        ItemStack main = player.getMainHandItem();
         DamageSource source = event.getSource();
+        if (!REFLECTING_DAMAGE.get() && main.getItem() instanceof ArsenalWeaponItem staff
+            && staff.kind() == WeaponKind.BLADE_STAFF && player.getOffhandItem().isEmpty()
+            && BLADE_STAFF_REFLECT_UNTIL.getOrDefault(player.getUUID(), Long.MIN_VALUE) >= now) {
+            if (!player.level().isClientSide() && source.getEntity() instanceof LivingEntity attacker
+                && attacker != player && player.level() instanceof ServerLevel level) {
+                REFLECTING_DAMAGE.set(true);
+                try {
+                    attacker.hurtServer(level, player.damageSources().playerAttack(player), event.getAmount());
+                    if (!isDirectMelee(source)) {
+                        attacker.addEffect(new MobEffectInstance(
+                            ModEffects.STUNNED.getHolder().orElseThrow(), 20, 0, false, true, true));
+                    }
+                }
+                finally { REFLECTING_DAMAGE.set(false); }
+                player.getCooldowns().addCooldown(main, recoveryCooldown(player, main, 10));
+                BLADE_STAFF_REFLECT_UNTIL.remove(player.getUUID());
+                player.stopUsingItem();
+                damage(main, player, 1);
+                level.playSound(null, player.blockPosition(), SoundEvents.SHIELD_BLOCK.value(), SoundSource.PLAYERS, 1.0F, 1.25F);
+            }
+            return true;
+        }
+        if (active.getItem() instanceof ArsenalShieldItem shield
+            && shield.shieldType() == ArsenalShieldItem.Type.TARTSY) {
+            if (!player.level().isClientSide()) {
+                damage(active, player, 1);
+                player.getCooldowns().addCooldown(active, recoveryCooldown(player, active, 80));
+                player.stopUsingItem();
+                ((ServerLevel)player.level()).playSound(null, player.blockPosition(), SoundEvents.SHIELD_BLOCK.value(), SoundSource.PLAYERS, 1.0F, 1.05F);
+            }
+            return true;
+        }
         boolean blocked = false;
         if (active.getItem() instanceof ArsenalShieldItem shield
             && shield.shieldType() == ArsenalShieldItem.Type.SUN_WAR
@@ -122,6 +166,14 @@ public final class CombatEvents {
             }
         }
         if (!(event.getSource().getEntity() instanceof Player attacker)) return;
+        if (attacker.getPersistentData().getBooleanOr(TARTSY_CRIT, false)) {
+            attacker.getPersistentData().putBoolean(TARTSY_CRIT, false);
+            event.setAmount(event.getAmount() * 1.5F);
+            if (attacker.level() instanceof ServerLevel level) {
+                level.sendParticles(ParticleTypes.CRIT, event.getEntity().getX(), event.getEntity().getY(0.6D), event.getEntity().getZ(), 16, .3D, .3D, .3D, .15D);
+                level.playSound(null, event.getEntity().blockPosition(), SoundEvents.PLAYER_ATTACK_CRIT, SoundSource.PLAYERS, 1.0F, 1.0F);
+            }
+        }
         if (attacker.getMainHandItem().getItem() instanceof ArsenalShieldItem shield
             && shield.shieldType() == ArsenalShieldItem.Type.SUN_WAR) {
             PendingBulwarkAttack pending = PENDING_BULWARK.remove(attacker.getUUID());
@@ -134,6 +186,21 @@ public final class CombatEvents {
         ItemStack weapon = attacker.getMainHandItem();
         if (!(weapon.getItem() instanceof ArsenalWeaponItem arsenal)) return;
         LivingEntity target = event.getEntity();
+        if (arsenal.kind() == WeaponKind.BLADE_STAFF
+            && !BLADE_STAFF_AOE_DAMAGE.get() && isDirectMelee(event.getSource())
+            && attacker.level() instanceof ServerLevel level && event.getAmount() > 0.0F) {
+            BLADE_STAFF_AOE_DAMAGE.set(true);
+            try {
+                for (LivingEntity nearby : level.getEntitiesOfClass(LivingEntity.class,
+                        target.getBoundingBox().inflate(2.0D),
+                        entity -> entity != target && entity.distanceToSqr(target) <= 4.0D
+                            && validTarget(attacker, entity))) {
+                    nearby.hurtServer(level, attacker.damageSources().playerAttack(attacker), event.getAmount());
+                }
+            } finally {
+                BLADE_STAFF_AOE_DAMAGE.set(false);
+            }
+        }
         PendingMeleeAttack pending = PENDING_MELEE.remove(attacker.getUUID());
         boolean fullyCharged = pending != null && pending.fullyCharged
             && pending.kind == arsenal.kind() && pending.targetId == target.getId()
@@ -172,6 +239,8 @@ public final class CombatEvents {
             return false;
         }
         if (!(player.getMainHandItem().getItem() instanceof ArsenalWeaponItem weapon)) return false;
+        if (weapon.kind() == WeaponKind.BLADE_STAFF
+            && BLADE_STAFF_REFLECT_UNTIL.getOrDefault(player.getUUID(), Long.MIN_VALUE) >= player.level().getGameTime()) return true;
         if (weapon.kind() == WeaponKind.FLAIL || weapon.kind() == WeaponKind.BALL_AND_CHAIN
             || weapon.kind() == WeaponKind.MORNING_STAR) return true;
         boolean piercedFrames = weapon.kind() == WeaponKind.CLAWS
@@ -202,6 +271,17 @@ public final class CombatEvents {
             && weapon.kind() == WeaponKind.LINKED_CLAWS;
     }
 
+    private static boolean isDirectMelee(DamageSource source) {
+        return source.getEntity() instanceof LivingEntity
+            && source.getDirectEntity() == source.getEntity()
+            && !source.is(DamageTypeTags.IS_PROJECTILE)
+            && !source.is(DamageTypeTags.IS_EXPLOSION)
+            && !source.is(DamageTypeTags.IS_FIRE)
+            && !source.is(DamageTypeTags.WITCH_RESISTANT_TO)
+            && !source.is(DamageTypes.THORNS)
+            && !source.is(DamageTypes.SONIC_BOOM);
+    }
+
     public static void handleControl(ServerPlayer player, byte action, boolean active) {
         if (action == ModNetwork.FLAIL) flailControl(player, active);
         else if (action == ModNetwork.BALL_CHAIN) ballControl(player, active);
@@ -214,6 +294,46 @@ public final class CombatEvents {
         else if (action == ModNetwork.BULWARK_MENU_GUARD) bulwarkMenuGuard(player, active);
         else if (action == ModNetwork.SCIMITAR_ATTACK) scimitarAttack(player, active);
         else if (action == ModNetwork.BALL_WIND_BOOST) ballWindBoost(player, active);
+        else if (action == ModNetwork.TARTSY_BASH) tartsyBash(player);
+        else if (action == ModNetwork.BLADE_STAFF_ATTACK) bladeStaffAttack(player);
+        else if (action == ModNetwork.BLADE_STAFF_REFLECT) beginBladeStaffReflection(player);
+    }
+
+    private static void beginBladeStaffReflection(ServerPlayer player) {
+        ItemStack stack = player.getMainHandItem();
+        if (!(stack.getItem() instanceof ArsenalWeaponItem weapon)
+            || weapon.kind() != WeaponKind.BLADE_STAFF || !player.getOffhandItem().isEmpty()
+            || player.getCooldowns().isOnCooldown(stack)
+            || BLADE_STAFF_REFLECT_UNTIL.containsKey(player.getUUID())) return;
+        BLADE_STAFF_REFLECT_UNTIL.put(player.getUUID(), player.level().getGameTime() + 20L);
+        player.startUsingItem(InteractionHand.MAIN_HAND);
+    }
+
+    private static void tartsyBash(ServerPlayer player) {
+        ItemStack stack = player.getUseItem();
+        if (!(stack.getItem() instanceof ArsenalShieldItem shield)
+            || shield.shieldType() != ArsenalShieldItem.Type.TARTSY
+            || player.getCooldowns().isOnCooldown(stack)) return;
+        Vec3 look = player.getLookAngle().multiply(1.0D, 0.0D, 1.0D);
+        if (look.lengthSqr() < 0.001D) return;
+        look = look.normalize();
+        player.setDeltaMovement(look.x * 1.0125D, 0.12D, look.z * 1.0125D);
+        player.hurtMarked = true;
+        long now = player.level().getGameTime();
+        TARTSY_DASH_UNTIL.put(player.getUUID(), now + 20L);
+        TARTSY_DASH_HITS.put(player.getUUID(), new HashSet<>());
+        player.getCooldowns().addCooldown(stack, recoveryCooldown(player, stack, 80));
+        player.stopUsingItem();
+    }
+
+    private static void bladeStaffAttack(ServerPlayer player) {
+        ItemStack stack = player.getMainHandItem();
+        if (!(stack.getItem() instanceof ArsenalWeaponItem weapon) || weapon.kind() != WeaponKind.BLADE_STAFF
+            || !player.getOffhandItem().isEmpty() || player.isUsingItem()
+            || player.getAttackStrengthScale(0.5F) < 0.95F) return;
+        LivingEntity target = clawTarget(player);
+        player.swing(InteractionHand.MAIN_HAND, true);
+        if (target != null) player.attack(target);
     }
 
     private static void clawMainAttack(ServerPlayer player) {
@@ -301,10 +421,6 @@ public final class CombatEvents {
         if (!(stack.getItem() instanceof ArsenalWeaponItem weapon)
             || weapon.kind() != WeaponKind.SCIMITAR) return;
         boolean dual = hasDualScimitars(player);
-        boolean pairedWithBall = offhand
-            && player.getMainHandItem().getItem() instanceof ArsenalWeaponItem mainBall
-            && mainBall.kind() == WeaponKind.BALL_AND_CHAIN;
-        if (offhand && !dual && !player.getMainHandItem().isEmpty() && !pairedWithBall) return;
         if (!offhand && !dual) return; // ordinary main-hand scimitars use vanilla attacks
         long now = player.level().getGameTime();
         long previous = LAST_SCIMITAR_ATTACK.getOrDefault(player.getUUID(), Long.MIN_VALUE);
@@ -313,7 +429,6 @@ public final class CombatEvents {
         double cooldown = dual ? Math.max(10.0D, 20.0D / Math.max(0.1D, attackSpeed))
             : 20.0D / Math.max(0.1D, attackSpeed);
         if (previous != Long.MIN_VALUE && now >= previous && now - previous + 0.5D < cooldown) return;
-        if (!dual && player.getAttackStrengthScale(0.5F) < 0.95F) return;
         LAST_SCIMITAR_ATTACK.put(player.getUUID(), now);
         LivingEntity target = clawTarget(player);
         player.swing(hand, true);
@@ -339,25 +454,27 @@ public final class CombatEvents {
                     SoundSource.PLAYERS, 0.85F, offhand ? 1.08F : 0.98F);
             }
         }
-        player.resetAttackStrengthTicker();
+        // A lone off-hand Scimitar has an independent cooldown and must not
+        // drain or reset the main-hand Blade Staff's vanilla attack bar.
+        if (dual || !offhand) player.resetAttackStrengthTicker();
     }
 
     private static float mainHandWeaponAddedDamage(Player player) {
-        if (!(player.getMainHandItem().getItem() instanceof ArsenalWeaponItem main)) return 0.0F;
-        if (main.kind() == WeaponKind.SCIMITAR) {
-            return ModItems.roundedScimitarDamage(main.tier()) - 1.0F;
-        }
-        return main.tier().material.attackDamageBonus() + main.kind().damageBaseline;
+        return (float)itemAttributeContribution(player, player.getMainHandItem(), Attributes.ATTACK_DAMAGE);
     }
 
     private static double offhandScimitarAttackSpeed(Player player) {
         double current = player.getAttributeValue(Attributes.ATTACK_SPEED);
-        double mainBase = 4.0D;
-        if (player.getMainHandItem().getItem() instanceof ArsenalWeaponItem main) {
-            mainBase = Math.max(0.1D, 4.0D + main.kind().speedModifier);
-        }
-        double scimitarBase = 4.0D + WeaponKind.SCIMITAR.speedModifier;
-        return current * scimitarBase / mainBase;
+        double mainContribution = itemAttributeContribution(player, player.getMainHandItem(), Attributes.ATTACK_SPEED);
+        return Math.max(0.1D, current - mainContribution + WeaponKind.SCIMITAR.speedModifier);
+    }
+
+    private static double itemAttributeContribution(Player player, ItemStack stack,
+            net.minecraft.core.Holder<net.minecraft.world.entity.ai.attributes.Attribute> attribute) {
+        double base = player.getAttributeBaseValue(attribute);
+        ItemAttributeModifiers modifiers = stack.getOrDefault(DataComponents.ATTRIBUTE_MODIFIERS,
+            ItemAttributeModifiers.EMPTY);
+        return modifiers.compute(attribute, base, EquipmentSlot.MAINHAND) - base;
     }
 
     private static LivingEntity clawTarget(ServerPlayer player) {
@@ -423,6 +540,56 @@ public final class CombatEvents {
         updateBall(server);
         updateRam(server);
         updateMorningStar(server);
+        updateTartsyDash(server);
+        updateBladeStaff(server);
+    }
+
+    private static void updateTartsyDash(ServerPlayer player) {
+        long now = player.level().getGameTime();
+        Long until = TARTSY_DASH_UNTIL.get(player.getUUID());
+        if (until == null) return;
+        if (now > until) {
+            TARTSY_DASH_UNTIL.remove(player.getUUID());
+            TARTSY_DASH_HITS.remove(player.getUUID());
+            return;
+        }
+        Set<Integer> hit = TARTSY_DASH_HITS.computeIfAbsent(player.getUUID(), ignored -> new HashSet<>());
+        ServerLevel level = (ServerLevel)player.level();
+        for (LivingEntity target : level.getEntitiesOfClass(LivingEntity.class,
+                player.getBoundingBox().inflate(.65D, .35D, .65D), target -> validTarget(player, target))) {
+            if (!hit.add(target.getId())) continue;
+            if (target.hurtServer(level, player.damageSources().playerAttack(player), 2.0F)) {
+                target.addEffect(new MobEffectInstance(ModEffects.STUNNED.getHolder().orElseThrow(), 20, 0, false, true, true));
+                target.knockback(.55D, player.getX() - target.getX(), player.getZ() - target.getZ());
+                player.getPersistentData().putBoolean(TARTSY_CRIT, true);
+            }
+        }
+    }
+
+    private static void updateBladeStaff(ServerPlayer player) {
+        ItemStack stack = player.getMainHandItem();
+        Long until = BLADE_STAFF_REFLECT_UNTIL.get(player.getUUID());
+        if (until == null) return;
+        long now = player.level().getGameTime();
+        boolean valid = stack.getItem() instanceof ArsenalWeaponItem weapon
+            && weapon.kind() == WeaponKind.BLADE_STAFF && player.getOffhandItem().isEmpty();
+        if (!valid) {
+            player.stopUsingItem();
+            BLADE_STAFF_REFLECT_UNTIL.remove(player.getUUID());
+            return;
+        }
+        if (now >= until) {
+            player.stopUsingItem();
+            player.getCooldowns().addCooldown(stack, recoveryCooldown(player, stack, 60));
+            BLADE_STAFF_REFLECT_UNTIL.remove(player.getUUID());
+            return;
+        }
+        if (!player.isUsingItem() || player.getUseItem() != stack)
+            player.startUsingItem(InteractionHand.MAIN_HAND);
+    }
+
+    private static int recoveryCooldown(Player player, ItemStack stack, int base) {
+        return ModEnchantments.level(player, stack, ModEnchantments.RECOVERY) > 0 ? Math.max(1, base / 2) : base;
     }
 
     private static int morningStarChargeTicks() {
@@ -908,8 +1075,9 @@ public final class CombatEvents {
             || !otherHandEmpty(player, active)) return;
         long now = player.level().getGameTime(), ready = player.getPersistentData().getLongOr("ArsenalBulwarkReady", 0);
         if (now < ready) return;
-        player.getPersistentData().putLong("ArsenalBulwarkReady", now + 60);
-        player.getCooldowns().addCooldown(active, 60);
+        int cooldown = recoveryCooldown(player, active, 60);
+        player.getPersistentData().putLong("ArsenalBulwarkReady", now + cooldown);
+        player.getCooldowns().addCooldown(active, cooldown);
         player.stopUsingItem();
         InteractionHand hand = player.getMainHandItem() == active
             ? InteractionHand.MAIN_HAND : InteractionHand.OFF_HAND;
@@ -948,7 +1116,9 @@ public final class CombatEvents {
         if (speed == null) return;
         ItemStack bulwark = equippedShield(player, ArsenalShieldItem.Type.SUN_WAR);
         boolean penalizedBulwark = !bulwark.isEmpty() && !otherHandEmpty(player, bulwark);
-        if (!penalizedBulwark) {
+        boolean penalizedBladeStaff = player.getMainHandItem().getItem() instanceof ArsenalWeaponItem weapon
+            && weapon.kind() == WeaponKind.BLADE_STAFF && !player.getOffhandItem().isEmpty();
+        if (!penalizedBulwark && !penalizedBladeStaff) {
             speed.removeModifier(OCCUPIED_HAND_ATTACK_SLOW);
             return;
         }

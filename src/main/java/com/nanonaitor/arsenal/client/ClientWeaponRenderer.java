@@ -41,12 +41,26 @@ public final class ClientWeaponRenderer {
         boolean local = player == minecraft.player;
         int swingTicks = ChainWeaponStats.swingIntervalTicks(player, player.getMainHandItem(),
             weapon.kind() == WeaponKind.BALL_AND_CHAIN && local && ClientControls.ballWindBoost());
-        if (weapon.kind() == WeaponKind.FLAIL && (local ? ClientControls.flailActive() : player.isUsingItem())) {
+        if (weapon.kind() == WeaponKind.BLADE_STAFF && player.isUsingItem()
+            && player.getUseItem() == player.getMainHandItem() && player.getOffhandItem().isEmpty()) {
+            double partial = minecraft.getDeltaTracker().getGameTimeDeltaPartialTick(false);
+            double bodyYaw = Math.toRadians(Mth.rotLerp((float)partial, player.yBodyRotO, player.yBodyRot));
+            double sinBody = Math.sin(bodyYaw), cosBody = Math.cos(bodyYaw);
+            // Keep the weapon centered in front of the torso. Only the staff
+            // rotates, so it spins on its own midpoint rather than orbiting the arm.
+            renderSpinningItem(event.getPoseStack(), event.getNodeCollector(),
+                event.getState().lightCoords, event.getState().outlineColor,
+                player.getMainHandItem().copy(), -sinBody * 0.72D, 1.15D,
+                cosBody * 0.72D, 1.25F, (float)-Math.toDegrees(bodyYaw),
+                (float)((now + partial) * 48.0D));
+        } else if (weapon.kind() == WeaponKind.FLAIL && (local ? ClientControls.flailActive() : player.isUsingItem())) {
             double angle = -(now + minecraft.getDeltaTracker().getGameTimeDeltaPartialTick(false)) / swingTicks * Math.PI * 2.0D;
             double reach = ChainWeaponStats.flailReach(player, player.getMainHandItem());
+            renderFlailTrails(event.getPoseStack(), event.getNodeCollector(), event.getState().lightCoords,
+                event.getState().outlineColor, weapon.tier(), angle, reach, 0.0D);
             renderChain(event, player.getMainHandItem(), weapon.tier(),
                 0.34D, 1.2D, 0.0D, Math.cos(angle) * reach, 1.05D,
-                Math.sin(angle) * reach, 0.58F, false);
+                Math.sin(angle) * reach, 0.87F, false);
         } else if (weapon.kind() == WeaponKind.BALL_AND_CHAIN) {
             double partial = minecraft.getDeltaTracker().getGameTimeDeltaPartialTick(false);
             double bodyYaw = Math.toRadians(Mth.rotLerp((float)partial, player.yBodyRotO, player.yBodyRot));
@@ -107,7 +121,11 @@ public final class ClientWeaponRenderer {
         double partial = event.getPartialTick();
         int swingTicks = ChainWeaponStats.swingIntervalTicks(minecraft.player, event.getItemStack(),
             weapon.kind() == WeaponKind.BALL_AND_CHAIN && ClientControls.ballWindBoost());
-        if (weapon.kind() == WeaponKind.MORNING_STAR && ClientControls.morningStarCharging()) {
+        if (weapon.kind() == WeaponKind.BLADE_STAFF && ClientControls.bladeStaffReflecting(now)) {
+            renderSpinningItem(event.getPoseStack(), event.getNodeCollector(), event.getPackedLight(), 0,
+                event.getItemStack().copy(), 0.0D, -0.18D, -1.05D, 1.6875F, 0.0F,
+                (float)((now + partial) * 48.0D));
+        } else if (weapon.kind() == WeaponKind.MORNING_STAR && ClientControls.morningStarCharging()) {
             float charge = ClientControls.morningStarChargeProgress(now);
             event.getPoseStack().translate(-0.10D, 0.08D + charge * 0.10D, -0.18D);
             event.getPoseStack().mulPose(Axis.XP.rotationDegrees(-28.0F - charge * 28.0F));
@@ -127,19 +145,30 @@ public final class ClientWeaponRenderer {
                 -0.42D - Math.max(0.0D, pulse) * 0.035D);
             event.getPoseStack().mulPose(Axis.XP.rotationDegrees(-7.0F));
         } else if (weapon.kind() == WeaponKind.FLAIL && ClientControls.flailActive()) {
-            // Camera space mirrors the depth axis, so use the opposite signed
-            // angle here to preserve the third-person rig's apparent direction.
-            double angle = (now + partial) / swingTicks * Math.PI * 2.0D;
-            double cameraYaw = Math.toRadians(Mth.rotLerp((float)partial,
-                minecraft.player.yRotO, minecraft.player.getYRot()));
-            double relative = angle - cameraYaw;
-            // Match the third-person rig's actual four-block horizontal orbit.
-            // Convert its world-space circle into camera space instead of drawing
-            // the old miniature ellipse directly in front of the screen.
+            // Use the exact same world-space anchor and orbit as third person,
+            // then transform both through the live first-person camera. This also
+            // accounts for pitch, which the earlier approximation omitted.
+            double angle = -(now + partial) / swingTicks * Math.PI * 2.0D;
+            double reach = ChainWeaponStats.flailReach(minecraft.player, event.getItemStack());
+            Vec3 hand = worldOffsetToCamera(minecraft.player, 0.34D,
+                1.20D - minecraft.player.getEyeHeight(), 0.0D, (float)partial);
+            Vec3 ball = worldOffsetToCamera(minecraft.player, Math.cos(angle) * reach,
+                1.05D - minecraft.player.getEyeHeight(), Math.sin(angle) * reach, (float)partial);
+            double gap = Math.min(Math.toRadians(9.0D), 0.42D / Math.max(0.01D, reach));
+            // The orbit angle decreases over time, so older positions are at a
+            // positive angular offset. Using a negative offset put the echoes
+            // ahead of the ball and made them appear to travel backwards.
+            Vec3 near = worldOffsetToCamera(minecraft.player, Math.cos(angle + gap) * reach,
+                1.05D - minecraft.player.getEyeHeight(), Math.sin(angle + gap) * reach, (float)partial);
+            Vec3 far = worldOffsetToCamera(minecraft.player, Math.cos(angle + gap * 1.75D) * reach,
+                1.05D - minecraft.player.getEyeHeight(), Math.sin(angle + gap * 1.75D) * reach, (float)partial);
+            renderCrossedFlailBall(event.getPoseStack(), event.getNodeCollector(), event.getPackedLight(), 0,
+                flailTrailStack(weapon.tier(), true), near.x, near.y, near.z, 0.51F);
+            renderCrossedFlailBall(event.getPoseStack(), event.getNodeCollector(), event.getPackedLight(), 0,
+                flailTrailStack(weapon.tier(), false), far.x, far.y, far.z, 0.33F);
             renderChain(event.getPoseStack(), event.getNodeCollector(), event.getPackedLight(), 0,
-                weapon.tier(), 0.38D, -0.42D, -0.15D,
-                Math.cos(relative) * ChainWeaponStats.flailReach(minecraft.player, event.getItemStack()), -0.57D,
-                -Math.sin(relative) * ChainWeaponStats.flailReach(minecraft.player, event.getItemStack()), 0.58F, 0.28F, false);
+                weapon.tier(), hand.x, hand.y, hand.z, ball.x, ball.y, ball.z,
+                0.87F, 0.28F, false);
         } else if (weapon.kind() == WeaponKind.BALL_AND_CHAIN && minecraft.player.isUsingItem()
             && minecraft.player.getUseItem() == event.getItemStack()
             && minecraft.player.getOffhandItem().isEmpty() && !customModelFlag(event.getItemStack())) {
@@ -192,8 +221,12 @@ public final class ClientWeaponRenderer {
                 dx / length, dy / length, dz / length, linkScale,
                 i % 2 == 0 ? 0.0F : 45.0F, !spikedHead);
         }
-        renderItem(pose, collector, light, outline,
-            spikedHead ? ballVisualStack(tier) : materialStack(tier), bx, by, bz, ballScale);
+        if (spikedHead) {
+            renderItem(pose, collector, light, outline, ballVisualStack(tier), bx, by, bz, ballScale);
+        } else {
+            renderCrossedFlailBall(pose, collector, light, outline,
+                flailSpikeStack(tier), bx, by, bz, ballScale);
+        }
     }
 
     private static void renderLink(PoseStack pose, SubmitNodeCollector collector, int light, int outline,
@@ -218,6 +251,47 @@ public final class ClientWeaponRenderer {
         pose.popPose();
     }
 
+    /** Two perpendicular sprite planes make the tiered spike read as a ball. */
+    private static void renderCrossedFlailBall(PoseStack pose, SubmitNodeCollector collector,
+            int light, int outline, ItemStack stack, double x, double y, double z, float scale) {
+        renderRotatedItem(pose, collector, light, outline, stack, x, y, z, scale, 0.0F);
+        renderRotatedItem(pose, collector, light, outline, stack, x, y, z, scale, 90.0F);
+    }
+
+    private static void renderRotatedItem(PoseStack pose, SubmitNodeCollector collector,
+            int light, int outline, ItemStack stack, double x, double y, double z,
+            float scale, float yaw) {
+        pose.pushPose();
+        pose.translate(x, y, z);
+        pose.mulPose(Axis.YP.rotationDegrees(yaw));
+        pose.scale(scale, scale, scale);
+        submitItem(pose, collector, light, outline, stack);
+        pose.popPose();
+    }
+
+    private static void renderSpinningItem(PoseStack pose, SubmitNodeCollector collector, int light,
+            int outline, ItemStack stack, double x, double y, double z, float scale,
+            float facingYaw, float angle) {
+        pose.pushPose();
+        pose.translate(x, y, z);
+        pose.mulPose(Axis.YP.rotationDegrees(facingYaw));
+        pose.mulPose(Axis.ZP.rotationDegrees(angle));
+        pose.scale(scale, scale, scale);
+        submitItem(pose, collector, light, outline, stack);
+        pose.popPose();
+    }
+
+    private static Vec3 worldOffsetToCamera(net.minecraft.world.entity.player.Player player,
+            double worldX, double worldY, double worldZ, float partial) {
+        double yaw = Math.toRadians(Mth.rotLerp(partial, player.yRotO, player.getYRot()));
+        double pitch = Math.toRadians(Mth.lerp(partial, player.xRotO, player.getXRot()));
+        double horizontalX = worldX * Math.cos(yaw) + worldZ * Math.sin(yaw);
+        double depth = worldX * Math.sin(yaw) - worldZ * Math.cos(yaw);
+        return new Vec3(horizontalX,
+            worldY * Math.cos(pitch) - depth * Math.sin(pitch),
+            worldY * Math.sin(pitch) + depth * Math.cos(pitch));
+    }
+
     private static void submitItem(PoseStack pose, SubmitNodeCollector collector, int light, int outline,
             ItemStack stack) {
         ItemStackRenderState state = new ItemStackRenderState();
@@ -240,6 +314,24 @@ public final class ClientWeaponRenderer {
     }
     private static ItemStack ballVisualStack(WeaponTier tier) {
         return new ItemStack(ModItems.BALL_VISUALS.get(tier).get());
+    }
+    private static ItemStack flailSpikeStack(WeaponTier tier) {
+        return new ItemStack(ModItems.FLAIL_SPIKE_VISUALS.get(tier).get());
+    }
+    private static ItemStack flailTrailStack(WeaponTier tier, boolean near) {
+        return new ItemStack((near ? ModItems.FLAIL_SPIKE_TRAIL_NEAR : ModItems.FLAIL_SPIKE_TRAIL_FAR).get(tier).get());
+    }
+
+    private static void renderFlailTrails(PoseStack pose, SubmitNodeCollector collector, int light,
+            int outline, WeaponTier tier, double angle, double reach, double yOffset) {
+        // About 0.42 blocks of arc spacing leaves each successively smaller
+        // echo almost touching the preceding ball without overlapping it.
+        double gap = Math.min(Math.toRadians(9.0D), 0.42D / Math.max(0.01D, reach));
+        renderCrossedFlailBall(pose, collector, light, outline, flailTrailStack(tier, true),
+            Math.cos(angle + gap) * reach, 1.05D + yOffset, Math.sin(angle + gap) * reach, 0.51F);
+        renderCrossedFlailBall(pose, collector, light, outline, flailTrailStack(tier, false),
+            Math.cos(angle + gap * 1.75D) * reach, 1.05D + yOffset,
+            Math.sin(angle + gap * 1.75D) * reach, 0.33F);
     }
 
     private static boolean customModelFlag(ItemStack stack) {

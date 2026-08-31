@@ -13,6 +13,7 @@ import net.minecraft.world.item.enchantment.EnchantmentHelper;
 public final class ModEnchantments {
     public static final ResourceKey<Enchantment> LONG_CHAIN = key("long_chain");
     public static final ResourceKey<Enchantment> ROTATION_FORCE = key("rotation_force");
+    public static final ResourceKey<Enchantment> RECOVERY = key("recovery");
 
     public static int level(LivingEntity owner, ItemStack stack, ResourceKey<Enchantment> enchantment) {
         var registry = owner.level().registryAccess().lookupOrThrow(Registries.ENCHANTMENT);

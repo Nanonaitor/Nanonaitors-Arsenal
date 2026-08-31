@@ -36,8 +36,9 @@ public final class ClientControls {
     private static boolean morningStarFullSwing;
     private static boolean mainClawWasDown, offhandClawWasDown;
     private static boolean menuBulwarkGuard, scimitarNextOffhand;
-    private static boolean offhandScimitarWasDown;
-    private static long lastScimitarAttack = Long.MIN_VALUE, lastBulwarkAttack = Long.MIN_VALUE;
+    private static boolean offhandScimitarWasDown, bladeStaffWasDown;
+    private static long lastScimitarAttack = Long.MIN_VALUE, lastBulwarkAttack = Long.MIN_VALUE,
+        bladeStaffReflectUntil = Long.MIN_VALUE;
     private static int releasedCharge, ballCharge, ballReleaseDuration = 16;
     private static double releasedDistance;
     private static Vec3 releasedDirection = Vec3.ZERO;
@@ -47,6 +48,7 @@ public final class ClientControls {
         TickEvent.ClientTickEvent.Post.BUS.addListener(ClientControls::tick);
         InputEvent.InteractionKeyMappingTriggered.BUS.addListener(ClientControls::interaction);
         net.minecraftforge.client.event.RenderLivingEvent.Post.BUS.addListener(ClientWeaponRenderer::render);
+        net.minecraftforge.client.event.RenderLivingEvent.Pre.BUS.addListener(ScimitarClientExtensions::beforeRender);
         net.minecraftforge.client.event.RenderHandEvent.BUS.addListener(ClientWeaponRenderer::renderFirstPerson);
     }
 
@@ -58,14 +60,18 @@ public final class ClientControls {
             ramLocked = false; mainClawWasDown = false; offhandClawWasDown = false;
             ballWindBoostWasDown = false;
             morningStarCharging = false; menuBulwarkGuard = false;
-            offhandScimitarWasDown = false; return; }
+            offhandScimitarWasDown = false; bladeStaffReflectUntil = Long.MIN_VALUE; return; }
         boolean attack = minecraft.screen == null && minecraft.options.keyAttack.isDown();
         updateScimitarGuardModels(player);
         tickMenuBulwarkGuard(minecraft, player);
         tickOffhandWeapons(minecraft, player, attack);
+        long now = player.level().getGameTime();
+        tickBladeStaffReflection(player, now);
         if (attack && player.isUsingItem() && player.getUseItem().getItem() instanceof ArsenalShieldItem shield
-            && shield.shieldType() == ArsenalShieldItem.Type.SUN_WAR) {
-            ModNetwork.send(ModNetwork.BULWARK_BASH, true);
+            && (shield.shieldType() == ArsenalShieldItem.Type.SUN_WAR
+                || shield.shieldType() == ArsenalShieldItem.Type.TARTSY)) {
+            ModNetwork.send(shield.shieldType() == ArsenalShieldItem.Type.TARTSY
+                ? ModNetwork.TARTSY_BASH : ModNetwork.BULWARK_BASH, true);
         }
         if (!(player.getMainHandItem().getItem() instanceof ArsenalWeaponItem weapon)) {
             if (ballWasDown) ModNetwork.send(ModNetwork.BALL_CHAIN, false);
@@ -77,7 +83,15 @@ public final class ClientControls {
             ballWasDown = false; ballWindBoostWasDown = false; flailWasDown = false; ramLocked = false;
             mainClawWasDown = false; offhandClawWasDown = false; morningStarCharging = false; return;
         }
-        long now = player.level().getGameTime();
+        if (weapon.kind() == WeaponKind.BLADE_STAFF) {
+            boolean auto = attack && player.getOffhandItem().isEmpty() && !bladeStaffReflecting(now);
+            if (auto && player.getAttackStrengthScale(0.5F) >= 0.95F) {
+                player.swing(InteractionHand.MAIN_HAND, true);
+                ModNetwork.send(ModNetwork.BLADE_STAFF_ATTACK, true);
+                player.resetAttackStrengthTicker();
+            }
+            bladeStaffWasDown = attack;
+        } else bladeStaffWasDown = false;
         if (weapon.kind() == WeaponKind.CLAWS) {
             tickClawAutoAttacks(minecraft, player, weapon, now);
         } else {
@@ -212,6 +226,17 @@ public final class ClientControls {
         Minecraft minecraft = Minecraft.getInstance();
         LocalPlayer player = minecraft.player;
         if (player != null && minecraft.screen == null && event.isUseItem()
+            && player.getMainHandItem().getItem() instanceof ArsenalWeaponItem staff
+            && staff.kind() == WeaponKind.BLADE_STAFF && player.getOffhandItem().isEmpty()
+            && !player.getCooldowns().isOnCooldown(player.getMainHandItem())
+            && !bladeStaffReflecting(player.level().getGameTime())) {
+            bladeStaffReflectUntil = player.level().getGameTime() + 20L;
+            player.startUsingItem(InteractionHand.MAIN_HAND);
+            ModNetwork.send(ModNetwork.BLADE_STAFF_REFLECT, true);
+            event.setSwingHand(false);
+            return true;
+        }
+        if (player != null && minecraft.screen == null && event.isUseItem()
             && player.getMainHandItem().getItem() instanceof ArsenalWeaponItem ball
             && ball.kind() == WeaponKind.BALL_AND_CHAIN
             && (ballWasDown || ballRelease(player.level().getGameTime()))) {
@@ -223,8 +248,13 @@ public final class ClientControls {
             boolean offhandBulwark = main.isEmpty() && off.getItem() instanceof ArsenalShieldItem shield
                 && shield.shieldType() == ArsenalShieldItem.Type.SUN_WAR;
             boolean dualScimitars = isScimitar(main) && isScimitar(off);
-            boolean offhandScimitar = main.isEmpty() && isScimitar(off);
-            if (offhandBulwark || dualScimitars || offhandScimitar) {
+            boolean tartsyGuard = player.isUsingItem() && player.getUseItem().getItem() instanceof ArsenalShieldItem tartsy
+                && tartsy.shieldType() == ArsenalShieldItem.Type.TARTSY;
+            boolean bladeReflect = bladeStaffReflecting(player.level().getGameTime());
+            // A lone off-hand Scimitar is driven by right click and must not
+            // consume the main hand's left click. This lets a Blade Staff (and
+            // other ordinary main-hand weapons) retain normal melee attacks.
+            if (offhandBulwark || dualScimitars || tartsyGuard || bladeReflect) {
                 event.setSwingHand(false);
                 return true;
             }
@@ -292,10 +322,14 @@ public final class ClientControls {
         }
 
         boolean dual = isScimitar(main) && isScimitar(off);
-        boolean offhandOnly = (main.isEmpty() || ballWithOffhandScimitar) && isScimitar(off);
+        // A lone off-hand Scimitar is a complete weapon regardless of what the
+        // main hand contains. Dual Scimitars retain their shared guard/alternation.
+        boolean offhandOnly = !dual && isScimitar(off);
         boolean offhandButton = minecraft.options.keyUse.isDown();
         boolean request = dual ? attack : offhandOnly && offhandButton && !offhandScimitarWasDown;
-        boolean ready = dual || player.getAttackStrengthScale(0.5F) >= 0.95F;
+        // A lone off-hand Scimitar owns its cooldown. It must remain usable
+        // immediately before or after an unrelated main-hand attack.
+        boolean ready = dual || offhandOnly;
         if (request && ready) {
             // The server adds the second Scimitar's speed to the shared attack
             // speed attribute. Alternate once per resulting combined cooldown.
@@ -309,10 +343,34 @@ public final class ClientControls {
                 ModNetwork.send(ModNetwork.SCIMITAR_ATTACK, offhandAttack);
                 lastScimitarAttack = now;
                 if (dual) scimitarNextOffhand = !scimitarNextOffhand;
-                player.resetAttackStrengthTicker();
+                if (dual) player.resetAttackStrengthTicker();
             }
         }
         offhandScimitarWasDown = offhandButton;
+    }
+
+    private static void tickBladeStaffReflection(LocalPlayer player, long now) {
+        if (!bladeStaffReflecting(now)) {
+            if (bladeStaffReflectUntil != Long.MIN_VALUE && player.isUsingItem()
+                && player.getUseItem().getItem() instanceof ArsenalWeaponItem weapon
+                && weapon.kind() == WeaponKind.BLADE_STAFF) player.stopUsingItem();
+            bladeStaffReflectUntil = Long.MIN_VALUE;
+            return;
+        }
+        if (!(player.getMainHandItem().getItem() instanceof ArsenalWeaponItem weapon)
+            || weapon.kind() != WeaponKind.BLADE_STAFF || !player.getOffhandItem().isEmpty()) {
+            player.stopUsingItem();
+            bladeStaffReflectUntil = Long.MIN_VALUE;
+            return;
+        }
+        // Keep the visual active for the full one-second server-timed window;
+        // releasing right click no longer releases the reflection early.
+        if (!player.isUsingItem() || player.getUseItem() != player.getMainHandItem())
+            player.startUsingItem(InteractionHand.MAIN_HAND);
+    }
+
+    public static boolean bladeStaffReflecting(long now) {
+        return bladeStaffReflectUntil != Long.MIN_VALUE && now <= bladeStaffReflectUntil;
     }
 
     private static InteractionHand bulwarkHandWithFreeOpposite(LocalPlayer player) {

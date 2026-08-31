@@ -17,16 +17,19 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.network.protocol.game.ClientboundSetActionBarTextPacket;
 
 public final class ArsenalShieldItem extends ShieldItem {
-    public enum Type { SUN_WAR }
+    public enum Type { SUN_WAR, TARTSY }
     private final Type type;
     public ArsenalShieldItem(Type type, Properties properties) { super(properties); this.type = type; }
     public Type shieldType() { return type; }
 
     @Override public void initializeClient(java.util.function.Consumer<net.minecraftforge.client.extensions.common.IClientItemExtensions> consumer) {
-        consumer.accept(new com.nanonaitor.arsenal.client.BulwarkClientExtensions());
+        if (type == Type.SUN_WAR) consumer.accept(new com.nanonaitor.arsenal.client.BulwarkClientExtensions());
     }
 
     @Override public InteractionResult use(Level level, Player player, InteractionHand hand) {
+        if (type == Type.TARTSY && player.getCooldowns().isOnCooldown(stackFor(player, hand))) {
+            return InteractionResult.FAIL;
+        }
         ItemStack opposite = hand == InteractionHand.MAIN_HAND ? player.getOffhandItem() : player.getMainHandItem();
         if (type == Type.SUN_WAR && !opposite.isEmpty()) {
             if (player instanceof ServerPlayer server) server.connection.send(
@@ -40,12 +43,30 @@ public final class ArsenalShieldItem extends ShieldItem {
     }
     // NONE lets the custom client extension supply separate carry and overhead guard poses.
     // Blocking is handled by CombatEvents while this stack is actively in use.
-    @Override public ItemUseAnimation getUseAnimation(ItemStack stack) { return ItemUseAnimation.NONE; }
+    @Override public ItemUseAnimation getUseAnimation(ItemStack stack) {
+        return type == Type.TARTSY ? ItemUseAnimation.BLOCK : ItemUseAnimation.NONE;
+    }
     @Override public int getUseDuration(ItemStack stack, LivingEntity user) { return 72000; }
 
     @Override public void appendHoverText(ItemStack stack, TooltipContext context,
             TooltipDisplay display, Consumer<Component> lines, TooltipFlag flag) {
+        if (type == Type.TARTSY) {
+            lines.accept(Component.literal("One-handed spiked assault shield.").withStyle(ChatFormatting.GOLD));
+            if (!com.nanonaitor.arsenal.client.ClientTooltip.expanded()) {
+                lines.accept(Component.literal("Hold SHIFT for details").withStyle(ChatFormatting.DARK_GRAY));
+                return;
+            }
+            lines.accept(Component.literal("Negates any one hit, then disables for 4 secs.").withStyle(ChatFormatting.AQUA));
+            lines.accept(Component.literal("Attack while guarding to charge forward.").withStyle(ChatFormatting.BLUE));
+            lines.accept(Component.literal("Dash: 1 sec immunity, 2 damage and Stunned for 1 sec.").withStyle(ChatFormatting.DARK_PURPLE));
+            lines.accept(Component.literal("A confirmed dash hit primes one guaranteed critical.").withStyle(ChatFormatting.RED));
+            return;
+        }
         lines.accept(Component.literal("Extremely durable, two-handed bulwark; 15% passive damage reduction.").withStyle(ChatFormatting.GOLD));
+        if (!com.nanonaitor.arsenal.client.ClientTooltip.expanded()) {
+            lines.accept(Component.literal("Hold SHIFT for details").withStyle(ChatFormatting.DARK_GRAY));
+            return;
+        }
         lines.accept(Component.literal("Can shield all directed attacks from any direction.").withStyle(ChatFormatting.AQUA));
         lines.accept(Component.literal("Damage: 1 + armor points, scaled by attack charge. Guard and attack for a 4-block bash.").withStyle(ChatFormatting.RED));
         lines.accept(Component.literal("Wait about 4 secs between attacks for full damage.").withStyle(ChatFormatting.YELLOW));
@@ -54,4 +75,5 @@ public final class ArsenalShieldItem extends ShieldItem {
         lines.accept(Component.literal("An occupied opposite hand halves attack speed.").withStyle(ChatFormatting.DARK_RED));
         lines.accept(Component.literal("Does not stop environmental hazards.").withStyle(ChatFormatting.DARK_GRAY));
     }
+    private static ItemStack stackFor(Player player, InteractionHand hand) { return player.getItemInHand(hand); }
 }
