@@ -1,6 +1,7 @@
 package com.nanonaitor.arsenal.item;
 
 import com.nanonaitor.arsenal.compat.ArsenalCompatManager;
+import com.nanonaitor.arsenal.client.ArsenalTooltip;
 import java.util.List;
 import net.minecraft.client.util.ITooltipFlag;
 import net.minecraft.entity.Entity;
@@ -34,8 +35,9 @@ public final class ItemBatteringRam extends ItemArsenalWeapon {
     @Override
     public void addInformation(ItemStack stack, World world, List<String> tooltip,
                                ITooltipFlag flag) {
+        if (!ArsenalTooltip.begin(tooltip, TextFormatting.GOLD,
+                "Hold left-click to charge forward.")) return;
         tooltip.add(TextFormatting.RED + "Two-Handed");
-        tooltip.add(TextFormatting.GOLD + "Hold left-click to charge forward.");
         tooltip.add(TextFormatting.GRAY + getBreakDescription());
         tooltip.add(TextFormatting.GRAY + "Costs 1 durability per block or enemy hit.");
         tooltip.add(TextFormatting.DARK_GRAY + "Requires an empty offhand.");

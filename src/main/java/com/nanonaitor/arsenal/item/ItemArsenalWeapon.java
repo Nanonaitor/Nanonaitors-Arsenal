@@ -58,8 +58,11 @@ public abstract class ItemArsenalWeapon extends ItemSword {
         if (enchantment == Enchantments.SWEEPING && !(this instanceof ItemScimitar)) {
             return false;
         }
+        // Avoid Item's fallback here: certain 1.12.2 compatibility paths can
+        // bounce from Item to Enchantment and back into this override forever.
         return enchantment.type == EnumEnchantmentType.WEAPON
-            || super.canApplyAtEnchantingTable(stack, enchantment);
+            || enchantment == Enchantments.UNBREAKING
+            || enchantment == Enchantments.MENDING;
     }
 
     @Override

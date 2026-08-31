@@ -1,7 +1,12 @@
 package com.nanonaitor.arsenal.item;
 
+import com.nanonaitor.arsenal.client.ArsenalTooltip;
+import java.util.List;
+import net.minecraft.client.util.ITooltipFlag;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
+import net.minecraft.util.text.TextFormatting;
+import net.minecraft.world.World;
 
 public final class ItemLinkedClaw extends ItemArsenalWeapon {
     public ItemLinkedClaw(WeaponTier tier) {
@@ -17,6 +22,15 @@ public final class ItemLinkedClaw extends ItemArsenalWeapon {
     @Override
     public boolean isEnchantable(ItemStack stack) {
         return false;
+    }
+
+    @Override
+    public void addInformation(ItemStack stack, World world, List<String> tooltip,
+                               ITooltipFlag flag) {
+        if (!ArsenalTooltip.begin(tooltip, TextFormatting.GOLD,
+                "The automatically managed half of a paired Claw.")) return;
+        tooltip.add(TextFormatting.GRAY + "Copies the main Claw's durability, enchantments, and quality.");
+        tooltip.add(TextFormatting.DARK_GRAY + "Disappears when its matching main Claw is unequipped.");
     }
 
     @Override

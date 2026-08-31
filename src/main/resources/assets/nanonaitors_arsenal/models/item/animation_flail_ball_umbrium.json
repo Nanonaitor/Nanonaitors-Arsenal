@@ -1,0 +1,73 @@
+{
+  "ambientocclusion": false,
+  "textures": {
+    "particle": "nanonaitors_arsenal:items/flail_spikeball_umbrium",
+    "spikeball": "nanonaitors_arsenal:items/flail_spikeball_umbrium"
+  },
+  "elements": [
+    {
+      "from": [
+        -4,
+        -4,
+        7.25
+      ],
+      "to": [
+        20,
+        20,
+        8.75
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#spikeball"
+        },
+        "south": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#spikeball"
+        }
+      }
+    },
+    {
+      "from": [
+        7.25,
+        -4,
+        -4
+      ],
+      "to": [
+        8.75,
+        20,
+        20
+      ],
+      "faces": {
+        "west": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#spikeball"
+        },
+        "east": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#spikeball"
+        }
+      }
+    }
+  ]
+}

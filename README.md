@@ -3,7 +3,7 @@
 A Forge 1.12.2 weapon mod focused on specialized weapons with distinct combat
 roles, counters, and active abilities rather than interchangeable damage tiers.
 
-The current 1.12.2 release is `1.1.0`for Forge 14.23.5.2860.
+The current 1.12.2 release is `2.0.0` for Forge 14.23.5.2860.
 
 This branch contains the Minecraft 1.12.2 port. The repository's default
 `main` branch contains the Minecraft 26.1.2 release.
@@ -11,12 +11,14 @@ This branch contains the Minecraft 1.12.2 port. The repository's default
 ## Weapon families
 
 - Sun-War Bulwark
+- Tartsy Shield
 - Morning star
 - Scimitar
 - Flail
 - Paired claws
 - Battering ram
 - Ball and chain
+- Blade Staff
 
 ## Implemented mechanics
 

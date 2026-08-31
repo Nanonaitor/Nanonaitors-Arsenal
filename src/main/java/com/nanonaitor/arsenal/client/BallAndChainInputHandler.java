@@ -25,6 +25,7 @@ public final class BallAndChainInputHandler {
         "ddf96815-9596-4d0c-93ea-a08c00a16ae4");
     private static long lastHeartbeatTick = Long.MIN_VALUE;
     private static boolean wasSwinging;
+    private static boolean guarding;
 
     private BallAndChainInputHandler() {}
 
@@ -56,14 +57,32 @@ public final class BallAndChainInputHandler {
         EntityPlayer player = minecraft.player;
         if (player == null) {
             wasSwinging = false;
+            guarding = false;
             lastHeartbeatTick = Long.MIN_VALUE;
             return;
         }
         boolean holdingWeapon = player.getHeldItemMainhand().getItem()
             instanceof ItemBallAndChain;
         boolean retrieving = BallAndChainAnimationHandler.isReleaseAnimationActive(player);
-        boolean canSwing = holdingWeapon && ArsenalCompatManager.canUseTwoHanded(player)
+        boolean canGuard = holdingWeapon
             && !retrieving
+            && player.getHeldItemOffhand().isEmpty()
+            && minecraft.currentScreen == null
+            && minecraft.gameSettings.keyBindUseItem.isKeyDown();
+        if (!canGuard) {
+            guarding = false;
+        } else if (!guarding && !wasSwinging
+            && !minecraft.gameSettings.keyBindAttack.isKeyDown()
+            && player.isHandActive()
+            && player.getActiveHand() == EnumHand.MAIN_HAND) {
+            // Once blocking begins, attack input cannot silently convert the
+            // same use action into a wind-up. The use button must be released
+            // before a Ball and Chain attack can begin.
+            guarding = true;
+        }
+        boolean canSwing = holdingWeapon
+            && !retrieving
+            && !guarding
             && minecraft.currentScreen == null
             && minecraft.gameSettings.keyBindAttack.isKeyDown();
         updateUseSpeed(player, canSwing || retrieving);
@@ -75,7 +94,7 @@ public final class BallAndChainInputHandler {
                 wasSwinging = false;
                 lastHeartbeatTick = Long.MIN_VALUE;
             }
-            if (holdingWeapon && !retrieving && player.isHandActive()
+            if (holdingWeapon && !retrieving && !guarding && player.isHandActive()
                 && player.getActiveHand() == EnumHand.MAIN_HAND) {
                 player.resetActiveHand();
             }
@@ -91,6 +110,14 @@ public final class BallAndChainInputHandler {
             lastHeartbeatTick = now;
             ModNetwork.CHANNEL.sendToServer(new BallAndChainSwingMessage(true));
         }
+    }
+
+    public static boolean isSwinging() {
+        return wasSwinging;
+    }
+
+    public static boolean isGuardingInput() {
+        return guarding;
     }
 
     private static void updateUseSpeed(EntityPlayer player, boolean active) {

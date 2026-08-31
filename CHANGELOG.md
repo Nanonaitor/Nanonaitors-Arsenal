@@ -1,5 +1,42 @@
 # Changelog
 
+## 2.0.0 - 2026-08-31
+
+- Added tiered Blade Staffs with continuous empty-offhand attacks, two-block
+  melee splash damage, a timed damage-reflection spin, and Stun on reflected
+  non-melee attacks.
+- Added the one-handed Tartsy Shield: it negates one hit before a four-second
+  disable, can launch an invulnerable shield dash, Stuns struck enemies, and
+  primes a guaranteed critical after a confirmed dash hit.
+- Added the Stunned effect and the Recovery shield enchantment.
+- Backported chargeable Morning Stars with quarter-charge damage scaling,
+  horizontal area attacks, full-charge Stun chance, particles, sound, and
+  first- and third-person animations.
+- Added independent offhand Scimitar attacks, alternating dual-wield attacks,
+  crossed dual-Scimitar guarding, durability handling, and first- and
+  third-person poses.
+- Added Ball and Chain guarding with its rendered ball, accelerated wind-up,
+  movement tradeoffs, blocking sounds, and corrected first-/third-person state.
+- Expanded Sun-War Bulwark main-/offhand use, two-handed guard poses, GUI guard,
+  cooldown handling, and offhand bash damage.
+- Improved paired Claw input priority, simultaneous hand animation, charged
+  auto-attacks, i-frame piercing rules, knockback, and confirmed-hit audio.
+- Reworked every Flail tier with animated sprites, straight chains, material
+  spiked-ball renders, crossed planes, and fading motion trails.
+- Added animated Ball and Chain sprites and material-correct recolors across
+  vanilla, Dragonbone, Myrmex, Living, Sentient, and other optional tiers.
+- Updated Morning Star and Scimitar artwork, held sizing, tooltips, and tier
+  recolors. Original commissioned artwork is credited to Star Artsy.
+- Added concise item summaries with Shift-expanded mechanical descriptions.
+- Added optional XAT race weapon affinities for Scimitars, Flails, Claws,
+  Morning Stars, Sun-War Bulwarks, Balls and Chains, Battering Rams, and Blade
+  Staffs, with configurable damage values and a master toggle.
+- Improved RLCraft Gold and Silver set bonuses, Reskillable checks, Dragonforge
+  conversions, Spartan/Quark recipe compatibility, Quality Tools integration,
+  and SRP Living/Sentient behavior.
+- Living and Sentient Blade Staffs cleanse Call of the Hive from nearby
+  entities while held.
+
 ## 1.2.3 - 2026-08-24
 
 - Fixed Gold and Silver Arsenal weapons being detected but not registered as

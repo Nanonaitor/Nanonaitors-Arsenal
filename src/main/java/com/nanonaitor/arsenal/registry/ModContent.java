@@ -4,6 +4,7 @@ import com.nanonaitor.arsenal.NanonaitorsArsenal;
 import com.nanonaitor.arsenal.block.BlockIronChain;
 import com.nanonaitor.arsenal.enchantment.EnchantmentLongChain;
 import com.nanonaitor.arsenal.enchantment.EnchantmentRotationForce;
+import com.nanonaitor.arsenal.enchantment.EnchantmentRecovery;
 import com.nanonaitor.arsenal.item.ItemMorningStar;
 import com.nanonaitor.arsenal.item.ItemClaws;
 import com.nanonaitor.arsenal.item.ItemLinkedClaw;
@@ -12,8 +13,11 @@ import com.nanonaitor.arsenal.item.ItemFlail;
 import com.nanonaitor.arsenal.item.ItemBatteringRam;
 import com.nanonaitor.arsenal.item.ItemBallAndChain;
 import com.nanonaitor.arsenal.item.ItemSunWarBulwark;
+import com.nanonaitor.arsenal.item.ItemTartsyShield;
+import com.nanonaitor.arsenal.item.ItemDoubleBladedScimitar;
 import com.nanonaitor.arsenal.item.WeaponTier;
 import com.nanonaitor.arsenal.potion.PotionArmorFracture;
+import com.nanonaitor.arsenal.potion.PotionStunned;
 import java.util.EnumMap;
 import java.util.Map;
 import net.minecraft.client.renderer.block.model.ModelResourceLocation;
@@ -51,10 +55,15 @@ public final class ModContent {
         new EnumMap<>(WeaponTier.class);
     public static final Map<WeaponTier, ItemLinkedClaw> LINKED_CLAWS =
         new EnumMap<>(WeaponTier.class);
+    public static final Map<WeaponTier, ItemDoubleBladedScimitar> DOUBLE_BLADED_SCIMITARS =
+        new EnumMap<>(WeaponTier.class);
     public static PotionArmorFracture ARMOR_FRACTURE;
+    public static PotionStunned STUNNED;
     public static EnchantmentLongChain LONG_CHAIN;
     public static EnchantmentRotationForce ROTATION_FORCE;
+    public static EnchantmentRecovery RECOVERY;
     public static ItemSunWarBulwark SUN_WAR_BULWARK;
+    public static ItemTartsyShield TARTSY_SHIELD;
     public static final BlockIronChain IRON_CHAIN = new BlockIronChain();
     public static ItemBlock IRON_CHAIN_ITEM;
 
@@ -77,7 +86,8 @@ public final class ModContent {
         registerChainOreEntries();
         registerHandleOreEntry();
         SUN_WAR_BULWARK = new ItemSunWarBulwark();
-        event.getRegistry().register(SUN_WAR_BULWARK);
+        TARTSY_SHIELD = new ItemTartsyShield();
+        event.getRegistry().registerAll(SUN_WAR_BULWARK, TARTSY_SHIELD);
         for (WeaponTier tier : WeaponTier.values()) {
             ItemMorningStar morningStar = new ItemMorningStar(tier);
             ItemScimitar scimitar = new ItemScimitar(tier);
@@ -86,6 +96,8 @@ public final class ModContent {
             ItemBatteringRam batteringRam = new ItemBatteringRam(tier);
             ItemBallAndChain ballAndChain = new ItemBallAndChain(tier);
             ItemLinkedClaw linkedClaw = new ItemLinkedClaw(tier);
+            ItemDoubleBladedScimitar doubleBladedScimitar =
+                new ItemDoubleBladedScimitar(tier);
             MORNING_STARS.put(tier, morningStar);
             SCIMITARS.put(tier, scimitar);
             CLAWS.put(tier, claws);
@@ -93,8 +105,9 @@ public final class ModContent {
             BATTERING_RAMS.put(tier, batteringRam);
             BALLS_AND_CHAINS.put(tier, ballAndChain);
             LINKED_CLAWS.put(tier, linkedClaw);
+            DOUBLE_BLADED_SCIMITARS.put(tier, doubleBladedScimitar);
             event.getRegistry().registerAll(morningStar, scimitar, claws, flail,
-                batteringRam, ballAndChain, linkedClaw);
+                batteringRam, ballAndChain, linkedClaw, doubleBladedScimitar);
         }
     }
 
@@ -134,21 +147,25 @@ public final class ModContent {
     @SubscribeEvent
     public static void registerPotions(RegistryEvent.Register<Potion> event) {
         ARMOR_FRACTURE = new PotionArmorFracture();
-        event.getRegistry().register(ARMOR_FRACTURE);
+        STUNNED = new PotionStunned();
+        event.getRegistry().registerAll(ARMOR_FRACTURE, STUNNED);
     }
 
     @SubscribeEvent
     public static void registerEnchantments(RegistryEvent.Register<Enchantment> event) {
         LONG_CHAIN = new EnchantmentLongChain();
         ROTATION_FORCE = new EnchantmentRotationForce();
-        event.getRegistry().registerAll(LONG_CHAIN, ROTATION_FORCE);
+        RECOVERY = new EnchantmentRecovery();
+        event.getRegistry().registerAll(LONG_CHAIN, ROTATION_FORCE, RECOVERY);
     }
 
     @SubscribeEvent
     @SideOnly(Side.CLIENT)
     public static void registerModels(ModelRegistryEvent event) {
+        // Morning Star and selected Scimitar pixel art by Star Artsy, commissioned by Nanonaitor.
         registerModel(IRON_CHAIN_ITEM);
         registerModel(SUN_WAR_BULWARK);
+        registerModel(TARTSY_SHIELD);
         for (ItemMorningStar item : MORNING_STARS.values()) {
             registerModel(item);
         }
@@ -165,6 +182,9 @@ public final class ModContent {
             registerModel(item);
         }
         for (ItemBallAndChain item : BALLS_AND_CHAINS.values()) {
+            registerModel(item);
+        }
+        for (ItemDoubleBladedScimitar item : DOUBLE_BLADED_SCIMITARS.values()) {
             registerModel(item);
         }
         for (WeaponTier tier : WeaponTier.values()) {

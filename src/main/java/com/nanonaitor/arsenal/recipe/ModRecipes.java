@@ -13,11 +13,19 @@ import net.minecraftforge.event.RegistryEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.oredict.ShapedOreRecipe;
+import net.minecraft.init.Items;
 
 @Mod.EventBusSubscriber(modid = NanonaitorsArsenal.MOD_ID)
 public final class ModRecipes {
     private ModRecipes() {}
     @SubscribeEvent public static void register(RegistryEvent.Register<IRecipe> event) {
+        ShapedOreRecipe tartsy = new ShapedOreRecipe(
+            new ResourceLocation(NanonaitorsArsenal.MOD_ID, "equipment"),
+            new ItemStack(ModContent.TARTSY_SHIELD),
+            " P ", "PBP", " L ", 'P', "plankWood",
+            'B', net.minecraft.init.Blocks.IRON_BLOCK, 'L', Items.LEATHER);
+        tartsy.setRegistryName(NanonaitorsArsenal.MOD_ID, "tartsy_shield");
+        event.getRegistry().register(tartsy);
         WeaponTier[] base = {WeaponTier.SILVER, WeaponTier.BRONZE, WeaponTier.STEEL,
             WeaponTier.UMBRIUM, WeaponTier.DRAGONBONE, WeaponTier.DESERT_MYRMEX,
             WeaponTier.JUNGLE_MYRMEX};
@@ -41,6 +49,9 @@ public final class ModRecipes {
             venom ? " V " : " M ", venom ? "VMV" : "MMM", " S ",
             'M', m, 'V', v);
         recipe(e, "scimitar", t, ModContent.SCIMITARS, venom?" VM":" MM", "MM ", "S  ", 'M', m, 'V', v);
+        recipe(e, "double_bladed_scimitar", t, ModContent.DOUBLE_BLADED_SCIMITARS,
+            venom ? "VM " : "MM ", " S ", venom ? " MV" : " MM",
+            'M', m, 'V', v);
         recipe(e, "claws", t, ModContent.CLAWS, venom?"V V":"M M", "MWM", " S ", 'M', m, 'V', v, 'W', "plankWood");
         recipe(e, "flail", t, ModContent.FLAILS, venom?"VM ":"MM ",
             " C ", " S ", 'M', m, 'V', v,
@@ -96,6 +107,8 @@ public final class ModRecipes {
         Object shell = ArsenalCompatManager.itemStack("srparasites:vile_shell");
         living(e, "morning_star", ModContent.MORNING_STARS.get(t), " F ", "FCF", " H ", f,c,h);
         living(e, "scimitar", ModContent.SCIMITARS.get(t), " FF", "FC ", "H  ", f,c,h);
+        living(e, "double_bladed_scimitar", ModContent.DOUBLE_BLADED_SCIMITARS.get(t),
+            "FF ", " H ", " FF", f,c,h);
         living(e, "claws", ModContent.CLAWS.get(t), "F F", "FCF", " H ", f,c,h);
         living(e, "flail", ModContent.FLAILS.get(t), "FC ", " T ", " H ", f,c,h, 'T',tendon);
         living(e, "battering_ram", ModContent.BATTERING_RAMS.get(t), "  C", "VVV", " H ", f,c,h, 'V',shell);
@@ -137,6 +150,7 @@ public final class ModRecipes {
         upgrade(e,"flail",ModContent.FLAILS,target,blood);
         upgrade(e,"battering_ram",ModContent.BATTERING_RAMS,target,blood);
         upgrade(e,"ball_and_chain",ModContent.BALLS_AND_CHAINS,target,blood);
+        upgrade(e,"double_bladed_scimitar",ModContent.DOUBLE_BLADED_SCIMITARS,target,blood);
     }
     private static <T extends ItemArsenalWeapon> void upgrade(RegistryEvent.Register<IRecipe> e,
             String family, Map<WeaponTier,T> map, WeaponTier target, String blood) {

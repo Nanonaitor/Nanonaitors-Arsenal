@@ -1,0 +1,7 @@
+{
+  "parent": "nanonaitors_arsenal:item/animation_flail_ball_silver",
+  "textures": {
+    "particle": "nanonaitors_arsenal:items/flail_spikeball_silver_trail_far",
+    "spikeball": "nanonaitors_arsenal:items/flail_spikeball_silver_trail_far"
+  }
+}

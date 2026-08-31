@@ -1,6 +1,7 @@
 package com.nanonaitor.arsenal.item;
 
 import com.nanonaitor.arsenal.combat.ClawCombat;
+import com.nanonaitor.arsenal.client.ArsenalTooltip;
 import java.util.List;
 import net.minecraft.client.util.ITooltipFlag;
 import net.minecraft.entity.Entity;
@@ -64,7 +65,8 @@ public final class ItemClaws extends ItemArsenalWeapon {
 
     @Override
     public void addInformation(ItemStack stack, World world, List<String> tooltip, ITooltipFlag flag) {
-        tooltip.add(TextFormatting.GOLD + "Automatically equips its paired offhand claw.");
+        if (!ArsenalTooltip.begin(tooltip, TextFormatting.GOLD,
+                "Automatically equips its paired offhand claw.")) return;
         tooltip.add(TextFormatting.GRAY + "Hold left/right click to auto-attack with each claw.");
         tooltip.add(TextFormatting.GRAY + "Fully charged paired hits pierce i-frames.");
         tooltip.add(TextFormatting.YELLOW + "Every 4th fully charged paired hit is a critical.");

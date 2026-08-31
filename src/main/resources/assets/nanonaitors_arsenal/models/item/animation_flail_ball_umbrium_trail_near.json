@@ -1,0 +1,7 @@
+{
+  "parent": "nanonaitors_arsenal:item/animation_flail_ball_umbrium",
+  "textures": {
+    "particle": "nanonaitors_arsenal:items/flail_spikeball_umbrium_trail_near",
+    "spikeball": "nanonaitors_arsenal:items/flail_spikeball_umbrium_trail_near"
+  }
+}

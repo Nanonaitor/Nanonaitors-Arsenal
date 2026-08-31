@@ -1,0 +1,2 @@
+{"parent":"nanonaitors_arsenal:item/double_bladed_scimitar_base","overrides":[{"predicate":{"nanonaitors_arsenal:reflecting":1.0},"model":"nanonaitors_arsenal:item/double_bladed_scimitar_reflecting"}],"textures":{"layer0":"nanonaitors_arsenal:items/double_bladed_scimitar_flamed_dragonbone"}}
+

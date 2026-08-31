@@ -7,6 +7,12 @@
 /reobf/
 /mcmodsrepo/
 
+# Local inspection, test-profile backups, and unpublished concepts
+/.inspection/
+/profile-backups/
+/art_sources/
+/design-notes/
+
 # Minecraft development data
 /config/
 /crash-reports/

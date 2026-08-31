@@ -58,7 +58,15 @@ public final class ReskillableCompat {
                     holder, addLock);
                 registered += registerFamily(ModContent.BALLS_AND_CHAINS, tier,
                     holder, addLock);
+                registered += registerFamily(ModContent.DOUBLE_BLADED_SCIMITARS, tier,
+                    holder, addLock);
             }
+            // Tartsy is a defensive weapon, so unlike the tiered weapon
+            // families it deliberately requires both combat skills.
+            Object tartsyLock = fromString.invoke(null,
+                "reskillable:defense|8,reskillable:attack|4");
+            addLock.invoke(null, new ItemStack(ModContent.TARTSY_SHIELD), tartsyLock);
+            registered++;
             LOGGER.info("Registered Reskillable requirements for {} Arsenal weapons.",
                 registered);
         } catch (ReflectiveOperationException | LinkageError exception) {

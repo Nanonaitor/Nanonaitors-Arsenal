@@ -1,0 +1,7 @@
+{
+  "parent": "nanonaitors_arsenal:item/animation_flail_ball_jungle_venom",
+  "textures": {
+    "particle": "nanonaitors_arsenal:items/flail_spikeball_jungle_venom_trail_near",
+    "spikeball": "nanonaitors_arsenal:items/flail_spikeball_jungle_venom_trail_near"
+  }
+}

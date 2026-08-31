@@ -3,7 +3,9 @@ package com.nanonaitor.arsenal.client;
 import com.nanonaitor.arsenal.NanonaitorsArsenal;
 import com.nanonaitor.arsenal.combat.ShieldCombat;
 import com.nanonaitor.arsenal.item.ItemSunWarBulwark;
+import com.nanonaitor.arsenal.item.ItemTartsyShield;
 import com.nanonaitor.arsenal.network.BulwarkBashMessage;
+import com.nanonaitor.arsenal.network.TartsyBashMessage;
 import com.nanonaitor.arsenal.network.ModNetwork;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.EntityPlayerSP;
@@ -22,9 +24,23 @@ public final class ShieldInputHandler {
     public static void onMouse(MouseEvent event) {
         if (event.getButton() != 0 || !event.isButtonstate()) return;
         EntityPlayerSP player = Minecraft.getMinecraft().player;
-        if (player == null || !ShieldCombat.isGuarding(player, ItemSunWarBulwark.class)) return;
+        if (player == null) return;
+        if (ShieldCombat.isGuarding(player, ItemTartsyShield.class)) {
+            event.setCanceled(true);
+            net.minecraft.util.math.Vec3d look = player.getLookVec();
+            double horizontal = Math.sqrt(look.x * look.x + look.z * look.z);
+            if (horizontal > 0.001D) {
+                player.motionX = look.x / horizontal * 1.0125D;
+                player.motionY = Math.max(player.motionY, 0.12D);
+                player.motionZ = look.z / horizontal * 1.0125D;
+            }
+            player.swingArm(player.getActiveHand());
+            ModNetwork.CHANNEL.sendToServer(new TartsyBashMessage());
+            return;
+        }
+        if (!ShieldCombat.isGuarding(player, ItemSunWarBulwark.class)) return;
         event.setCanceled(true);
-        player.swingArm(EnumHand.MAIN_HAND);
+        player.swingArm(player.getActiveHand());
         ModNetwork.CHANNEL.sendToServer(new BulwarkBashMessage());
     }
 

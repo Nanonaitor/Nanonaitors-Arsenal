@@ -143,7 +143,7 @@ public final class BallAndChainCombat {
         ItemStack current = player.getHeldItemMainhand();
         if (current != state.weapon || !(current.getItem() instanceof ItemBallAndChain)
             || ((ItemBallAndChain) current.getItem()).getTier() != state.tier
-            || !ArsenalCompatManager.canUseTwoHanded(player)) {
+            ) {
             THROWS.remove(player);
             if (player.isHandActive()) player.resetActiveHand();
             return false;
@@ -169,7 +169,7 @@ public final class BallAndChainCombat {
 
     private static boolean isValidWielder(EntityPlayerMP player, ItemStack stack) {
         return stack.getItem() instanceof ItemBallAndChain
-            && ArsenalCompatManager.canUseTwoHanded(player) && player.isEntityAlive()
+            && player.isEntityAlive()
             && ReskillableCompat.canUse(player, stack)
             && !player.isSpectator();
     }
@@ -220,7 +220,12 @@ public final class BallAndChainCombat {
         Vec3d direction = player.getLookVec().normalize();
         double throwReach = ChainWeaponStats.ballThrowReach(player, weapon,
             effectiveCharge);
-        Vec3d intendedEnd = start.add(direction.scale(throwReach));
+        double longChain = Math.min(throwReach - 0.01D,
+            ChainWeaponStats.longChainBonus(player, weapon));
+        Vec3d horizontal = new Vec3d(direction.x, 0.0D, direction.z);
+        if (horizontal.lengthSquared() > 0.0001D) horizontal = horizontal.normalize();
+        Vec3d intendedEnd = start.add(direction.scale(throwReach - longChain))
+            .add(horizontal.scale(longChain));
         Vec3d end = stopAtSolidBlock(player, start, intendedEnd);
         float multiplier = RELEASE_DAMAGE_MULTIPLIER[effectiveCharge];
         float baseDamage = (float) player.getEntityAttribute(

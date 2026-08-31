@@ -52,6 +52,18 @@ public final class BallAndChainAnimationHandler {
         return RELEASES.containsKey(player);
     }
 
+    public static boolean isGuarding(EntityPlayer player) {
+        return player != null
+            && player.getHeldItemMainhand().getItem() instanceof ItemBallAndChain
+            && player.getHeldItemOffhand().isEmpty()
+            && player.isHandActive()
+            && player.getActiveHand() == EnumHand.MAIN_HAND
+            && !WINDUPS.containsKey(player)
+            && !RELEASES.containsKey(player)
+            && (player != Minecraft.getMinecraft().player
+                || BallAndChainInputHandler.isGuardingInput());
+    }
+
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
         if (event.phase != TickEvent.Phase.END) {
@@ -74,8 +86,8 @@ public final class BallAndChainAnimationHandler {
             }
             boolean localInput = player == minecraft.player
                 && minecraft.currentScreen == null
-                && ArsenalCompatManager.canUseTwoHanded(player)
                 && !RELEASES.containsKey(player)
+                && !BallAndChainInputHandler.isGuardingInput()
                 && minecraft.gameSettings.keyBindAttack.isKeyDown();
             boolean remoteActive = player != minecraft.player && player.isHandActive()
                 && player.getActiveHand() == EnumHand.MAIN_HAND
@@ -95,7 +107,10 @@ public final class BallAndChainAnimationHandler {
         while (windupIterator.hasNext()) {
             Map.Entry<EntityPlayer, WindupState> entry = windupIterator.next();
             if (entry.getValue().endTick < now || entry.getKey().isDead) {
+                EntityPlayer player = entry.getKey();
                 windupIterator.remove();
+                if (!RELEASES.containsKey(player))
+                    player.getEntityData().setBoolean("ArsenalBallAndChainActive", false);
             }
         }
         Iterator<Map.Entry<EntityPlayer, ReleaseState>> releaseIterator =
@@ -138,6 +153,19 @@ public final class BallAndChainAnimationHandler {
                 renderRelease(player, entry.getValue(), event.getPartialTicks());
             }
         }
+        // Guarding uses the tier ball itself as the shield: no chain, and the
+        // same world-space model is visible from both first and third person.
+        for (EntityPlayer player : minecraft.world.playerEntities) {
+            if (!isGuarding(player)) continue;
+            if (player == minecraft.player
+                && minecraft.gameSettings.thirdPersonView == 0) continue;
+            RenderFrame frame = getFrame(player, event.getPartialTicks(),
+                player.rotationYaw, player.rotationPitch);
+            double bx = frame.anchorX + frame.forwardX * 0.46D;
+            double by = frame.anchorY - 0.12D + frame.forwardY * 0.12D;
+            double bz = frame.anchorZ + frame.forwardZ * 0.46D;
+            WeaponPartRenderer.renderBall(player.getHeldItemMainhand(), bx, by, bz, 0.421D);
+        }
     }
 
     private static void renderWindup(EntityPlayer player, WindupState state,
@@ -158,7 +186,7 @@ public final class BallAndChainAnimationHandler {
         double ballX = frame.anchorX + windupX * distance;
         double ballY = frame.anchorY + Math.sin(angle) * 0.72D * reachScale;
         double ballZ = frame.anchorZ + windupZ * distance;
-        renderChainAndBall(player, frame, ballX, ballY, ballZ, 0.24D);
+        renderChainAndBall(player, frame, ballX, ballY, ballZ, 0.264D);
     }
 
     private static void renderRelease(EntityPlayer player, ReleaseState state,

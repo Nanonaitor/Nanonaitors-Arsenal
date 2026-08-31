@@ -21,6 +21,15 @@ public final class ChainWeaponStats {
         return Math.max(MIN_REACH, FlailCombat.RADIUS + reachBonus(player, stack));
     }
 
+    public static double flailVerticalReach(EntityPlayer player, ItemStack stack) {
+        return Math.max(MIN_REACH, FlailCombat.RADIUS + attributeReachBonus(player));
+    }
+
+    public static double longChainBonus(EntityPlayer player, ItemStack stack) {
+        return ModContent.LONG_CHAIN == null ? 0.0D
+            : EnchantmentHelper.getEnchantmentLevel(ModContent.LONG_CHAIN, stack);
+    }
+
     public static double ballWindupReach(EntityPlayer player, ItemStack stack) {
         return Math.max(MIN_REACH, BallAndChainCombat.WINDUP_REACH
             + reachBonus(player, stack));
@@ -59,15 +68,21 @@ public final class ChainWeaponStats {
         if (haste != null) {
             speed *= 1.0D + 0.10D * (haste.getAmplifier() + 1);
         }
+        if (stack.getItem() instanceof com.nanonaitor.arsenal.item.ItemBallAndChain) {
+            if (!player.getHeldItemOffhand().isEmpty()) speed *= 0.50D;
+            if (player.getHeldItemOffhand().isEmpty()
+                && player.getEntityData().getBoolean("ArsenalBallWindBoost")) speed += 0.30D;
+        }
         return Math.max(MIN_ATTACK_SPEED, speed);
     }
 
     private static double reachBonus(EntityPlayer player, ItemStack stack) {
+        return attributeReachBonus(player) + longChainBonus(player, stack);
+    }
+
+    private static double attributeReachBonus(EntityPlayer player) {
         IAttributeInstance reach = player.getEntityAttribute(EntityPlayer.REACH_DISTANCE);
-        double attributeBonus = reach == null ? 0.0D
+        return reach == null ? 0.0D
             : reach.getAttributeValue() - reach.getAttribute().getDefaultValue();
-        int enchantmentBonus = ModContent.LONG_CHAIN == null ? 0
-            : EnchantmentHelper.getEnchantmentLevel(ModContent.LONG_CHAIN, stack);
-        return attributeBonus + enchantmentBonus;
     }
 }

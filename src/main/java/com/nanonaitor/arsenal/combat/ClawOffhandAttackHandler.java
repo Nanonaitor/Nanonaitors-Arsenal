@@ -1,5 +1,6 @@
 package com.nanonaitor.arsenal.combat;
 
+import com.nanonaitor.arsenal.NanonaitorsArsenal;
 import com.nanonaitor.arsenal.item.ItemClaws;
 import com.nanonaitor.arsenal.compat.ReskillableCompat;
 import java.util.Map;
@@ -14,9 +15,14 @@ import net.minecraft.util.DamageSource;
 import net.minecraft.util.EnumHand;
 import net.minecraft.util.math.MathHelper;
 import net.minecraftforge.fml.common.Loader;
+import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+import net.minecraftforge.fml.common.gameevent.TickEvent;
 
+@Mod.EventBusSubscriber(modid = NanonaitorsArsenal.MOD_ID)
 public final class ClawOffhandAttackHandler {
     private static final Map<EntityPlayer, Long> LAST_ATTACK_TICK = new WeakHashMap<>();
+    private static final Map<EntityPlayer, Long> PENDING_SWING_TICK = new WeakHashMap<>();
 
     private ClawOffhandAttackHandler() {}
 
@@ -80,7 +86,7 @@ public final class ClawOffhandAttackHandler {
         // Broadcast the offhand animation only after damage is resolved. RLCombat's
         // default weakerOffhand rule keys off the active swing hand and would
         // otherwise halve this paired-weapon attack.
-        player.swingArm(EnumHand.OFF_HAND);
+        PENDING_SWING_TICK.put(player, now + 2L);
         boolean critical = claws.confirmChargedPairedHit(main, fullyCharged);
         main.damageItem(1, player);
         player.addExhaustion(0.1F);
@@ -109,6 +115,15 @@ public final class ClawOffhandAttackHandler {
                 SoundEvents.ENTITY_PLAYER_ATTACK_CRIT, target.getSoundCategory(),
                 0.45F, 1.45F);
         }
+    }
+
+    @SubscribeEvent
+    public static void animateDelayedOffhand(TickEvent.PlayerTickEvent event) {
+        if (event.phase != TickEvent.Phase.END || event.player.world.isRemote) return;
+        Long due = PENDING_SWING_TICK.get(event.player);
+        if (due == null || event.player.world.getTotalWorldTime() < due) return;
+        PENDING_SWING_TICK.remove(event.player);
+        event.player.swingArm(EnumHand.OFF_HAND);
     }
 
 }

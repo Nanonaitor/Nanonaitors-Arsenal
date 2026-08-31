@@ -37,6 +37,7 @@ public final class ArsenalJeiPlugin implements IModPlugin {
             blacklist.addIngredientToBlacklist(new ItemStack(ModContent.FLAILS.get(tier)));
             blacklist.addIngredientToBlacklist(new ItemStack(ModContent.BATTERING_RAMS.get(tier)));
             blacklist.addIngredientToBlacklist(new ItemStack(ModContent.BALLS_AND_CHAINS.get(tier)));
+            blacklist.addIngredientToBlacklist(new ItemStack(ModContent.DOUBLE_BLADED_SCIMITARS.get(tier)));
         }
     }
 }

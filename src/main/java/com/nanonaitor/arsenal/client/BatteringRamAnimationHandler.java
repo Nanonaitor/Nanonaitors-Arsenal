@@ -4,6 +4,9 @@ import com.nanonaitor.arsenal.NanonaitorsArsenal;
 import com.nanonaitor.arsenal.compat.ArsenalCompatManager;
 import com.nanonaitor.arsenal.item.ItemBatteringRam;
 import com.nanonaitor.arsenal.item.ItemSunWarBulwark;
+import com.nanonaitor.arsenal.item.ItemMorningStar;
+import com.nanonaitor.arsenal.item.ItemScimitar;
+import com.nanonaitor.arsenal.item.ItemBallAndChain;
 import java.util.Map;
 import java.util.WeakHashMap;
 import net.minecraft.client.model.ModelBiped;
@@ -25,14 +28,37 @@ public final class BatteringRamAnimationHandler {
     public static void beforePlayerRender(RenderPlayerEvent.Pre event) {
         EntityPlayer player = event.getEntityPlayer();
         boolean ram = player.getHeldItemMainhand().getItem() instanceof ItemBatteringRam;
-        boolean bulwark = player.getHeldItemMainhand().getItem() instanceof ItemSunWarBulwark;
-        if ((!ram && !bulwark) || !ArsenalCompatManager.canUseTwoHanded(player)) return;
+        boolean bulwark = player.getHeldItemMainhand().getItem() instanceof ItemSunWarBulwark
+            || player.getHeldItemOffhand().getItem() instanceof ItemSunWarBulwark;
+        boolean morning = player.getHeldItemMainhand().getItem() instanceof ItemMorningStar
+            && player.getEntityData().getBoolean("ArsenalMorningCharging");
+        boolean scimitars = player.getHeldItemMainhand().getItem() instanceof ItemScimitar
+            && player.getHeldItemOffhand().getItem() instanceof ItemScimitar
+            && player.isHandActive() && player.getActiveItemStack().getItem() instanceof ItemScimitar;
+        boolean ballGuard = player.getHeldItemMainhand().getItem() instanceof ItemBallAndChain
+            && player.isHandActive() && player.getActiveItemStack() == player.getHeldItemMainhand()
+            && !player.getEntityData().getBoolean("ArsenalBallAndChainActive");
+        if (!ram && !bulwark && !morning && !scimitars && !ballGuard) return;
+        if (ram && !ArsenalCompatManager.canUseTwoHanded(player)) return;
         ModelPlayer model = event.getRenderer().getMainModel();
         PREVIOUS.put(player, new PreviousPose(model));
         boolean active = ram ? BatteringRamInputHandler.isCharging(player)
             : player.isHandActive()
-                && player.getActiveItemStack() == player.getHeldItemMainhand();
-        if (ram) {
+                || bulwark && player.getEntityData().getBoolean("ArsenalBulwarkMenuGuard");
+        if (morning) {
+            // BOW_AND_ARROW is the only 1.12 vanilla pose which remains raised
+            // after ModelBiped recalculates its angles. The item itself uses
+            // NONE, so this pose is stable and cannot cycle bow model frames.
+            model.rightArmPose = ModelBiped.ArmPose.BOW_AND_ARROW;
+        } else if (scimitars) {
+            model.leftArmPose = ModelBiped.ArmPose.BLOCK;
+            model.rightArmPose = ModelBiped.ArmPose.BLOCK;
+            model.bipedRightArm.rotateAngleZ = -0.52F;
+            model.bipedLeftArm.rotateAngleZ = 0.52F;
+        } else if (ballGuard) {
+            model.leftArmPose = ModelBiped.ArmPose.BLOCK;
+            model.rightArmPose = ModelBiped.ArmPose.BLOCK;
+        } else if (ram) {
             model.leftArmPose = ModelBiped.ArmPose.EMPTY;
             model.rightArmPose = ModelBiped.ArmPose.EMPTY;
             poseRam(model, player, active, event.getPartialRenderTick());
@@ -40,9 +66,14 @@ public final class BatteringRamAnimationHandler {
             // Raw arm rotations are recalculated by ModelBiped in 1.12.  BLOCK is
             // persistent through that pass and keeps both hands raised around the
             // Bulwark in vanilla and animation-free modpack profiles.
-            model.leftArmPose = ModelBiped.ArmPose.BLOCK;
-            model.rightArmPose = ModelBiped.ArmPose.BLOCK;
-            if (active) model.isSneak = true;
+            if (active) {
+                model.leftArmPose = ModelBiped.ArmPose.BLOCK;
+                model.rightArmPose = ModelBiped.ArmPose.BLOCK;
+                model.isSneak = true;
+            } else {
+                model.leftArmPose = ModelBiped.ArmPose.ITEM;
+                model.rightArmPose = ModelBiped.ArmPose.ITEM;
+            }
         }
     }
 
@@ -55,6 +86,7 @@ public final class BatteringRamAnimationHandler {
         ModelPlayer model = event.getRenderer().getMainModel();
         previous.restore(model);
     }
+
 
     private static void poseRam(ModelPlayer model, EntityPlayer player,
                                 boolean charging, float partialTicks) {

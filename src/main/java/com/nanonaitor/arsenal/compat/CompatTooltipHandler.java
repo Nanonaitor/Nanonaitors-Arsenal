@@ -1,6 +1,10 @@
 package com.nanonaitor.arsenal.compat;
 
 import com.nanonaitor.arsenal.NanonaitorsArsenal;
+import com.nanonaitor.arsenal.client.ArsenalTooltip;
+import com.nanonaitor.arsenal.enchantment.EnchantmentLongChain;
+import com.nanonaitor.arsenal.enchantment.EnchantmentRotationForce;
+import com.nanonaitor.arsenal.enchantment.EnchantmentRecovery;
 import com.nanonaitor.arsenal.item.ItemArsenalWeapon;
 import com.nanonaitor.arsenal.item.ItemBallAndChain;
 import com.nanonaitor.arsenal.item.ItemBatteringRam;
@@ -9,6 +13,13 @@ import com.nanonaitor.arsenal.item.ItemFlail;
 import com.nanonaitor.arsenal.item.ItemMorningStar;
 import com.nanonaitor.arsenal.item.ItemScimitar;
 import com.nanonaitor.arsenal.item.WeaponTier;
+import com.nanonaitor.arsenal.registry.ModContent;
+import java.util.Map;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiScreen;
+import net.minecraft.enchantment.Enchantment;
+import net.minecraft.enchantment.EnchantmentHelper;
+import net.minecraft.client.resources.I18n;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.text.TextFormatting;
 import net.minecraftforge.event.entity.player.ItemTooltipEvent;
@@ -21,7 +32,44 @@ public final class CompatTooltipHandler {
     private CompatTooltipHandler() {}
     @SubscribeEvent public static void tooltip(ItemTooltipEvent event) {
         ItemStack stack=event.getItemStack();
+        if (stack.getItem() == ModContent.IRON_CHAIN_ITEM) {
+            if (ArsenalTooltip.begin(event.getToolTip(), TextFormatting.GOLD,
+                    "Placeable chain and chain-weapon crafting component.")) {
+                event.getToolTip().add(TextFormatting.GRAY
+                    + "Connects along the axis of the face it is placed against.");
+                event.getToolTip().add(TextFormatting.DARK_GRAY
+                    + "Used to craft Flails and Balls & Chains.");
+            }
+            return;
+        }
+        addRaceAffinityTooltip(event, stack);
+        Map<Enchantment, Integer> enchantments = EnchantmentHelper.getEnchantments(stack);
+        boolean arsenalEnchantment = enchantments.keySet().stream().anyMatch(enchantment ->
+            enchantment instanceof EnchantmentLongChain
+                || enchantment instanceof EnchantmentRotationForce);
+        boolean recoveryEnchantment = enchantments.keySet().stream().anyMatch(enchantment ->
+            enchantment instanceof EnchantmentRecovery);
+        if (arsenalEnchantment || recoveryEnchantment) {
+            if (ArsenalTooltip.begin(event.getToolTip(), TextFormatting.GOLD,
+                    arsenalEnchantment ? "Arsenal chain-weapon enchantment."
+                        : "Arsenal shield enchantment.")) {
+                for (Enchantment enchantment : enchantments.keySet()) {
+                    if (enchantment instanceof EnchantmentLongChain) {
+                        event.getToolTip().add(TextFormatting.GRAY
+                            + I18n.format("enchantment.nanonaitors_arsenal.long_chain.desc"));
+                    } else if (enchantment instanceof EnchantmentRotationForce) {
+                        event.getToolTip().add(TextFormatting.GRAY
+                            + I18n.format("enchantment.nanonaitors_arsenal.rotation_force.desc"));
+                    } else if (enchantment instanceof EnchantmentRecovery) {
+                        event.getToolTip().add(TextFormatting.GRAY
+                            + I18n.format("enchantment.nanonaitors_arsenal.recovery.desc"));
+                    }
+                }
+            }
+            return;
+        }
         if (!(stack.getItem() instanceof ItemArsenalWeapon)) return;
+        if (!GuiScreen.isShiftKeyDown()) return;
         WeaponTier tier=((ItemArsenalWeapon)stack.getItem()).getTier();
         if (tier==WeaponTier.SILVER) event.getToolTip().add(TextFormatting.GRAY+"+2 damage vs undead.");
         if (tier.isMyrmex()) event.getToolTip().add(TextFormatting.GRAY+"+4 damage vs non-arthropods and Death Worms.");
@@ -66,5 +114,18 @@ public final class CompatTooltipHandler {
             if (sentient) event.getToolTip().add(TextFormatting.WHITE
                 +"You can't hide anymore...");
         }
+    }
+
+    private static void addRaceAffinityTooltip(ItemTooltipEvent event, ItemStack stack) {
+        if (!RaceWeaponAffinityCompat.isEnabled()) return;
+        String affinity = RaceWeaponAffinityCompat.affinityRace(stack);
+        if (affinity == null) return;
+        int percent = RaceWeaponAffinityCompat.configuredPercent();
+        boolean matching = Minecraft.getMinecraft().player != null
+            && ArsenalCompatManager.isXatRace(Minecraft.getMinecraft().player, affinity);
+        String line = matching
+            ? TextFormatting.LIGHT_PURPLE + "+" + percent + "% Damage!"
+            : TextFormatting.ITALIC + "+" + percent + "% Damage as " + affinity;
+        event.getToolTip().add(Math.min(1, event.getToolTip().size()), line);
     }
 }

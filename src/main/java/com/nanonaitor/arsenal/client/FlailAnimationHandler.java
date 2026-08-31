@@ -157,8 +157,34 @@ public final class FlailAnimationHandler {
         double ballY = orbitY;
         double ballZ = pz + rightZ * Math.cos(angle) * radius
             + forwardZ * Math.sin(angle) * radius;
+
+        // Every tier uses the same tested spike-ball silhouette and close-set
+        // two-frame afterimage treatment, recolored to its material palette.
+        double trailGapAngle = Math.min(Math.toRadians(12.0D),
+            0.70D / Math.max(0.01D, radius));
+        renderTrail(weapon, px, orbitY, pz, rightX, rightZ,
+            forwardX, forwardZ, radius,
+            angle - trailGapAngle, 0.18D,
+            WeaponPartRenderer.BALL_TRAIL_NEAR);
+        renderTrail(weapon, px, orbitY, pz, rightX, rightZ,
+            forwardX, forwardZ, radius,
+            angle - trailGapAngle * 1.75D, 0.12D,
+            WeaponPartRenderer.BALL_TRAIL_FAR);
         WeaponPartRenderer.renderChainAndBall(player.getHeldItemMainhand(),
             anchorX, anchorY, anchorZ, ballX, ballY, ballZ, 0.30D);
+    }
+
+    private static void renderTrail(ItemStack weapon, double px, double orbitY,
+                                        double pz, double rightX, double rightZ,
+                                        double forwardX, double forwardZ,
+                                        double radius, double angle,
+                                        double ballRadius, int part) {
+        double x = px + rightX * Math.cos(angle) * radius
+            + forwardX * Math.sin(angle) * radius;
+        double z = pz + rightZ * Math.cos(angle) * radius
+            + forwardZ * Math.sin(angle) * radius;
+        WeaponPartRenderer.renderBallAfterimage(weapon, x, orbitY, z,
+            ballRadius, part);
     }
 
     private static final class AnimationState {

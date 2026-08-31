@@ -26,11 +26,15 @@ public final class ArsenalCreativeTab extends CreativeTabs {
     @Override
     public void displayAllRelevantItems(NonNullList<ItemStack> items) {
         add(items, ModContent.SUN_WAR_BULWARK);
+        add(items, ModContent.TARTSY_SHIELD);
         for (WeaponTier tier : WeaponTier.values()) {
             if (ArsenalCompatManager.isTierAvailable(tier)) add(items, ModContent.MORNING_STARS.get(tier));
         }
         for (WeaponTier tier : WeaponTier.values()) {
             if (ArsenalCompatManager.isTierAvailable(tier)) add(items, ModContent.SCIMITARS.get(tier));
+        }
+        for (WeaponTier tier : WeaponTier.values()) {
+            if (ArsenalCompatManager.isTierAvailable(tier)) add(items, ModContent.DOUBLE_BLADED_SCIMITARS.get(tier));
         }
         for (WeaponTier tier : WeaponTier.values()) {
             if (ArsenalCompatManager.isTierAvailable(tier)) add(items, ModContent.CLAWS.get(tier));
@@ -51,6 +55,10 @@ public final class ArsenalCreativeTab extends CreativeTabs {
         if (ModContent.ROTATION_FORCE != null) {
             items.add(ItemEnchantedBook.getEnchantedItemStack(new EnchantmentData(
                 ModContent.ROTATION_FORCE, ModContent.ROTATION_FORCE.getMaxLevel())));
+        }
+        if (ModContent.RECOVERY != null) {
+            items.add(ItemEnchantedBook.getEnchantedItemStack(new EnchantmentData(
+                ModContent.RECOVERY, ModContent.RECOVERY.getMaxLevel())));
         }
     }
 

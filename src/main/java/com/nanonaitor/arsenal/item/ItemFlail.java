@@ -1,6 +1,7 @@
 package com.nanonaitor.arsenal.item;
 
 import com.nanonaitor.arsenal.combat.FlailCombat;
+import com.nanonaitor.arsenal.client.ArsenalTooltip;
 import java.util.List;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.client.util.ITooltipFlag;
@@ -27,7 +28,8 @@ public final class ItemFlail extends ItemArsenalWeapon {
     @Override
     public void addInformation(ItemStack stack, World world, List<String> tooltip,
                                ITooltipFlag flag) {
-        tooltip.add(TextFormatting.GOLD + "Hold left-click to swing continuously.");
+        if (!ArsenalTooltip.begin(tooltip, TextFormatting.GOLD,
+                "Hold left-click to swing continuously.")) return;
         tooltip.add(TextFormatting.GRAY + "Hits all visible enemies within 4 base blocks.");
         tooltip.add(TextFormatting.DARK_GRAY + "Reach and attack-speed modifiers apply.");
     }

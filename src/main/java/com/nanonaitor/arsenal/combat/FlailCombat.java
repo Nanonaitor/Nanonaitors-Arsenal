@@ -71,11 +71,12 @@ public final class FlailCombat {
         LAST_SWING_TICK.put(player, now);
 
         double radius = ChainWeaponStats.flailReach(player, weapon);
+        double verticalRadius = ChainWeaponStats.flailVerticalReach(player, weapon);
 
         List<EntityLivingBase> targets = player.world.getEntitiesWithinAABB(
             EntityLivingBase.class, player.getEntityBoundingBox().grow(radius),
             target -> target != player && !target.isDead
-                && isHitboxWithinRange(player, target, radius)
+                && isHitboxWithinRange(player, target, radius, verticalRadius)
                 && !player.isOnSameTeam(target) && canSeeHitbox(player, target));
 
         float baseDamage = (float) player.getEntityAttribute(
@@ -165,7 +166,8 @@ public final class FlailCombat {
 
     private static boolean isHitboxWithinRange(EntityPlayer player,
                                                 EntityLivingBase target,
-                                                double radius) {
+                                                double radius,
+                                                double verticalRadius) {
         AxisAlignedBB playerBox = player.getEntityBoundingBox();
         AxisAlignedBB targetBox = target.getEntityBoundingBox();
         double dx = Math.max(0.0D, Math.max(playerBox.minX - targetBox.maxX,
@@ -174,7 +176,7 @@ public final class FlailCombat {
             targetBox.minY - playerBox.maxY));
         double dz = Math.max(0.0D, Math.max(playerBox.minZ - targetBox.maxZ,
             targetBox.minZ - playerBox.maxZ));
-        return dx * dx + dy * dy + dz * dz <= radius * radius;
+        return dx * dx + dz * dz <= radius * radius && dy <= verticalRadius;
     }
 
     private static boolean canSeeHitbox(EntityPlayer player, EntityLivingBase target) {

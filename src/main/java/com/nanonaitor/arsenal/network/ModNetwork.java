@@ -26,5 +26,9 @@ public final class ModNetwork {
             FlailAnimationMessage.class, 5, Side.CLIENT);
         CHANNEL.registerMessage(BulwarkBashMessage.Handler.class,
             BulwarkBashMessage.class, 6, Side.SERVER);
+        CHANNEL.registerMessage(ModernWeaponControlMessage.Handler.class,
+            ModernWeaponControlMessage.class, 7, Side.SERVER);
+        CHANNEL.registerMessage(TartsyBashMessage.Handler.class,
+            TartsyBashMessage.class, 8, Side.SERVER);
     }
 }

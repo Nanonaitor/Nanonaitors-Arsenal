@@ -19,12 +19,19 @@ public final class ItemSunWarBulwark extends ItemArsenalShield {
 
     @Override
     public boolean canBeginGuard(EntityPlayer player, EnumHand hand) {
-        return hand == EnumHand.MAIN_HAND && ArsenalCompatManager.canUseTwoHanded(player);
+        boolean held = player.getHeldItem(hand).getItem() == this;
+        boolean free = hand == EnumHand.MAIN_HAND ? player.getHeldItemOffhand().isEmpty()
+            : player.getHeldItemMainhand().isEmpty();
+        if (held && !free && !player.world.isRemote) {
+            player.sendStatusMessage(new net.minecraft.util.text.TextComponentString(
+                "I need both hands to shield with the bulwark!"), true);
+        }
+        return held && free;
     }
 
     public boolean isTwoHandedReady(EntityPlayer player) {
-        return player.getHeldItemMainhand().getItem() == this
-            && ArsenalCompatManager.canUseTwoHanded(player);
+        return player.getHeldItemMainhand().getItem() == this && player.getHeldItemOffhand().isEmpty()
+            || player.getHeldItemOffhand().getItem() == this && player.getHeldItemMainhand().isEmpty();
     }
 
     @Override
@@ -39,14 +46,16 @@ public final class ItemSunWarBulwark extends ItemArsenalShield {
         return modifiers;
     }
 
-    @Override protected void appendShieldTooltip(List<String> tooltip) {
-        line(tooltip, TextFormatting.GOLD, "Extremely durable two-handed fortress shield");
+    @Override protected String shieldSummary() {
+        return "Extremely durable two-handed fortress shield.";
+    }
+
+    @Override protected void appendShieldDetails(List<String> tooltip) {
         line(tooltip, TextFormatting.AQUA, "15% passive damage reduction when ready");
         line(tooltip, TextFormatting.BLUE, "Can shield all directed attacks from any direction");
         line(tooltip, TextFormatting.RED, "Damage: 1 + total armor points");
         line(tooltip, TextFormatting.DARK_GRAY, "Guard and attack for a 4-block area bash");
         line(tooltip, TextFormatting.GRAY, "40% slower while carried; 75% slower while guarding");
-        line(tooltip, TextFormatting.DARK_RED,
-            "Requires an empty offhand for every ability");
+        line(tooltip, TextFormatting.DARK_RED, "Needs both hands free to guard; passive always works");
     }
 }

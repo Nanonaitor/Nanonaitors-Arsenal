@@ -91,6 +91,6 @@ public final class DragonForgeCompat {
     private static List<Map<WeaponTier, ? extends ItemArsenalWeapon>> families() {
         return Arrays.asList(ModContent.MORNING_STARS, ModContent.SCIMITARS,
             ModContent.CLAWS, ModContent.FLAILS, ModContent.BATTERING_RAMS,
-            ModContent.BALLS_AND_CHAINS);
+            ModContent.BALLS_AND_CHAINS, ModContent.DOUBLE_BLADED_SCIMITARS);
     }
 }

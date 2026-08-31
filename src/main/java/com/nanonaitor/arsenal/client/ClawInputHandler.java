@@ -27,6 +27,7 @@ public final class ClawInputHandler {
     private static ItemStack rlCombatHiddenLinkedClaw = ItemStack.EMPTY;
     private static long lastMainhandAutoAttackTick = Long.MIN_VALUE;
     private static long lastOffhandAutoAttackTick = Long.MIN_VALUE;
+    private static long pendingOffhandAnimationTick = Long.MIN_VALUE;
 
     private ClawInputHandler() {}
 
@@ -40,6 +41,11 @@ public final class ClawInputHandler {
         if (!(main.getItem() instanceof ItemClaws)) return;
         ItemClaws claws = (ItemClaws)main.getItem();
         if (!ClawPairHandler.hasMatchingLinkedClaw(player, claws)) return;
+
+        // Chests, doors, levers and other targeted blocks keep vanilla's
+        // right-click priority. The linked claw attacks only when the click was
+        // not intended to interact with a block.
+        if (isBlockInteractionTarget(minecraft)) return;
 
         lastOffhandAutoAttackTick = player.world.getTotalWorldTime();
 
@@ -68,9 +74,7 @@ public final class ClawInputHandler {
         // Animate locally without sending vanilla's offhand-animation packet.
         // RLCombat can process that packet before our scheduled custom attack
         // and incorrectly classify the linked hit as a weaker generic offhand hit.
-        player.swingingHand = EnumHand.OFF_HAND;
-        player.swingProgressInt = -1;
-        player.isSwingInProgress = true;
+        queueOffhandAnimation(player);
     }
 
     @SubscribeEvent(priority = EventPriority.LOWEST, receiveCanceled = true)
@@ -128,11 +132,16 @@ public final class ClawInputHandler {
                     ModNetwork.CHANNEL.sendToServer(
                         new OffhandClawAttackMessage(hit.entityHit.getEntityId()));
                 }
-                player.swingingHand = EnumHand.OFF_HAND;
-                player.swingProgressInt = -1;
-                player.isSwingInProgress = true;
+                queueOffhandAnimation(player);
                 lastOffhandAutoAttackTick = now;
             }
+        }
+
+        if (event.phase == TickEvent.Phase.END
+            && pendingOffhandAnimationTick != Long.MIN_VALUE
+            && now >= pendingOffhandAnimationTick) {
+            playOffhandAnimation(player);
+            pendingOffhandAnimationTick = Long.MIN_VALUE;
         }
 
         // Prevent Everything Nunchaku/RLCombat from issuing a second generic
@@ -166,6 +175,9 @@ public final class ClawInputHandler {
         // the RLCombat + Everything Nunchaku input path even while the physical
         // button remains held. Read a mouse-bound use key directly as a fallback;
         // keyboard/remapped bindings continue to use Minecraft's normal state.
+        if (isBlockInteractionTarget(minecraft)) {
+            return false;
+        }
         if (minecraft.gameSettings.keyBindUseItem.isKeyDown()) {
             return true;
         }
@@ -174,6 +186,28 @@ public final class ClawInputHandler {
         return keyCode < 0 && mouseButton >= 0
             && mouseButton < Mouse.getButtonCount()
             && Mouse.isButtonDown(mouseButton);
+    }
+
+    private static boolean isBlockInteractionTarget(Minecraft minecraft) {
+        RayTraceResult hit = minecraft.objectMouseOver;
+        return hit != null && hit.typeOfHit == RayTraceResult.Type.BLOCK;
+    }
+
+    private static void queueOffhandAnimation(EntityPlayerSP player) {
+        // 1.12 stores only one active swing hand. A two-tick offset lets the
+        // main claw begin its swing before the linked claw takes over, so both
+        // animations remain readable instead of replacing each other instantly.
+        long due = player.world.getTotalWorldTime() + 2L;
+        if (pendingOffhandAnimationTick == Long.MIN_VALUE
+            || due < pendingOffhandAnimationTick) {
+            pendingOffhandAnimationTick = due;
+        }
+    }
+
+    private static void playOffhandAnimation(EntityPlayerSP player) {
+        player.swingingHand = EnumHand.OFF_HAND;
+        player.swingProgressInt = -1;
+        player.isSwingInProgress = true;
     }
 
     private static void restoreRlCombatOffhand() {

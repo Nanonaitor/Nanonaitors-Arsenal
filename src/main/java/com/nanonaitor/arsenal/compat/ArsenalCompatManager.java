@@ -98,15 +98,34 @@ public final class ArsenalCompatManager {
     }
 
     public static boolean isXatTitan(Entity entity) {
-        if (entity == null || !Loader.isModLoaded("xat")) return false;
+        return isXatRace(entity, "Titan");
+    }
+
+    public static boolean isXatRace(Entity entity, String expectedRace) {
+        if (entity == null || expectedRace == null || !Loader.isModLoaded("xat")) return false;
         resolveXatRaceApi();
         String registryName = invokeRaceMethod(xatRaceRegistryName, entity);
         if (registryName != null) {
-            String normalized = registryName.toLowerCase(Locale.ROOT);
-            if ("titan".equals(normalized) || normalized.endsWith(":titan")) return true;
+            String normalized = normalizeRace(registryName);
+            if (normalizeRace(expectedRace).equals(normalized)) return true;
         }
         String raceName = invokeRaceMethod(xatRaceName, entity);
-        return raceName != null && "titan".equalsIgnoreCase(raceName.trim());
+        return raceName != null && normalizeRace(expectedRace).equals(normalizeRace(raceName));
+    }
+
+    public static String getXatRace(Entity entity) {
+        if (entity == null || !Loader.isModLoaded("xat")) return null;
+        resolveXatRaceApi();
+        String registryName = invokeRaceMethod(xatRaceRegistryName, entity);
+        return registryName != null ? normalizeRace(registryName)
+            : normalizeRace(invokeRaceMethod(xatRaceName, entity));
+    }
+
+    private static String normalizeRace(String race) {
+        if (race == null) return null;
+        String normalized = race.trim().toLowerCase(Locale.ROOT);
+        int namespace = normalized.lastIndexOf(':');
+        return namespace >= 0 ? normalized.substring(namespace + 1) : normalized;
     }
 
     private static synchronized void resolveXatRaceApi() {

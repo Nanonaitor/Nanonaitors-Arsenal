@@ -42,9 +42,9 @@ public final class ModSmeltingRecipes {
         // floor(primary material / 3), matching the upper end of the requested 25-33% band.
         add(ModContent.MORNING_STARS.get(tier), counted(whole, 1)); // 4 primary materials
         add(ModContent.SCIMITARS.get(tier), counted(whole, 1));    // 4 primary materials
+        add(ModContent.DOUBLE_BLADED_SCIMITARS.get(tier), counted(whole, 1)); // 4 primary materials
         add(ModContent.CLAWS.get(tier), counted(whole, 1));        // 4 primary materials
         add(ModContent.FLAILS.get(tier), counted(nugget, 3));      // 1 primary material
-
         boolean usesBlock = usesMaterialBlock(tier);
         ItemStack heavyReturn = usesBlock ? counted(whole, 3) : counted(nugget, 3);
         add(ModContent.BATTERING_RAMS.get(tier), heavyReturn);

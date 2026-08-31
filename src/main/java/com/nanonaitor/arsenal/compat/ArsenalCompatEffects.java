@@ -5,6 +5,7 @@ import com.nanonaitor.arsenal.item.ItemArsenalWeapon;
 import com.nanonaitor.arsenal.item.ItemBallAndChain;
 import com.nanonaitor.arsenal.item.ItemBatteringRam;
 import com.nanonaitor.arsenal.item.ItemClaws;
+import com.nanonaitor.arsenal.item.ItemDoubleBladedScimitar;
 import com.nanonaitor.arsenal.item.ItemFlail;
 import com.nanonaitor.arsenal.item.ItemMorningStar;
 import com.nanonaitor.arsenal.item.WeaponTier;
@@ -41,7 +42,9 @@ public final class ArsenalCompatEffects {
     private static final String PROGRESS = "srpkills";
     private static final String LIGHTNING_TICK = "ArsenalElectricEffectTick";
     private static final String RAGE_MARKER = "ArsenalSrpRamRage";
+    private static final String BLADE_STAFF_CLEANSE_REFRESH = "ArsenalBladeStaffCothCleanseRefresh";
     private static final int LIVING_EFFECT_DURATION_TICKS = 10 * 20;
+    private static final int BLADE_STAFF_CLEANSE_INTERVAL = 20;
     private ArsenalCompatEffects() {}
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
@@ -110,6 +113,33 @@ public final class ArsenalCompatEffects {
             player.getEntityData().removeTag(RAGE_MARKER);
         }
 
+        ItemDoubleBladedScimitar bladeStaff = heldBladeStaff(player);
+        WeaponTier staffTier = bladeStaff == null ? null : bladeStaff.getTier();
+        boolean cleansingStaff = staffTier == WeaponTier.LIVING
+            || staffTier == WeaponTier.SENTIENT;
+        long now = player.world.getTotalWorldTime();
+        if (cleansingStaff
+            && now >= player.getEntityData().getLong(BLADE_STAFF_CLEANSE_REFRESH)) {
+                // SRP's Call of the Hive effect is registered as srparasites:coth.
+                // Use the registry lookup so Arsenal remains safe without SRP.
+                Potion callOfTheHive = ArsenalCompatManager.potion("coth");
+                if (callOfTheHive != null) {
+                    double radius = staffTier == WeaponTier.SENTIENT ? 10.0D : 5.0D;
+                    double radiusSq = radius * radius;
+                    for (EntityLivingBase target : player.world.getEntitiesWithinAABB(
+                            EntityLivingBase.class, player.getEntityBoundingBox().grow(radius),
+                            target -> target.getDistanceSq(player) <= radiusSq)) {
+                        if (target.isPotionActive(callOfTheHive))
+                            target.removePotionEffect(callOfTheHive);
+                    }
+                }
+                player.getEntityData().setLong(BLADE_STAFF_CLEANSE_REFRESH,
+                    now + BLADE_STAFF_CLEANSE_INTERVAL);
+        } else if (!cleansingStaff
+            && player.getEntityData().hasKey(BLADE_STAFF_CLEANSE_REFRESH)) {
+            player.getEntityData().removeTag(BLADE_STAFF_CLEANSE_REFRESH);
+        }
+
         // Native sentient SRP tools occasionally mark their wielder as Prey.
         if (weapon != null && weapon.getTier() == WeaponTier.SENTIENT
             && ArsenalCompatManager.isSrpScentEnabled()
@@ -175,7 +205,8 @@ public final class ArsenalCompatEffects {
         found=find(ModContent.CLAWS,item); if(found!=null)return found;
         found=find(ModContent.FLAILS,item); if(found!=null)return found;
         found=find(ModContent.BATTERING_RAMS,item); if(found!=null)return found;
-        return find(ModContent.BALLS_AND_CHAINS,item);
+        found=find(ModContent.BALLS_AND_CHAINS,item); if(found!=null)return found;
+        return find(ModContent.DOUBLE_BLADED_SCIMITARS,item);
     }
     private static <T extends ItemArsenalWeapon> T find(Map<WeaponTier,T> map, ItemArsenalWeapon item) {
         return map.get(WeaponTier.LIVING)==item?map.get(WeaponTier.SENTIENT):null;
@@ -188,6 +219,14 @@ public final class ArsenalCompatEffects {
         if (player==null) return null;
         return player.getHeldItemMainhand().getItem() instanceof ItemArsenalWeapon
             ?(ItemArsenalWeapon)player.getHeldItemMainhand().getItem():null;
+    }
+
+    private static ItemDoubleBladedScimitar heldBladeStaff(EntityPlayer player) {
+        if (player.getHeldItemMainhand().getItem() instanceof ItemDoubleBladedScimitar)
+            return (ItemDoubleBladedScimitar)player.getHeldItemMainhand().getItem();
+        if (player.getHeldItemOffhand().getItem() instanceof ItemDoubleBladedScimitar)
+            return (ItemDoubleBladedScimitar)player.getHeldItemOffhand().getItem();
+        return null;
     }
     private static boolean isEntity(EntityLivingBase e,String path) {
         ResourceLocation id=EntityList.getKey(e); return id!=null&&"iceandfire".equals(id.getResourceDomain())&&path.equals(id.getResourcePath());
