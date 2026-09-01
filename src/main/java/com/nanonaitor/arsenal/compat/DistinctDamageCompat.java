@@ -90,7 +90,10 @@ public final class DistinctDamageCompat {
         Method getType = registry.getClass().getMethod("get", String.class);
         for (String name : new String[] {"slashing", "bludgeoning", "radiant", "necrotic",
                 "fire", "cold", "lightning", "poison"}) {
-            Object type = getType.invoke(registry, name);
+            // DDD's public names are prefixed internally even though its config
+            // accepts short physical aliases such as s/b/p.
+            Object type = getType.invoke(registry, "ddd_" + name);
+            if (type == null) type = getType.invoke(registry, name);
             if (type == null) throw new IllegalStateException("DDD damage type missing: " + name);
             DAMAGE_TYPES.put(name, type);
         }

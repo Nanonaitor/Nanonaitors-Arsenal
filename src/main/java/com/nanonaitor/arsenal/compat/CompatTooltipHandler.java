@@ -24,14 +24,22 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.util.text.TextFormatting;
 import net.minecraftforge.event.entity.player.ItemTooltipEvent;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.eventhandler.EventPriority;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.relauncher.Side;
 
 @Mod.EventBusSubscriber(modid = NanonaitorsArsenal.MOD_ID, value = Side.CLIENT)
 public final class CompatTooltipHandler {
     private CompatTooltipHandler() {}
-    @SubscribeEvent public static void tooltip(ItemTooltipEvent event) {
+    @SubscribeEvent(priority = EventPriority.HIGHEST)
+    public static void tooltip(ItemTooltipEvent event) {
         ItemStack stack=event.getItemStack();
+        if (stack.getItem() instanceof ItemArsenalWeapon) {
+            // DDD normally receives configured distributions during capability
+            // attachment. Arsenal supplies optional distributions dynamically,
+            // so apply them before DDD's normal-priority tooltip renderer runs.
+            DistinctDamageCompat.apply(stack, (ItemArsenalWeapon) stack.getItem());
+        }
         if (stack.getItem() == ModContent.IRON_CHAIN_ITEM) {
             if (ArsenalTooltip.begin(event.getToolTip(), TextFormatting.GOLD,
                     "Placeable chain and chain-weapon crafting component.")) {
