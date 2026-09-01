@@ -38,7 +38,10 @@ public final class CompatTooltipHandler {
             // DDD normally receives configured distributions during capability
             // attachment. Arsenal supplies optional distributions dynamically,
             // so apply them before DDD's normal-priority tooltip renderer runs.
-            DistinctDamageCompat.apply(stack, (ItemArsenalWeapon) stack.getItem());
+            ItemArsenalWeapon weapon = (ItemArsenalWeapon) stack.getItem();
+            if (!DistinctDamageCompat.apply(stack, weapon) && DistinctDamageCompat.isLoaded()) {
+                DistinctDamageCompat.addFallbackTooltip(event.getToolTip(), weapon);
+            }
         }
         if (stack.getItem() == ModContent.IRON_CHAIN_ITEM) {
             if (ArsenalTooltip.begin(event.getToolTip(), TextFormatting.GOLD,

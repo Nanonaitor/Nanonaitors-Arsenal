@@ -4,6 +4,7 @@ import com.nanonaitor.arsenal.client.ArsenalCreativeTab;
 import com.nanonaitor.arsenal.compat.SilverSetBonusCompat;
 import com.nanonaitor.arsenal.compat.DragonForgeCompat;
 import com.nanonaitor.arsenal.compat.ReskillableCompat;
+import com.nanonaitor.arsenal.compat.DistinctDamageCompat;
 import com.nanonaitor.arsenal.network.ModNetwork;
 import com.nanonaitor.arsenal.recipe.ModSmeltingRecipes;
 import net.minecraft.creativetab.CreativeTabs;
@@ -39,6 +40,7 @@ public final class NanonaitorsArsenal {
     @Mod.EventHandler
     public void init(FMLInitializationEvent event) {
         ModSmeltingRecipes.register();
+        DistinctDamageCompat.registerDefinitions();
     }
 
     @Mod.EventHandler
