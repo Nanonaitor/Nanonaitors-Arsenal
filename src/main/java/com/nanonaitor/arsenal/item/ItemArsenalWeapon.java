@@ -4,6 +4,7 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import com.nanonaitor.arsenal.NanonaitorsArsenal;
 import com.nanonaitor.arsenal.compat.ArsenalCompatManager;
+import com.nanonaitor.arsenal.compat.DistinctDamageCompat;
 import com.nanonaitor.arsenal.enchantment.EnchantmentLongChain;
 import com.nanonaitor.arsenal.enchantment.EnchantmentRotationForce;
 import java.util.Collections;
@@ -14,8 +15,10 @@ import net.minecraft.init.Enchantments;
 import net.minecraft.entity.SharedMonsterAttributes;
 import net.minecraft.entity.ai.attributes.AttributeModifier;
 import net.minecraft.inventory.EntityEquipmentSlot;
+import net.minecraft.entity.Entity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.ItemSword;
+import net.minecraft.world.World;
 
 public abstract class ItemArsenalWeapon extends ItemSword {
     private final WeaponTier tier;
@@ -43,6 +46,12 @@ public abstract class ItemArsenalWeapon extends ItemSword {
 
     public final double getDisplayedAttackSpeed() {
         return 4.0D + attackSpeedModifier;
+    }
+
+    @Override
+    public void onUpdate(ItemStack stack, World world, Entity entity, int slot, boolean selected) {
+        super.onUpdate(stack, world, entity, slot, selected);
+        DistinctDamageCompat.apply(stack, this);
     }
 
     /**
