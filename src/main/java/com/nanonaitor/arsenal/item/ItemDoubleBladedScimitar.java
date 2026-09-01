@@ -60,10 +60,13 @@ public final class ItemDoubleBladedScimitar extends ItemArsenalWeapon {
         if (!ArsenalTooltip.begin(tooltip, TextFormatting.GOLD,
                 "Blade Staff with continuous attacks.")) return;
         tooltip.add(TextFormatting.AQUA + "Empty off-hand: hold attack to auto-attack.");
-        tooltip.add(TextFormatting.GOLD + "Melee hits damage other enemies within 2 blocks of the target.");
+        tooltip.add(TextFormatting.GOLD + "Melee hits damage other enemies within "
+            + (getTier() == WeaponTier.SENTIENT ? "3" : "2") + " blocks of the target.");
         tooltip.add(TextFormatting.BLUE + "Right click: reflect attacks for 1 sec.");
         tooltip.add(TextFormatting.DARK_PURPLE
             + "Reflection returns incoming damage before armor reduction.");
+        tooltip.add(TextFormatting.DARK_PURPLE
+            + "Reflection also returns harmful effects delivered by the attack.");
         tooltip.add(TextFormatting.DARK_PURPLE
             + "Reflected non-melee attacks Stun their attacker for 1 sec.");
         tooltip.add(TextFormatting.GRAY

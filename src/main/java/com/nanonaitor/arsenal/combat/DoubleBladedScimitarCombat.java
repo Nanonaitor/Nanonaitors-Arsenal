@@ -2,7 +2,9 @@ package com.nanonaitor.arsenal.combat;
 
 import com.nanonaitor.arsenal.NanonaitorsArsenal;
 import com.nanonaitor.arsenal.item.ItemDoubleBladedScimitar;
+import com.nanonaitor.arsenal.item.WeaponTier;
 import com.nanonaitor.arsenal.registry.ModContent;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.WeakHashMap;
@@ -14,6 +16,7 @@ import net.minecraft.entity.ai.attributes.IAttributeInstance;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.init.SoundEvents;
 import net.minecraft.item.ItemStack;
+import net.minecraft.potion.Potion;
 import net.minecraft.potion.PotionEffect;
 import net.minecraft.util.DamageSource;
 import net.minecraft.util.EntityDamageSource;
@@ -40,6 +43,10 @@ public final class DoubleBladedScimitarCombat {
         OCCUPIED_OFFHAND_SPEED, "Double blade occupied offhand penalty", -0.5D, 2)
         .setSaved(false);
     private static final Map<EntityPlayer, Long> REFLECTION_END = new WeakHashMap<>();
+    private static final Map<EntityPlayer, Map<Potion, PotionEffect>> REFLECTION_EFFECT_BASELINE =
+        new WeakHashMap<>();
+    private static final Map<EntityPlayer, PendingEffectReflection> PENDING_EFFECT_REFLECTION =
+        new WeakHashMap<>();
     private static final ThreadLocal<Boolean> RETURNING = new ThreadLocal<Boolean>() {
         @Override protected Boolean initialValue() { return Boolean.FALSE; }
     };
@@ -56,6 +63,7 @@ public final class DoubleBladedScimitarCombat {
             || player.getCooldownTracker().hasCooldown(stack.getItem())) return false;
         long end = player.world.getTotalWorldTime() + REFLECTION_TICKS;
         REFLECTION_END.put(player, end);
+        REFLECTION_EFFECT_BASELINE.put(player, harmfulEffects(player));
         player.getEntityData().setBoolean(ACTIVE, true);
         player.setActiveHand(EnumHand.MAIN_HAND);
         player.getCooldownTracker().setCooldown(stack.getItem(), NORMAL_COOLDOWN_TICKS);
@@ -81,6 +89,7 @@ public final class DoubleBladedScimitarCombat {
     public static void playerTick(TickEvent.PlayerTickEvent event) {
         if (event.phase != TickEvent.Phase.END) return;
         EntityPlayer player = event.player;
+        if (!player.world.isRemote) updateReflectedEffects(player);
         ItemStack main = player.getHeldItemMainhand();
         boolean doubleBlade = main.getItem() instanceof ItemDoubleBladedScimitar;
         updateOffhandPenalty(player, doubleBlade && !player.getHeldItemOffhand().isEmpty());
@@ -90,6 +99,7 @@ public final class DoubleBladedScimitarCombat {
             || !doubleBlade || !player.getHeldItemOffhand().isEmpty();
         if (expired) {
             REFLECTION_END.remove(player);
+            REFLECTION_EFFECT_BASELINE.remove(player);
             player.getEntityData().removeTag(ACTIVE);
             if (player.isHandActive() && player.getActiveItemStack() == main) {
                 player.resetActiveHand();
@@ -97,6 +107,9 @@ public final class DoubleBladedScimitarCombat {
         } else {
             player.getEntityData().setBoolean(ACTIVE, true);
             if (!player.isHandActive()) player.setActiveHand(EnumHand.MAIN_HAND);
+            if (!PENDING_EFFECT_REFLECTION.containsKey(player)) {
+                REFLECTION_EFFECT_BASELINE.put(player, harmfulEffects(player));
+            }
         }
     }
 
@@ -107,7 +120,7 @@ public final class DoubleBladedScimitarCombat {
         else if (!apply && present != null) speed.removeModifier(present);
     }
 
-    @SubscribeEvent(priority = EventPriority.HIGHEST)
+    @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void reflect(LivingAttackEvent event) {
         if (RETURNING.get() || !(event.getEntityLiving() instanceof EntityPlayer)) return;
         EntityPlayer defender = (EntityPlayer) event.getEntityLiving();
@@ -115,6 +128,15 @@ public final class DoubleBladedScimitarCombat {
         event.setCanceled(true);
         Entity source = event.getSource().getTrueSource();
         if (source == null || source == defender || event.getAmount() <= 0.0F) return;
+        if (!defender.world.isRemote && source instanceof EntityLivingBase) {
+            PendingEffectReflection pending = new PendingEffectReflection(
+                (EntityLivingBase) source,
+                REFLECTION_EFFECT_BASELINE.containsKey(defender)
+                    ? REFLECTION_EFFECT_BASELINE.get(defender) : harmfulEffects(defender),
+                defender.world.getTotalWorldTime() + 2L);
+            PENDING_EFFECT_REFLECTION.put(defender, pending);
+            transferReflectedEffects(defender, pending);
+        }
         boolean hit;
         RETURNING.set(Boolean.TRUE);
         try {
@@ -132,6 +154,7 @@ public final class DoubleBladedScimitarCombat {
             ItemStack weapon = defender.getHeldItemMainhand();
             defender.getCooldownTracker().removeCooldown(weapon.getItem());
             defender.getCooldownTracker().setCooldown(weapon.getItem(), SUCCESS_COOLDOWN_TICKS);
+            REFLECTION_EFFECT_BASELINE.remove(defender);
             defender.world.playSound(null, defender.posX, defender.posY, defender.posZ,
                 SoundEvents.ENTITY_PLAYER_ATTACK_SWEEP, SoundCategory.PLAYERS,
                 0.8F, 1.25F);
@@ -149,12 +172,15 @@ public final class DoubleBladedScimitarCombat {
         if (!(attacker.getHeldItemMainhand().getItem() instanceof ItemDoubleBladedScimitar)
             || attacker.world.isRemote) return;
         EntityLivingBase primary = event.getEntityLiving();
+        ItemDoubleBladedScimitar bladeStaff =
+            (ItemDoubleBladedScimitar) attacker.getHeldItemMainhand().getItem();
+        double radius = bladeStaff.getTier() == WeaponTier.SENTIENT ? 3.0D : 2.0D;
         AOE_DAMAGE.set(Boolean.TRUE);
         try {
             for (EntityLivingBase nearby : attacker.world.getEntitiesWithinAABB(
-                    EntityLivingBase.class, primary.getEntityBoundingBox().grow(2.0D),
+                    EntityLivingBase.class, primary.getEntityBoundingBox().grow(radius),
                     entity -> entity != attacker && entity != primary && entity.isEntityAlive()
-                        && entity.getDistanceSq(primary) <= 4.0D
+                        && entity.getDistanceSq(primary) <= radius * radius
                         && (!(entity instanceof EntityPlayer)
                             || attacker.canAttackPlayer((EntityPlayer) entity)))) {
                 nearby.attackEntityFrom(DamageSource.causePlayerDamage(attacker), event.getAmount());
@@ -168,6 +194,54 @@ public final class DoubleBladedScimitarCombat {
         Entity direct = source.getImmediateSource();
         return direct instanceof EntityLivingBase && direct == source.getTrueSource()
             && !source.isProjectile() && !source.isMagicDamage() && !source.isExplosion();
+    }
+
+    private static Map<Potion, PotionEffect> harmfulEffects(EntityLivingBase entity) {
+        Map<Potion, PotionEffect> effects = new HashMap<>();
+        for (PotionEffect effect : entity.getActivePotionEffects()) {
+            if (effect.getPotion().isBadEffect()) {
+                effects.put(effect.getPotion(), new PotionEffect(effect));
+            }
+        }
+        return effects;
+    }
+
+    private static void updateReflectedEffects(EntityPlayer defender) {
+        PendingEffectReflection pending = PENDING_EFFECT_REFLECTION.get(defender);
+        if (pending == null) return;
+        transferReflectedEffects(defender, pending);
+        if (defender.world.getTotalWorldTime() >= pending.expiresAt
+            || !pending.attacker.isEntityAlive()) {
+            PENDING_EFFECT_REFLECTION.remove(defender);
+        }
+    }
+
+    private static void transferReflectedEffects(EntityPlayer defender,
+                                                   PendingEffectReflection pending) {
+        Map<Potion, PotionEffect> current = harmfulEffects(defender);
+        for (Map.Entry<Potion, PotionEffect> entry : current.entrySet()) {
+            PotionEffect before = pending.baseline.get(entry.getKey());
+            PotionEffect after = entry.getValue();
+            boolean introduced = before == null || after.getAmplifier() > before.getAmplifier()
+                || after.getDuration() > before.getDuration() + 1;
+            if (!introduced) continue;
+            defender.removePotionEffect(entry.getKey());
+            if (before != null) defender.addPotionEffect(new PotionEffect(before));
+            pending.attacker.addPotionEffect(new PotionEffect(after));
+        }
+    }
+
+    private static final class PendingEffectReflection {
+        private final EntityLivingBase attacker;
+        private final Map<Potion, PotionEffect> baseline;
+        private final long expiresAt;
+
+        private PendingEffectReflection(EntityLivingBase attacker,
+                                        Map<Potion, PotionEffect> baseline, long expiresAt) {
+            this.attacker = attacker;
+            this.baseline = new HashMap<>(baseline);
+            this.expiresAt = expiresAt;
+        }
     }
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
