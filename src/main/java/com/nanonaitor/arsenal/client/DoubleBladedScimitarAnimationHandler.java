@@ -57,7 +57,10 @@ public final class DoubleBladedScimitarAnimationHandler {
             GlStateManager.pushMatrix();
             GlStateManager.translate(x, y, z);
             GlStateManager.rotate(-player.rotationYaw, 0.0F, 1.0F, 0.0F);
-            GlStateManager.translate(-0.34D, 0.0D, -0.10D);
+            // Center the staff on the torso and project it forward in the
+            // player's local facing direction. Keeping this translation after
+            // the yaw transform makes it follow the body without orbiting it.
+            GlStateManager.translate(0.0D, 0.0D, 0.58D);
             GlStateManager.rotate(angle, 0.0F, 0.0F, 1.0F);
             GlStateManager.scale(1.35D, 1.35D, 1.35D);
             minecraft.getRenderItem().renderItem(held, ItemCameraTransforms.TransformType.NONE);
