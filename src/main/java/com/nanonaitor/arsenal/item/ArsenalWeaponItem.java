@@ -124,8 +124,11 @@ public class ArsenalWeaponItem extends Item {
             }
             case BLADE_STAFF -> {
                 lines.accept(Component.literal("Empty offhand: hold attack to auto-strike at full charge.").withStyle(ChatFormatting.YELLOW));
-                lines.accept(Component.literal("Melee hits damage other enemies within 2 blocks of the target.").withStyle(ChatFormatting.GOLD));
+                lines.accept(Component.literal("Melee hits damage other enemies within "
+                    + ("sentient".equals(tier.id) ? "3" : "2")
+                    + " blocks of the target.").withStyle(ChatFormatting.GOLD));
                 lines.accept(Component.literal("Use to spin for 1 sec and reflect incoming damage before armor.").withStyle(ChatFormatting.AQUA));
+                lines.accept(Component.literal("Reflection also returns harmful effects delivered by the attack.").withStyle(ChatFormatting.DARK_PURPLE));
                 lines.accept(Component.literal("Reflected non-melee attacks Stun their attacker for 1 sec.").withStyle(ChatFormatting.DARK_PURPLE));
                 lines.accept(Component.literal("Missed reflection: 3 sec cooldown; successful reflection: 0.5 sec.").withStyle(ChatFormatting.GRAY));
                 lines.accept(Component.literal("An occupied offhand disables reflection and halves attack speed.").withStyle(ChatFormatting.DARK_RED));

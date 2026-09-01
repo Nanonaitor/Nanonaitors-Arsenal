@@ -9,6 +9,7 @@ import com.nanonaitor.arsenal.registry.ModItems;
 import com.nanonaitor.arsenal.enchantment.ModEnchantments;
 import java.util.*;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.core.component.DataComponents;
@@ -24,6 +25,7 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffect;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
@@ -77,6 +79,10 @@ public final class CombatEvents {
     private static final Map<UUID, Long> TARTSY_DASH_UNTIL = new HashMap<>();
     private static final Map<UUID, Set<Integer>> TARTSY_DASH_HITS = new HashMap<>();
     private static final Map<UUID, Long> BLADE_STAFF_REFLECT_UNTIL = new HashMap<>();
+    private static final Map<UUID, Map<Holder<MobEffect>, MobEffectInstance>> BLADE_STAFF_EFFECT_BASELINE =
+        new HashMap<>();
+    private static final Map<UUID, PendingEffectReflection> PENDING_BLADE_STAFF_EFFECTS =
+        new HashMap<>();
     private static final ThreadLocal<Boolean> REFLECTING_DAMAGE = ThreadLocal.withInitial(() -> false);
     private static final ThreadLocal<Boolean> BLADE_STAFF_AOE_DAMAGE = ThreadLocal.withInitial(() -> false);
     private static final String TARTSY_CRIT = "ArsenalTartsyCritical";
@@ -96,6 +102,10 @@ public final class CombatEvents {
             && BLADE_STAFF_REFLECT_UNTIL.getOrDefault(player.getUUID(), Long.MIN_VALUE) >= now) {
             if (!player.level().isClientSide() && source.getEntity() instanceof LivingEntity attacker
                 && attacker != player && player.level() instanceof ServerLevel level) {
+                PendingEffectReflection pending = new PendingEffectReflection(attacker,
+                    BLADE_STAFF_EFFECT_BASELINE.getOrDefault(player.getUUID(), harmfulEffects(player)),
+                    now + 2L);
+                PENDING_BLADE_STAFF_EFFECTS.put(player.getUUID(), pending);
                 REFLECTING_DAMAGE.set(true);
                 try {
                     attacker.hurtServer(level, player.damageSources().playerAttack(player), event.getAmount());
@@ -105,8 +115,10 @@ public final class CombatEvents {
                     }
                 }
                 finally { REFLECTING_DAMAGE.set(false); }
+                transferReflectedEffects(player, pending);
                 player.getCooldowns().addCooldown(main, recoveryCooldown(player, main, 10));
                 BLADE_STAFF_REFLECT_UNTIL.remove(player.getUUID());
+                BLADE_STAFF_EFFECT_BASELINE.remove(player.getUUID());
                 player.stopUsingItem();
                 damage(main, player, 1);
                 level.playSound(null, player.blockPosition(), SoundEvents.SHIELD_BLOCK.value(), SoundSource.PLAYERS, 1.0F, 1.25F);
@@ -189,11 +201,12 @@ public final class CombatEvents {
         if (arsenal.kind() == WeaponKind.BLADE_STAFF
             && !BLADE_STAFF_AOE_DAMAGE.get() && isDirectMelee(event.getSource())
             && attacker.level() instanceof ServerLevel level && event.getAmount() > 0.0F) {
+            double radius = bladeStaffRadius(arsenal.tier());
             BLADE_STAFF_AOE_DAMAGE.set(true);
             try {
                 for (LivingEntity nearby : level.getEntitiesOfClass(LivingEntity.class,
-                        target.getBoundingBox().inflate(2.0D),
-                        entity -> entity != target && entity.distanceToSqr(target) <= 4.0D
+                        target.getBoundingBox().inflate(radius),
+                        entity -> entity != target && entity.distanceToSqr(target) <= radius * radius
                             && validTarget(attacker, entity))) {
                     nearby.hurtServer(level, attacker.damageSources().playerAttack(attacker), event.getAmount());
                 }
@@ -306,6 +319,7 @@ public final class CombatEvents {
             || player.getCooldowns().isOnCooldown(stack)
             || BLADE_STAFF_REFLECT_UNTIL.containsKey(player.getUUID())) return;
         BLADE_STAFF_REFLECT_UNTIL.put(player.getUUID(), player.level().getGameTime() + 20L);
+        BLADE_STAFF_EFFECT_BASELINE.put(player.getUUID(), harmfulEffects(player));
         player.startUsingItem(InteractionHand.MAIN_HAND);
     }
 
@@ -567,6 +581,7 @@ public final class CombatEvents {
     }
 
     private static void updateBladeStaff(ServerPlayer player) {
+        updateReflectedEffects(player);
         ItemStack stack = player.getMainHandItem();
         Long until = BLADE_STAFF_REFLECT_UNTIL.get(player.getUUID());
         if (until == null) return;
@@ -576,16 +591,80 @@ public final class CombatEvents {
         if (!valid) {
             player.stopUsingItem();
             BLADE_STAFF_REFLECT_UNTIL.remove(player.getUUID());
+            BLADE_STAFF_EFFECT_BASELINE.remove(player.getUUID());
             return;
         }
         if (now >= until) {
             player.stopUsingItem();
             player.getCooldowns().addCooldown(stack, recoveryCooldown(player, stack, 60));
             BLADE_STAFF_REFLECT_UNTIL.remove(player.getUUID());
+            BLADE_STAFF_EFFECT_BASELINE.remove(player.getUUID());
             return;
+        }
+        if (!PENDING_BLADE_STAFF_EFFECTS.containsKey(player.getUUID())) {
+            BLADE_STAFF_EFFECT_BASELINE.put(player.getUUID(), harmfulEffects(player));
         }
         if (!player.isUsingItem() || player.getUseItem() != stack)
             player.startUsingItem(InteractionHand.MAIN_HAND);
+    }
+
+    private static double bladeStaffRadius(WeaponTier tier) {
+        // The modern tier list does not currently register Sentient, but retaining
+        // this tier-aware rule keeps its behavior correct when that material is ported.
+        return "sentient".equals(tier.id) ? 3.0D : 2.0D;
+    }
+
+    private static Map<Holder<MobEffect>, MobEffectInstance> harmfulEffects(LivingEntity entity) {
+        Map<Holder<MobEffect>, MobEffectInstance> effects = new HashMap<>();
+        for (MobEffectInstance effect : entity.getActiveEffects()) {
+            if (!effect.getEffect().value().isBeneficial()) {
+                effects.put(effect.getEffect(), copyEffect(effect));
+            }
+        }
+        return effects;
+    }
+
+    private static MobEffectInstance copyEffect(MobEffectInstance effect) {
+        return new MobEffectInstance(effect.getEffect(), effect.getDuration(), effect.getAmplifier(),
+            effect.isAmbient(), effect.isVisible(), effect.showIcon());
+    }
+
+    private static void updateReflectedEffects(ServerPlayer defender) {
+        PendingEffectReflection pending = PENDING_BLADE_STAFF_EFFECTS.get(defender.getUUID());
+        if (pending == null) return;
+        transferReflectedEffects(defender, pending);
+        if (defender.level().getGameTime() >= pending.expiresAt || !pending.attacker.isAlive()) {
+            PENDING_BLADE_STAFF_EFFECTS.remove(defender.getUUID());
+        }
+    }
+
+    private static void transferReflectedEffects(Player defender,
+                                                   PendingEffectReflection pending) {
+        for (Map.Entry<Holder<MobEffect>, MobEffectInstance> entry :
+                harmfulEffects(defender).entrySet()) {
+            MobEffectInstance before = pending.baseline.get(entry.getKey());
+            MobEffectInstance after = entry.getValue();
+            boolean introduced = before == null || after.getAmplifier() > before.getAmplifier()
+                || after.getDuration() > before.getDuration() + 1;
+            if (!introduced) continue;
+            defender.removeEffect(entry.getKey());
+            if (before != null) defender.addEffect(copyEffect(before));
+            pending.attacker.addEffect(copyEffect(after));
+        }
+    }
+
+    private static final class PendingEffectReflection {
+        private final LivingEntity attacker;
+        private final Map<Holder<MobEffect>, MobEffectInstance> baseline;
+        private final long expiresAt;
+
+        private PendingEffectReflection(LivingEntity attacker,
+                                        Map<Holder<MobEffect>, MobEffectInstance> baseline,
+                                        long expiresAt) {
+            this.attacker = attacker;
+            this.baseline = new HashMap<>(baseline);
+            this.expiresAt = expiresAt;
+        }
     }
 
     private static int recoveryCooldown(Player player, ItemStack stack, int base) {
