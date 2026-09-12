@@ -141,8 +141,7 @@ public final class ModernWeaponInputHandler {
         if (mc.currentScreen == null && !guard && dualScimitars && attack) {
             double speed = Math.max(0.1D, player.getEntityAttribute(
                 net.minecraft.entity.SharedMonsterAttributes.ATTACK_SPEED).getAttributeValue());
-            double dualSpeed = speed >= 1.8D ? 2.0D : speed;
-            double cooldown = 20.0D / Math.max(0.1D, dualSpeed);
+            double cooldown = 20.0D / Math.max(0.1D, speed);
             if (lastScimitar == Long.MIN_VALUE || now - lastScimitar + 0.5D >= cooldown) {
                 boolean offhand = nextScimitarOffhand;
                 player.swingArm(offhand ? EnumHand.OFF_HAND : EnumHand.MAIN_HAND);

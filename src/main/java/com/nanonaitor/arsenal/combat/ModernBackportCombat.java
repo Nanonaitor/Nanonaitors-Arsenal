@@ -237,8 +237,7 @@ public final class ModernBackportCombat {
             ? offhandScimitarAttackSpeed(player, stack)
             : Math.max(0.1D, player.getEntityAttribute(
                 SharedMonsterAttributes.ATTACK_SPEED).getAttributeValue());
-        double dualSpeed = speed >= 1.8D ? 2.0D : speed;
-        double cooldown = dual ? 20.0D / Math.max(0.1D, dualSpeed) : 20.0D / speed;
+        double cooldown = 20.0D / Math.max(0.1D, speed);
         float attackMultiplier = 1.0F;
         if (auxiliary) {
             float strength = last == Long.MIN_VALUE ? 1.0F : (float)Math.max(0.0D,

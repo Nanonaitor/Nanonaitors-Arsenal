@@ -67,6 +67,13 @@ public final class ReskillableCompat {
                 "reskillable:defense|8,reskillable:attack|4");
             addLock.invoke(null, new ItemStack(ModContent.TARTSY_SHIELD), tartsyLock);
             registered++;
+            // The two-handed Bulwark is endgame defensive equipment and must
+            // not be usable until the player has invested in Defense.
+            Object bulwarkLock = fromString.invoke(null,
+                "reskillable:defense|16");
+            addLock.invoke(null, new ItemStack(ModContent.SUN_WAR_BULWARK),
+                bulwarkLock);
+            registered++;
             LOGGER.info("Registered Reskillable requirements for {} Arsenal weapons.",
                 registered);
         } catch (ReflectiveOperationException | LinkageError exception) {

@@ -286,9 +286,16 @@ public final class ShieldCombat {
     }
 
     private static int shieldCooldown(ItemStack shield, int baseTicks) {
-        return ModContent.RECOVERY != null
-            && EnchantmentHelper.getEnchantmentLevel(ModContent.RECOVERY, shield) > 0
-            ? Math.max(1, baseTicks / 2) : baseTicks;
+        int ticks = baseTicks;
+        if (ModContent.RECOVERY != null
+            && EnchantmentHelper.getEnchantmentLevel(ModContent.RECOVERY, shield) > 0) {
+            ticks = Math.max(1, ticks / 2);
+        }
+        if (ModContent.BREECHED != null
+            && EnchantmentHelper.getEnchantmentLevel(ModContent.BREECHED, shield) > 0) {
+            ticks *= 2;
+        }
+        return ticks;
     }
 
     private static float attackChargeMultiplier(EntityPlayer player) {
@@ -299,15 +306,24 @@ public final class ShieldCombat {
     private static void updateBulwarkMovement(EntityPlayer player) {
         IAttributeInstance speed = player.getEntityAttribute(SharedMonsterAttributes.MOVEMENT_SPEED);
         AttributeModifier old = speed.getModifier(MOVEMENT_UUID);
-        if (old != null) speed.removeModifier(old);
-        if (isBulwarkReady(player)) {
-            // Active item use multiplies movement input by 0.2 in 1.12.2. A +25%
-            // attribute modifier therefore produces the intended 25% final speed.
-            double amount = isGuarding(player, ItemSunWarBulwark.class)
-                ? (0.25D / VANILLA_USE_FACTOR) - 1.0D : -0.40D;
-            speed.applyModifier(new AttributeModifier(MOVEMENT_UUID,
-                "Sun-War Bulwark movement", amount, 2).setSaved(false));
+        ItemStack bulwark = findEquipped(player, ItemSunWarBulwark.class);
+        if (bulwark.isEmpty()) {
+            if (old != null) speed.removeModifier(old);
+            return;
         }
+        // Active item use multiplies movement input by 0.2 in 1.12.2. A +25%
+        // attribute modifier therefore produces the intended 25% final speed.
+        // Carrying remains a 40% penalty even with the opposite hand occupied;
+        // only the stronger guarding state still requires both hands.
+        double amount = isBulwarkReady(player)
+            && isGuarding(player, ItemSunWarBulwark.class)
+            ? (0.25D / VANILLA_USE_FACTOR) - 1.0D : -0.40D;
+        // Replacing this modifier every tick forces Minecraft to recalculate
+        // movement-based FOV every tick, producing a visible zoom pulse.
+        if (old != null && Math.abs(old.getAmount() - amount) < 0.000001D) return;
+        if (old != null) speed.removeModifier(old);
+        speed.applyModifier(new AttributeModifier(MOVEMENT_UUID,
+            "Sun-War Bulwark movement", amount, 2).setSaved(false));
     }
 
     private static void updateOccupiedAttackSpeed(EntityPlayer player) {

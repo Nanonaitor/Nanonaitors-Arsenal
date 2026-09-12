@@ -1,30 +1,13 @@
 {
-  "textures": {
-    "particle": "minecraft:blocks/iron_block",
-    "face": "minecraft:blocks/hardened_clay_stained_brown",
-    "rim": "minecraft:blocks/iron_block",
-    "spike": "minecraft:blocks/iron_block",
-    "grip": "minecraft:blocks/planks_oak"
-  },
-  "elements": [
-    {"from":[3,3,7],"to":[13,13,9],"faces":{"north":{"texture":"#face"},"south":{"texture":"#face"},"east":{"texture":"#rim"},"west":{"texture":"#rim"},"up":{"texture":"#rim"},"down":{"texture":"#rim"}}},
-    {"from":[1,5,7],"to":[3,11,9],"faces":{"north":{"texture":"#rim"},"south":{"texture":"#rim"},"east":{"texture":"#rim"},"west":{"texture":"#rim"},"up":{"texture":"#rim"},"down":{"texture":"#rim"}}},
-    {"from":[13,5,7],"to":[15,11,9],"faces":{"north":{"texture":"#rim"},"south":{"texture":"#rim"},"east":{"texture":"#rim"},"west":{"texture":"#rim"},"up":{"texture":"#rim"},"down":{"texture":"#rim"}}},
-    {"from":[5,1,7],"to":[11,3,9],"faces":{"north":{"texture":"#rim"},"south":{"texture":"#rim"},"east":{"texture":"#rim"},"west":{"texture":"#rim"},"up":{"texture":"#rim"},"down":{"texture":"#rim"}}},
-    {"from":[5,13,7],"to":[11,15,9],"faces":{"north":{"texture":"#rim"},"south":{"texture":"#rim"},"east":{"texture":"#rim"},"west":{"texture":"#rim"},"up":{"texture":"#rim"},"down":{"texture":"#rim"}}},
-    {"from":[6,6,5],"to":[10,10,7],"faces":{"north":{"texture":"#spike"},"south":{"texture":"#spike"},"east":{"texture":"#spike"},"west":{"texture":"#spike"},"up":{"texture":"#spike"},"down":{"texture":"#spike"}}},
-    {"from":[7,7,3],"to":[9,9,5],"faces":{"north":{"texture":"#spike"},"south":{"texture":"#spike"},"east":{"texture":"#spike"},"west":{"texture":"#spike"},"up":{"texture":"#spike"},"down":{"texture":"#spike"}}},
-    {"from":[7.5,7.5,1],"to":[8.5,8.5,3],"faces":{"north":{"texture":"#spike"},"south":{"texture":"#spike"},"east":{"texture":"#spike"},"west":{"texture":"#spike"},"up":{"texture":"#spike"},"down":{"texture":"#spike"}}},
-    {"from":[6.5,6,9],"to":[9.5,10,11],"faces":{"north":{"texture":"#grip"},"south":{"texture":"#grip"},"east":{"texture":"#grip"},"west":{"texture":"#grip"},"up":{"texture":"#grip"},"down":{"texture":"#grip"}}}
-  ],
+  "parent": "builtin/entity",
   "display": {
-    "thirdperson_righthand":{"rotation":[0,90,-10],"translation":[0,3,1],"scale":[0.9,0.9,0.9]},
-    "thirdperson_lefthand":{"rotation":[0,-90,10],"translation":[0,3,1],"scale":[0.9,0.9,0.9]},
-    "firstperson_righthand":{"rotation":[0,0,5],"translation":[-10,0,-10],"scale":[1.25,1.25,1.25]},
-    "firstperson_lefthand":{"rotation":[0,0,5],"translation":[10,-2,-10],"scale":[1.25,1.25,1.25]},
-    "gui":{"rotation":[15,155,-5],"translation":[2,3,0],"scale":[0.65,0.65,0.65]},
-    "fixed":{"rotation":[0,180,0],"translation":[-2,4,-5],"scale":[0.5,0.5,0.5]},
-    "ground":{"rotation":[0,0,0],"translation":[4,4,2],"scale":[0.25,0.25,0.25]}
+    "thirdperson_righthand": {"rotation":[0,90,0],"translation":[10,6,-4],"scale":[0.9,0.9,0.9]},
+    "thirdperson_lefthand": {"rotation":[0,90,0],"translation":[10,6,12],"scale":[0.9,0.9,0.9]},
+    "firstperson_righthand": {"rotation":[0,180,5],"translation":[-10,5,-10],"scale":[1.05,1.05,1.05]},
+    "firstperson_lefthand": {"rotation":[0,180,5],"translation":[10,3,-10],"scale":[1.05,1.05,1.05]},
+    "gui": {"rotation":[15,-25,-5],"translation":[2,3,0],"scale":[0.65,0.65,0.65]},
+    "fixed": {"rotation":[0,180,0],"translation":[-2,4,-5],"scale":[0.5,0.5,0.5]},
+    "ground": {"rotation":[0,0,0],"translation":[4,4,2],"scale":[0.25,0.25,0.25]}
   },
   "overrides": [
     {"predicate":{"blocking":1},"model":"nanonaitors_arsenal:item/tartsy_shield_blocking"}

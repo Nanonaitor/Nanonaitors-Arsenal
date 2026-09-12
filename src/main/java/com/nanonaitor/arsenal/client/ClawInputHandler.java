@@ -10,6 +10,7 @@ import net.minecraft.client.entity.EntityPlayerSP;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.EnumHand;
+import net.minecraft.util.EnumActionResult;
 import net.minecraft.util.math.RayTraceResult;
 import net.minecraftforge.client.event.MouseEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent;
@@ -28,6 +29,7 @@ public final class ClawInputHandler {
     private static long lastMainhandAutoAttackTick = Long.MIN_VALUE;
     private static long lastOffhandAutoAttackTick = Long.MIN_VALUE;
     private static long pendingOffhandAnimationTick = Long.MIN_VALUE;
+    private static boolean interactingWithEntity;
 
     private ClawInputHandler() {}
 
@@ -41,6 +43,21 @@ public final class ClawInputHandler {
         if (!(main.getItem() instanceof ItemClaws)) return;
         ItemClaws claws = (ItemClaws)main.getItem();
         if (!ClawPairHandler.hasMatchingLinkedClaw(player, claws)) return;
+
+        // Give vanilla/modded entity interaction first refusal. This covers
+        // villagers, horses and modded mounts without maintaining a fragile
+        // entity-class allowlist. Only a PASS becomes a linked-claw attack.
+        RayTraceResult hit = minecraft.objectMouseOver;
+        if (hit != null && hit.typeOfHit == RayTraceResult.Type.ENTITY
+            && hit.entityHit != null && minecraft.playerController != null) {
+            EnumActionResult interaction = minecraft.playerController.interactWithEntity(
+                player, hit.entityHit, EnumHand.MAIN_HAND);
+            if (interaction != EnumActionResult.PASS) {
+                interactingWithEntity = true;
+                event.setCanceled(true);
+                return;
+            }
+        }
 
         // Chests, doors, levers and other targeted blocks keep vanilla's
         // right-click priority. The linked claw attacks only when the click was
@@ -63,7 +80,7 @@ public final class ClawInputHandler {
             rlCombatHiddenLinkedClaw = player.getHeldItemOffhand();
             player.inventory.offHandInventory.set(0, ItemStack.EMPTY);
         }
-        RayTraceResult hit = minecraft.objectMouseOver;
+        hit = minecraft.objectMouseOver;
         if (hit != null && hit.typeOfHit == RayTraceResult.Type.ENTITY
             && hit.entityHit instanceof EntityLivingBase) {
             // Send the custom full-damage attack before the vanilla animation
@@ -175,7 +192,8 @@ public final class ClawInputHandler {
         // the RLCombat + Everything Nunchaku input path even while the physical
         // button remains held. Read a mouse-bound use key directly as a fallback;
         // keyboard/remapped bindings continue to use Minecraft's normal state.
-        if (isBlockInteractionTarget(minecraft)) {
+        if (!isPhysicalUseHeld(minecraft)) interactingWithEntity = false;
+        if (interactingWithEntity || isBlockInteractionTarget(minecraft)) {
             return false;
         }
         if (minecraft.gameSettings.keyBindUseItem.isKeyDown()) {
@@ -186,6 +204,14 @@ public final class ClawInputHandler {
         return keyCode < 0 && mouseButton >= 0
             && mouseButton < Mouse.getButtonCount()
             && Mouse.isButtonDown(mouseButton);
+    }
+
+    private static boolean isPhysicalUseHeld(Minecraft minecraft) {
+        if (minecraft.gameSettings.keyBindUseItem.isKeyDown()) return true;
+        int keyCode = minecraft.gameSettings.keyBindUseItem.getKeyCode();
+        int mouseButton = keyCode + 100;
+        return keyCode < 0 && mouseButton >= 0
+            && mouseButton < Mouse.getButtonCount() && Mouse.isButtonDown(mouseButton);
     }
 
     private static boolean isBlockInteractionTarget(Minecraft minecraft) {

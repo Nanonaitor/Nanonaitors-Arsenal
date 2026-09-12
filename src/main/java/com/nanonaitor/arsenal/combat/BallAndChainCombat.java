@@ -8,6 +8,7 @@ import com.nanonaitor.arsenal.item.WeaponTier;
 import com.nanonaitor.arsenal.network.BallAndChainReleaseAnimationMessage;
 import com.nanonaitor.arsenal.network.ModNetwork;
 import com.nanonaitor.arsenal.registry.ModContent;
+import com.nanonaitor.arsenal.registry.ModSounds;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -389,8 +390,9 @@ public final class BallAndChainCombat {
     }
 
     private static void playAttackSound(EntityPlayerMP player, boolean hit, float pitch) {
-        SoundEvent sound = hit ? SoundEvents.ENTITY_PLAYER_ATTACK_STRONG
-            : SoundEvents.ENTITY_PLAYER_ATTACK_NODAMAGE;
+        // Called only by a wind-up damage sweep or an outbound/return damage pass.
+        // Separate IDs keep legitimate audio out of the client melee-spam filter.
+        SoundEvent sound = hit ? ModSounds.BALL_CHAIN_HIT : ModSounds.BALL_CHAIN_SWING;
         player.world.playSound(null, player.posX, player.posY, player.posZ,
             sound, player.getSoundCategory(), hit ? 1.0F : 0.65F, pitch);
     }

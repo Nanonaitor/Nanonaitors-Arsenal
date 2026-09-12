@@ -2,9 +2,11 @@ package com.nanonaitor.arsenal.registry;
 
 import com.nanonaitor.arsenal.NanonaitorsArsenal;
 import com.nanonaitor.arsenal.block.BlockIronChain;
+import com.nanonaitor.arsenal.client.ShieldItemStackRenderer;
 import com.nanonaitor.arsenal.enchantment.EnchantmentLongChain;
 import com.nanonaitor.arsenal.enchantment.EnchantmentRotationForce;
 import com.nanonaitor.arsenal.enchantment.EnchantmentRecovery;
+import com.nanonaitor.arsenal.enchantment.EnchantmentBreeched;
 import com.nanonaitor.arsenal.item.ItemMorningStar;
 import com.nanonaitor.arsenal.item.ItemClaws;
 import com.nanonaitor.arsenal.item.ItemLinkedClaw;
@@ -62,6 +64,7 @@ public final class ModContent {
     public static EnchantmentLongChain LONG_CHAIN;
     public static EnchantmentRotationForce ROTATION_FORCE;
     public static EnchantmentRecovery RECOVERY;
+    public static EnchantmentBreeched BREECHED;
     public static ItemSunWarBulwark SUN_WAR_BULWARK;
     public static ItemTartsyShield TARTSY_SHIELD;
     public static final BlockIronChain IRON_CHAIN = new BlockIronChain();
@@ -156,13 +159,17 @@ public final class ModContent {
         LONG_CHAIN = new EnchantmentLongChain();
         ROTATION_FORCE = new EnchantmentRotationForce();
         RECOVERY = new EnchantmentRecovery();
-        event.getRegistry().registerAll(LONG_CHAIN, ROTATION_FORCE, RECOVERY);
+        BREECHED = new EnchantmentBreeched();
+        event.getRegistry().registerAll(LONG_CHAIN, ROTATION_FORCE, RECOVERY, BREECHED);
     }
 
     @SubscribeEvent
     @SideOnly(Side.CLIENT)
     public static void registerModels(ModelRegistryEvent event) {
         // Morning Star and selected Scimitar pixel art by Star Artsy, commissioned by Nanonaitor.
+        ShieldItemStackRenderer shieldRenderer = new ShieldItemStackRenderer();
+        SUN_WAR_BULWARK.setTileEntityItemStackRenderer(shieldRenderer);
+        TARTSY_SHIELD.setTileEntityItemStackRenderer(shieldRenderer);
         registerModel(IRON_CHAIN_ITEM);
         registerModel(SUN_WAR_BULWARK);
         registerModel(TARTSY_SHIELD);

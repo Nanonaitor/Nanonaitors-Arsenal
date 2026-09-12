@@ -60,6 +60,10 @@ public final class ArsenalCreativeTab extends CreativeTabs {
             items.add(ItemEnchantedBook.getEnchantedItemStack(new EnchantmentData(
                 ModContent.RECOVERY, ModContent.RECOVERY.getMaxLevel())));
         }
+        if (ModContent.BREECHED != null) {
+            items.add(ItemEnchantedBook.getEnchantedItemStack(new EnchantmentData(
+                ModContent.BREECHED, ModContent.BREECHED.getMaxLevel())));
+        }
     }
 
     private static void add(NonNullList<ItemStack> items, net.minecraft.item.Item item) {

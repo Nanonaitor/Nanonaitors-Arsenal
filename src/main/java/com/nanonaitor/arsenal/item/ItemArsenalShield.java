@@ -19,6 +19,7 @@ import net.minecraft.util.EnumActionResult;
 import net.minecraft.util.EnumHand;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.text.TextFormatting;
+import net.minecraft.util.text.translation.I18n;
 import net.minecraft.world.World;
 
 public abstract class ItemArsenalShield extends ItemShield {
@@ -40,6 +41,13 @@ public abstract class ItemArsenalShield extends ItemShield {
 
     @Override public int getMaxItemUseDuration(ItemStack stack) { return 72000; }
     @Override public EnumAction getItemUseAction(ItemStack stack) { return EnumAction.BLOCK; }
+
+    @Override
+    public String getItemStackDisplayName(ItemStack stack) {
+        // ItemShield hardcodes vanilla's "Shield" display name. Arsenal shields
+        // must resolve their own registered translation keys instead.
+        return I18n.translateToLocal(getUnlocalizedName(stack) + ".name").trim();
+    }
 
     @Override
     public ActionResult<ItemStack> onItemRightClick(World world, EntityPlayer player, EnumHand hand) {

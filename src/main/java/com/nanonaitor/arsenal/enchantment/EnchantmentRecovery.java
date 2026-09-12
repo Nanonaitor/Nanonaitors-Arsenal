@@ -25,6 +25,10 @@ public final class EnchantmentRecovery extends Enchantment {
         return canApply(stack);
     }
 
+    @Override protected boolean canApplyTogether(Enchantment other) {
+        return !(other instanceof EnchantmentBreeched) && super.canApplyTogether(other);
+    }
+
     @Override public int getMinEnchantability(int level) { return 20; }
     @Override public int getMaxEnchantability(int level) { return 50; }
     @Override public int getMaxLevel() { return 1; }

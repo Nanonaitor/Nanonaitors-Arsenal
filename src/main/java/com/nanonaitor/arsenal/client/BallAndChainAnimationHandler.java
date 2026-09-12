@@ -88,7 +88,7 @@ public final class BallAndChainAnimationHandler {
                 && minecraft.currentScreen == null
                 && !RELEASES.containsKey(player)
                 && !BallAndChainInputHandler.isGuardingInput()
-                && minecraft.gameSettings.keyBindAttack.isKeyDown();
+                && BallAndChainInputHandler.isAttackPhysicallyDown();
             boolean remoteActive = player != minecraft.player && player.isHandActive()
                 && player.getActiveHand() == EnumHand.MAIN_HAND
                 && !RELEASES.containsKey(player);

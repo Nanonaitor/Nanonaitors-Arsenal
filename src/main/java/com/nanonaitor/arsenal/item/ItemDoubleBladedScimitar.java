@@ -4,6 +4,10 @@ import com.nanonaitor.arsenal.client.ArsenalTooltip;
 import com.nanonaitor.arsenal.combat.DoubleBladedScimitarCombat;
 import com.nanonaitor.arsenal.compat.ReskillableCompat;
 import java.util.List;
+import java.util.Map;
+import net.minecraft.enchantment.Enchantment;
+import net.minecraft.enchantment.EnchantmentHelper;
+import net.minecraft.init.Enchantments;
 import net.minecraft.client.util.ITooltipFlag;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
@@ -16,6 +20,7 @@ import net.minecraft.util.EnumHand;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.text.TextFormatting;
 import net.minecraft.world.World;
+import net.minecraftforge.fml.common.Loader;
 
 /** Blade Staff. Legacy class and registry IDs are retained for save compatibility. */
 public final class ItemDoubleBladedScimitar extends ItemArsenalWeapon {
@@ -38,6 +43,33 @@ public final class ItemDoubleBladedScimitar extends ItemArsenalWeapon {
 
     @Override public int getMaxItemUseDuration(ItemStack stack) { return 72000; }
     @Override public EnumAction getItemUseAction(ItemStack stack) { return EnumAction.NONE; }
+
+    @Override
+    public boolean canApplyAtEnchantingTable(ItemStack stack, Enchantment enchantment) {
+        return !isUnsupportedSweep(enchantment)
+            && super.canApplyAtEnchantingTable(stack, enchantment);
+    }
+
+    @Override
+    public void onUpdate(ItemStack stack, World world, net.minecraft.entity.Entity entity,
+                         int slot, boolean selected) {
+        super.onUpdate(stack, world, entity, slot, selected);
+        if (!world.isRemote) removeUnsupportedSweeps(stack);
+    }
+
+    private static boolean isUnsupportedSweep(Enchantment enchantment) {
+        if (enchantment == Enchantments.SWEEPING) return true;
+        ResourceLocation id = enchantment == null ? null : enchantment.getRegistryName();
+        return Loader.isModLoaded("somanyenchantments") && id != null
+            && "somanyenchantments".equals(id.getResourceDomain())
+            && "arcslash".equals(id.getResourcePath());
+    }
+
+    private static void removeUnsupportedSweeps(ItemStack stack) {
+        Map<Enchantment, Integer> enchantments = EnchantmentHelper.getEnchantments(stack);
+        if (!enchantments.keySet().removeIf(ItemDoubleBladedScimitar::isUnsupportedSweep)) return;
+        EnchantmentHelper.setEnchantments(enchantments, stack);
+    }
 
     @Override
     public ActionResult<ItemStack> onItemRightClick(World world, EntityPlayer player,

@@ -5,6 +5,7 @@ import com.nanonaitor.arsenal.client.ArsenalTooltip;
 import com.nanonaitor.arsenal.enchantment.EnchantmentLongChain;
 import com.nanonaitor.arsenal.enchantment.EnchantmentRotationForce;
 import com.nanonaitor.arsenal.enchantment.EnchantmentRecovery;
+import com.nanonaitor.arsenal.enchantment.EnchantmentBreeched;
 import com.nanonaitor.arsenal.item.ItemArsenalWeapon;
 import com.nanonaitor.arsenal.item.ItemBallAndChain;
 import com.nanonaitor.arsenal.item.ItemBatteringRam;
@@ -60,9 +61,12 @@ public final class CompatTooltipHandler {
                 || enchantment instanceof EnchantmentRotationForce);
         boolean recoveryEnchantment = enchantments.keySet().stream().anyMatch(enchantment ->
             enchantment instanceof EnchantmentRecovery);
-        if (arsenalEnchantment || recoveryEnchantment) {
+        boolean breechedEnchantment = enchantments.keySet().stream().anyMatch(enchantment ->
+            enchantment instanceof EnchantmentBreeched);
+        if (arsenalEnchantment || recoveryEnchantment || breechedEnchantment) {
             if (ArsenalTooltip.begin(event.getToolTip(), TextFormatting.GOLD,
                     arsenalEnchantment ? "Arsenal chain-weapon enchantment."
+                        : breechedEnchantment ? "Arsenal shield curse."
                         : "Arsenal shield enchantment.")) {
                 for (Enchantment enchantment : enchantments.keySet()) {
                     if (enchantment instanceof EnchantmentLongChain) {
@@ -74,6 +78,9 @@ public final class CompatTooltipHandler {
                     } else if (enchantment instanceof EnchantmentRecovery) {
                         event.getToolTip().add(TextFormatting.GRAY
                             + I18n.format("enchantment.nanonaitors_arsenal.recovery.desc"));
+                    } else if (enchantment instanceof EnchantmentBreeched) {
+                        event.getToolTip().add(TextFormatting.RED
+                            + I18n.format("enchantment.nanonaitors_arsenal.breeched.desc"));
                     }
                 }
             }
@@ -124,6 +131,20 @@ public final class CompatTooltipHandler {
                     +TextFormatting.DARK_GRAY+"too weak to fight"+TextFormatting.WHITE+".");
             if (sentient) event.getToolTip().add(TextFormatting.WHITE
                 +"You can't hide anymore...");
+        }
+    }
+
+    /** Removes a second identical Rotation Force explanation added by tooltip mods. */
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    public static void deduplicateRotationForceTooltip(ItemTooltipEvent event) {
+        String expected = I18n.format("enchantment.nanonaitors_arsenal.rotation_force.desc");
+        boolean found = false;
+        java.util.Iterator<String> lines = event.getToolTip().iterator();
+        while (lines.hasNext()) {
+            String plain = TextFormatting.getTextWithoutFormattingCodes(lines.next());
+            if (!expected.equals(plain)) continue;
+            if (found) lines.remove();
+            else found = true;
         }
     }
 

@@ -13,6 +13,7 @@ import net.minecraft.entity.ai.attributes.IAttributeInstance;
 import net.minecraft.util.EnumHand;
 import net.minecraftforge.event.entity.player.AttackEntityEvent;
 import net.minecraftforge.client.event.MouseEvent;
+import net.minecraftforge.client.event.sound.PlaySoundEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.eventhandler.EventPriority;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
@@ -36,20 +37,54 @@ public final class BallAndChainInputHandler {
      */
     @SubscribeEvent(priority = EventPriority.HIGHEST, receiveCanceled = true)
     public static void onMouseRelease(MouseEvent event) {
-        if (event.getButton() != 0 || event.isButtonstate() || !wasSwinging) {
+        Minecraft mc = Minecraft.getMinecraft();
+        int key = mc.gameSettings.keyBindAttack.getKeyCode();
+        if (key >= 0 || event.getButton() != key + 100 || mc.currentScreen != null) {
             return;
         }
-        EntityPlayer player = Minecraft.getMinecraft().player;
+        EntityPlayer player = mc.player;
         if (player != null && player.getHeldItemMainhand().getItem()
             instanceof ItemBallAndChain) {
-            ModNetwork.CHANNEL.sendToServer(new BallAndChainSwingMessage(false));
-            wasSwinging = false;
-            lastHeartbeatTick = Long.MIN_VALUE;
+            // Own both edges: otherwise RLCombat starts an ordinary targeted
+            // melee swing in parallel with Arsenal's damage-window sweeps.
+            event.setCanceled(true);
+            clearVanillaAttack(mc);
+            if (!event.isButtonstate() && wasSwinging) {
+                ModNetwork.CHANNEL.sendToServer(new BallAndChainSwingMessage(false));
+                wasSwinging = false;
+                lastHeartbeatTick = Long.MIN_VALUE;
+            }
         }
     }
 
-    @SubscribeEvent
+    public static boolean isAttackPhysicallyDown() {
+        Minecraft mc = Minecraft.getMinecraft();
+        if (!mc.inGameHasFocus || mc.currentScreen != null) return false;
+        int key = mc.gameSettings.keyBindAttack.getKeyCode();
+        if (key < 0) {
+            int button = key + 100;
+            return button >= 0 && button < org.lwjgl.input.Mouse.getButtonCount()
+                && org.lwjgl.input.Mouse.isButtonDown(button);
+        }
+        return key > 0 && key < org.lwjgl.input.Keyboard.KEYBOARD_SIZE
+            && org.lwjgl.input.Keyboard.isKeyDown(key);
+    }
+
+    private static void clearVanillaAttack(Minecraft mc) {
+        net.minecraft.client.settings.KeyBinding.setKeyBindState(
+            mc.gameSettings.keyBindAttack.getKeyCode(), false);
+        while (mc.gameSettings.keyBindAttack.isPressed()) { /* drain queued clicks */ }
+    }
+
+    @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onClientTick(TickEvent.ClientTickEvent event) {
+        Minecraft mc = Minecraft.getMinecraft();
+        if (mc.player != null && mc.currentScreen == null
+            && mc.player.getHeldItemMainhand().getItem() instanceof ItemBallAndChain) {
+            // START prevents held-click attacks in Minecraft's tick; END also
+            // covers combat mods polling the binding after that tick.
+            clearVanillaAttack(mc);
+        }
         if (event.phase != TickEvent.Phase.END) {
             return;
         }
@@ -72,7 +107,7 @@ public final class BallAndChainInputHandler {
         if (!canGuard) {
             guarding = false;
         } else if (!guarding && !wasSwinging
-            && !minecraft.gameSettings.keyBindAttack.isKeyDown()
+            && !isAttackPhysicallyDown()
             && player.isHandActive()
             && player.getActiveHand() == EnumHand.MAIN_HAND) {
             // Once blocking begins, attack input cannot silently convert the
@@ -84,7 +119,7 @@ public final class BallAndChainInputHandler {
             && !retrieving
             && !guarding
             && minecraft.currentScreen == null
-            && minecraft.gameSettings.keyBindAttack.isKeyDown();
+            && isAttackPhysicallyDown();
         updateUseSpeed(player, canSwing || retrieving);
         player.getEntityData().setBoolean("ArsenalBallAndChainActive",
             holdingWeapon && (canSwing || retrieving));
@@ -118,6 +153,29 @@ public final class BallAndChainInputHandler {
 
     public static boolean isGuardingInput() {
         return guarding;
+    }
+
+    /** Only Arsenal's server-timed sound events may represent this weapon's attacks. */
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    public static void suppressRlCombatSwingSound(PlaySoundEvent event) {
+        if (event.getResultSound() == null) return;
+        Minecraft minecraft = Minecraft.getMinecraft();
+        EntityPlayer player = minecraft.player;
+        if (player == null || !(player.getHeldItemMainhand().getItem() instanceof ItemBallAndChain)
+            || minecraft.world == null) return;
+        net.minecraft.client.audio.ISound playing = event.getResultSound();
+        net.minecraft.util.ResourceLocation sound = playing.getSoundLocation();
+        if (!ChainSwingSoundFilter.isExtraMeleeSound(sound.getResourceDomain(),
+            sound.getResourcePath())) return;
+        // RLCombat also schedules sounds after mouse-up, and vanilla attack
+        // sounds can occur while an entity is targeted. Do not gate on input.
+        // Restrict suppression to sounds originating at this player, not every
+        // other player's attacks. Arsenal's namespaced timed sounds pass through.
+        EntityPlayer source = minecraft.world.getClosestPlayer(playing.getXPosF(),
+            playing.getYPosF(), playing.getZPosF(), 2.0D, false);
+        if (source == player) {
+            event.setResultSound(null);
+        }
     }
 
     private static void updateUseSpeed(EntityPlayer player, boolean active) {
