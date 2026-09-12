@@ -222,8 +222,8 @@ public final class ShieldCombat {
             if (!dash.hit.add(target.getEntityId())) continue;
             if (target.attackEntityFrom(new EntityDamageSource("tartsy_dash", player), 2.0F)) {
                 if (ModContent.STUNNED != null)
-                    target.addPotionEffect(new net.minecraft.potion.PotionEffect(
-                        ModContent.STUNNED, 20, 0, false, true));
+                    com.nanonaitor.arsenal.config.ConfiguredEffects.apply(target,
+                        com.nanonaitor.arsenal.config.ArsenalConfig.effects.tartsyDash, 20, 0);
                 player.getEntityData().setBoolean(TARTSY_CRITICAL_READY, true);
                 target.knockBack(player, 0.55F, player.posX - target.posX,
                     player.posZ - target.posZ);

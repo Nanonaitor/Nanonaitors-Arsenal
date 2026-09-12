@@ -25,7 +25,7 @@ public final class ModRecipes {
             " P ", "PBP", " L ", 'P', "plankWood",
             'B', net.minecraft.init.Blocks.IRON_BLOCK, 'L', Items.LEATHER);
         tartsy.setRegistryName(NanonaitorsArsenal.MOD_ID, "tartsy_shield");
-        event.getRegistry().register(tartsy);
+        if (com.nanonaitor.arsenal.config.ContentSwitches.enabled("tartsy_shield")) event.getRegistry().register(tartsy);
         WeaponTier[] base = {WeaponTier.SILVER, WeaponTier.BRONZE, WeaponTier.STEEL,
             WeaponTier.UMBRIUM, WeaponTier.DRAGONBONE, WeaponTier.DESERT_MYRMEX,
             WeaponTier.JUNGLE_MYRMEX};
@@ -124,6 +124,7 @@ public final class ModRecipes {
     private static void living(RegistryEvent.Register<IRecipe> e, String family,
                                ItemArsenalWeapon out, String a,String b,String c,
                                Object f,Object core,Object handle,Object... extraKeys) {
+        if (!com.nanonaitor.arsenal.config.ContentSwitches.enabled(family)) return;
         java.util.List<Object> args = new java.util.ArrayList<>();
         args.add(a); args.add(b); args.add(c);
         addLivingIngredient(args, a,b,c, 'F',f);
@@ -154,11 +155,13 @@ public final class ModRecipes {
     }
     private static <T extends ItemArsenalWeapon> void upgrade(RegistryEvent.Register<IRecipe> e,
             String family, Map<WeaponTier,T> map, WeaponTier target, String blood) {
+        if (!com.nanonaitor.arsenal.config.ContentSwitches.enabled(family)) return;
         ArsenalUpgradeRecipe r = new ArsenalUpgradeRecipe(map.get(WeaponTier.DRAGONBONE), map.get(target), blood);
         r.setRegistryName(NanonaitorsArsenal.MOD_ID, family + "_" + target.getId()); e.getRegistry().register(r);
     }
     private static <T extends ItemArsenalWeapon> void recipe(RegistryEvent.Register<IRecipe> e,
             String family, WeaponTier t, Map<WeaponTier,T> map, String a,String b,String c,Object... keys) {
+        if (!com.nanonaitor.arsenal.config.ContentSwitches.enabled(family)) return;
         java.util.List<Object> args = new java.util.ArrayList<>();
         args.add(a);args.add(b);args.add(c);
         for (int i=0;i<keys.length;i+=2) {

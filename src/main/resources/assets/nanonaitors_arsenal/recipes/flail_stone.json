@@ -1,25 +1,31 @@
 {
-    "type":  "minecraft:crafting_shaped",
-    "pattern":  [
-                    "MM ",
-                    " C ",
-                    " S "
-                ],
-    "key":  {
-                "M":  {
-                          "type":  "forge:ore_dict",
-                          "ore":  "cobblestone"
-                      },
-                "S":  {
-                          "type":  "forge:ore_dict",
-                          "ore":  "handleWeapon"
-                      },
-                "C":  {
-                          "type":  "forge:ore_dict",
-                          "ore":  "chainIron"
-                      }
-            },
-    "result":  {
-                   "item":  "nanonaitors_arsenal:flail_stone"
-               }
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "MM ",
+    " C ",
+    " S "
+  ],
+  "key": {
+    "M": {
+      "type": "forge:ore_dict",
+      "ore": "cobblestone"
+    },
+    "S": {
+      "type": "forge:ore_dict",
+      "ore": "handleWeapon"
+    },
+    "C": {
+      "type": "forge:ore_dict",
+      "ore": "chainIron"
+    }
+  },
+  "result": {
+    "item": "nanonaitors_arsenal:flail_stone"
+  },
+  "conditions": [
+    {
+      "type": "nanonaitors_arsenal:weapon_enabled",
+      "family": "flail"
+    }
+  ]
 }

@@ -55,9 +55,9 @@ public final class ItemScimitar extends ItemArsenalWeapon {
         if (!ArsenalTooltip.begin(tooltip, TextFormatting.GOLD,
                 "Fast blade that weakens enemies on hit.")) return;
         tooltip.add(TextFormatting.GOLD + "Dual wield to alternate attacks and cross-guard.");
-        if (getTier() == WeaponTier.GOLD && Loader.isModLoaded("setbonus")) {
+        if ((getTier() == WeaponTier.GOLD || getTier() == WeaponTier.SILVER) && Loader.isModLoaded("setbonus")) {
             tooltip.add(TextFormatting.DARK_PURPLE
-                + "Hits inflict Weakness I, or Weakness II with a full Gold armor set.");
+                + "Default: Weakness I; II with the matching RLCraft armor-set bonus.");
         } else if (getTier() == WeaponTier.SENTIENT) {
             tooltip.add(TextFormatting.DARK_PURPLE
                 + "Hits inflict Weakness III for 10 secs.");

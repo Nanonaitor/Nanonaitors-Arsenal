@@ -32,12 +32,21 @@ public final class PotionStunned extends Potion {
     }
 
     @SubscribeEvent
+    public static void onPotionApplicable(net.minecraftforge.event.entity.living.PotionEvent.PotionApplicableEvent event) {
+        if (event.getPotionEffect().getPotion() == ModContent.STUNNED
+            && com.nanonaitor.arsenal.config.ConfiguredEffects.stunImmune(event.getEntityLiving()))
+            event.setResult(net.minecraftforge.fml.common.eventhandler.Event.Result.DENY);
+    }
+
+    @SubscribeEvent
     public static void onLivingUpdate(LivingEvent.LivingUpdateEvent event) {
         EntityLivingBase living = event.getEntityLiving();
         if (living.world.isRemote || !(living instanceof EntityLiving)) return;
         EntityLiving mob = (EntityLiving) living;
         NBTTagCompound data = mob.getEntityData();
-        boolean stunned = ModContent.STUNNED != null && mob.isPotionActive(ModContent.STUNNED);
+        boolean immune = com.nanonaitor.arsenal.config.ConfiguredEffects.stunImmune(mob);
+        if (immune && ModContent.STUNNED != null) mob.removePotionEffect(ModContent.STUNNED);
+        boolean stunned = !immune && ModContent.STUNNED != null && mob.isPotionActive(ModContent.STUNNED);
         if (stunned) {
             if (!data.getBoolean(MANAGED)) {
                 data.setBoolean(PREVIOUS, mob.isAIDisabled());

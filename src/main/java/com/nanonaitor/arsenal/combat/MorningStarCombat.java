@@ -35,8 +35,8 @@ public final class MorningStarCombat {
         int currentLevel = current == null ? 0 : current.getAmplifier() + 1;
         int newLevel = Math.min(currentLevel + 1, item.getTier().getMorningStarFractureCap());
         int duration = target instanceof EntityPlayer ? PLAYER_DURATION_TICKS : MOB_DURATION_TICKS;
-        target.addPotionEffect(new PotionEffect(ModContent.ARMOR_FRACTURE,
-            duration, newLevel - 1, false, true));
+        com.nanonaitor.arsenal.config.ConfiguredEffects.apply(target,
+            com.nanonaitor.arsenal.config.ArsenalConfig.effects.morningStarFracture, duration, newLevel - 1);
     }
 
     private static final class PendingAttack {

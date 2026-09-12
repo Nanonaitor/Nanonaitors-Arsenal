@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+## 2.0.4 - 2026-09-11
+
+- Added configurable weapon-family crafting/upgrade recipe switches and
+  enchantment registration switches, plus an in-game config GUI. Weapon switches
+  preserve existing items, gameplay, creative/JEI item listings and recycling.
+- Added configurable attack potion lists with registry IDs, one-based levels,
+  durations, optional tier defaults, and empty-list disabling.
+- Added Flail and Ball & Chain base-reach settings, a shield-enchantment toggle,
+  and entity-ID immunity entries for Stunned (including externally applied stun).
+- Silver Scimitars now inflict default Weakness II with RLCraft's matching Silver
+  set bonus; Silver Ball & Chain jumps to full charge on rotation two with that
+  set. Gold retains its existing two-rotation full charge, including with its set.
+- Configuration changes require restart; disabling enchantment registrations can
+  remove old enchantments from saves. Weapon recipe switches do not delete items.
+  See CONFIGURATION.md before changing settings.
+
 - Replaced all 19 Blade Staff tier textures with the new 32x32 double-bladed
   artwork, using tier palettes for the blade ends and retaining the handle.
   Weapon pixels are fully opaque; empty background pixels remain transparent.

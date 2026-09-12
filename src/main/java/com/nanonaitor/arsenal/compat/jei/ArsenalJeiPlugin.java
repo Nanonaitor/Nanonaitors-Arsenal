@@ -31,13 +31,12 @@ public final class ArsenalJeiPlugin implements IModPlugin {
         }
         for (WeaponTier tier : WeaponTier.values()) {
             if (ArsenalCompatManager.isTierAvailable(tier)) continue;
-            blacklist.addIngredientToBlacklist(new ItemStack(ModContent.MORNING_STARS.get(tier)));
-            blacklist.addIngredientToBlacklist(new ItemStack(ModContent.SCIMITARS.get(tier)));
-            blacklist.addIngredientToBlacklist(new ItemStack(ModContent.CLAWS.get(tier)));
-            blacklist.addIngredientToBlacklist(new ItemStack(ModContent.FLAILS.get(tier)));
-            blacklist.addIngredientToBlacklist(new ItemStack(ModContent.BATTERING_RAMS.get(tier)));
-            blacklist.addIngredientToBlacklist(new ItemStack(ModContent.BALLS_AND_CHAINS.get(tier)));
-            blacklist.addIngredientToBlacklist(new ItemStack(ModContent.DOUBLE_BLADED_SCIMITARS.get(tier)));
+            for (net.minecraft.item.Item item : new net.minecraft.item.Item[]{
+                ModContent.MORNING_STARS.get(tier), ModContent.SCIMITARS.get(tier),
+                ModContent.CLAWS.get(tier), ModContent.FLAILS.get(tier),
+                ModContent.BATTERING_RAMS.get(tier), ModContent.BALLS_AND_CHAINS.get(tier),
+                ModContent.DOUBLE_BLADED_SCIMITARS.get(tier)})
+                blacklist.addIngredientToBlacklist(new ItemStack(item));
         }
     }
 }

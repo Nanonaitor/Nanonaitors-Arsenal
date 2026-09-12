@@ -126,7 +126,9 @@ public final class BallAndChainCombat {
                 + ChainWeaponStats.swingIntervalTicks(player, weapon);
             int maxCharges = maxCharges(((ItemBallAndChain) weapon.getItem()).getTier());
             int previousCharge = state.charge;
-            state.charge = Math.min(maxCharges, state.charge + 1);
+            state.charge = BallChargeRules.nextCharge(state.charge, maxCharges,
+                com.nanonaitor.arsenal.compat.SilverSetBonusCompat.hasMatchingMetalSet(
+                    player, ((ItemBallAndChain) weapon.getItem()).getTier()));
             performWindupSweep(player, weapon, state.charge);
             if (previousCharge < maxCharges && state.charge == maxCharges) {
                 player.world.playSound(null, player.posX, player.posY, player.posZ,
@@ -441,8 +443,8 @@ public final class BallAndChainCombat {
             int piercing = tier.getArmorPiercePercent();
             int amplifier = piercing >= 100 ? 4 : piercing >= 75 ? 2
                 : piercing >= 50 ? 1 : 0;
-            target.addPotionEffect(new PotionEffect(ModContent.ARMOR_FRACTURE,
-                10 * 20, amplifier, false, true));
+            com.nanonaitor.arsenal.config.ConfiguredEffects.apply(target,
+                com.nanonaitor.arsenal.config.ArsenalConfig.effects.ballPlayerFracture, 200, amplifier);
             return;
         }
         IAttributeInstance armor = target.getEntityAttribute(SharedMonsterAttributes.ARMOR);

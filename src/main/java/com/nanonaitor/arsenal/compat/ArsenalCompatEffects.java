@@ -75,7 +75,16 @@ public final class ArsenalCompatEffects {
         if (weapon == null) return;
         WeaponTier tier = weapon.getTier();
         EntityLivingBase target = event.getEntityLiving();
-        if (tier.isVenom()) target.addPotionEffect(new PotionEffect(MobEffects.POISON,200,2));
+        if (tier.isVenom()) com.nanonaitor.arsenal.config.ConfiguredEffects.apply(target,
+            com.nanonaitor.arsenal.config.ArsenalConfig.effects.venomHit, 200, 2);
+        com.nanonaitor.arsenal.config.ArsenalConfig.Effects effects = com.nanonaitor.arsenal.config.ArsenalConfig.effects;
+        String[] extra = weapon instanceof ItemClaws ? effects.clawsHit
+            : weapon instanceof ItemFlail ? effects.flailHit
+            : weapon instanceof ItemBallAndChain ? effects.ballAndChainHit
+            : weapon instanceof ItemBatteringRam ? effects.batteringRamHit
+            : weapon instanceof ItemMorningStar ? effects.morningStarHit
+            : weapon instanceof ItemDoubleBladedScimitar ? effects.bladeStaffHit : new String[0];
+        com.nanonaitor.arsenal.config.ConfiguredEffects.apply(target, extra, 200, 0);
         if (tier == WeaponTier.LIVING || tier == WeaponTier.SENTIENT) {
             applyLivingFamilyProc(weapon, target, tier == WeaponTier.SENTIENT);
         }
@@ -83,8 +92,7 @@ public final class ArsenalCompatEffects {
             target.setFire(5); knockBack(target,player);
         } else if (tier == WeaponTier.ICED_DRAGONBONE) {
             setFrozen(target,200);
-            target.addPotionEffect(new PotionEffect(MobEffects.SLOWNESS,100,2));
-            target.addPotionEffect(new PotionEffect(MobEffects.MINING_FATIGUE,100,2));
+            com.nanonaitor.arsenal.config.ConfiguredEffects.apply(target, effects.icedDragonboneHit, 100, 2);
             knockBack(target,player);
         } else if (tier == WeaponTier.ELECTRIC_DRAGONBONE) {
             long now=player.world.getTotalWorldTime();
@@ -153,14 +161,18 @@ public final class ArsenalCompatEffects {
                                                boolean sentient) {
         int amplifier = sentient ? 1 : 0;
         if (weapon instanceof ItemMorningStar) {
-            addPotion(target, "corrosive", LIVING_EFFECT_DURATION_TICKS, amplifier);
+            com.nanonaitor.arsenal.config.ConfiguredEffects.apply(target,
+                com.nanonaitor.arsenal.config.ArsenalConfig.effects.livingMorningStar, LIVING_EFFECT_DURATION_TICKS, amplifier);
         } else if (weapon instanceof ItemClaws) {
-            addPotion(target, "bleed", LIVING_EFFECT_DURATION_TICKS, amplifier);
+            com.nanonaitor.arsenal.config.ConfiguredEffects.apply(target,
+                com.nanonaitor.arsenal.config.ArsenalConfig.effects.livingClaws, LIVING_EFFECT_DURATION_TICKS, amplifier);
         } else if (weapon instanceof ItemFlail) {
-            addPotion(target, "antimall", LIVING_EFFECT_DURATION_TICKS, amplifier);
+            com.nanonaitor.arsenal.config.ConfiguredEffects.apply(target,
+                com.nanonaitor.arsenal.config.ArsenalConfig.effects.livingFlail, LIVING_EFFECT_DURATION_TICKS, amplifier);
         } else if (weapon instanceof ItemBallAndChain) {
             if (ArsenalCompatManager.isSrpParasite(target)) {
-                addPotion(target, "debar", LIVING_EFFECT_DURATION_TICKS, amplifier);
+                com.nanonaitor.arsenal.config.ConfiguredEffects.apply(target,
+                    com.nanonaitor.arsenal.config.ArsenalConfig.effects.livingBallAndChain, LIVING_EFFECT_DURATION_TICKS, amplifier);
             }
         }
         // Battering Rams keep their proc on the wielder through heldSrpEffects().

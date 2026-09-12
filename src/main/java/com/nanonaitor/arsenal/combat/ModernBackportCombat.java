@@ -190,11 +190,12 @@ public final class ModernBackportCombat {
                     int level = old == null ? 1 : old.getAmplifier() + 2;
                     level = Math.min(level, item.getTier().getMorningStarFractureCap());
                     int duration = target instanceof EntityPlayer ? 200 : 600;
-                    target.addPotionEffect(new PotionEffect(ModContent.ARMOR_FRACTURE,
-                        duration, level - 1, false, true));
+                    com.nanonaitor.arsenal.config.ConfiguredEffects.apply(target,
+                        com.nanonaitor.arsenal.config.ArsenalConfig.effects.morningStarFracture, duration, level - 1);
                 }
                 if (full && ModContent.STUNNED != null && player.getRNG().nextFloat() < 0.20F)
-                    target.addPotionEffect(new PotionEffect(ModContent.STUNNED, 60, 0, false, true));
+                    com.nanonaitor.arsenal.config.ConfiguredEffects.apply(target,
+                        com.nanonaitor.arsenal.config.ArsenalConfig.effects.morningStarStun, 60, 0);
             }
         }
         player.swingArm(EnumHand.MAIN_HAND);

@@ -1,11 +1,31 @@
 {
   "type": "minecraft:crafting_shaped",
-  "pattern": ["GOG", "DSD", "GOG"],
+  "pattern": [
+    "GOG",
+    "DSD",
+    "GOG"
+  ],
   "key": {
-    "G": {"item": "minecraft:gold_block"},
-    "O": {"item": "minecraft:obsidian"},
-    "D": {"item": "minecraft:diamond"},
-    "S": {"item": "minecraft:shield"}
+    "G": {
+      "item": "minecraft:gold_block"
+    },
+    "O": {
+      "item": "minecraft:obsidian"
+    },
+    "D": {
+      "item": "minecraft:diamond"
+    },
+    "S": {
+      "item": "minecraft:shield"
+    }
   },
-  "result": {"item": "nanonaitors_arsenal:sun_war_bulwark"}
+  "result": {
+    "item": "nanonaitors_arsenal:sun_war_bulwark"
+  },
+  "conditions": [
+    {
+      "type": "nanonaitors_arsenal:weapon_enabled",
+      "family": "sun_war_bulwark"
+    }
+  ]
 }

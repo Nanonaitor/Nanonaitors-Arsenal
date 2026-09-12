@@ -18,7 +18,8 @@ public final class EnchantmentRecovery extends Enchantment {
     }
 
     @Override public boolean canApply(ItemStack stack) {
-        return stack.getItem() instanceof ItemArsenalShield;
+        return com.nanonaitor.arsenal.config.ArsenalConfig.shields.allowShieldEnchantments
+            && stack.getItem() instanceof ItemArsenalShield;
     }
 
     @Override public boolean canApplyAtEnchantingTable(ItemStack stack) {

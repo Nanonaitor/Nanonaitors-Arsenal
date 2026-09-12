@@ -69,8 +69,12 @@ public final class ItemBallAndChain extends ItemArsenalWeapon {
             tooltip.add(TextFormatting.GOLD
                 + "Hold attack to build up to " + charges + " charges.");
         }
-        tooltip.add(TextFormatting.GRAY + "Wind-up sweeps deal 0.5x damage 3 base blocks ahead.");
-        tooltip.add(TextFormatting.GRAY + "Release to throw 4 base blocks per charge.");
+        tooltip.add(TextFormatting.GRAY + "Wind-up: 0.5x damage, "
+            + com.nanonaitor.arsenal.config.ArsenalConfig.reach.ballWindupReach + " base blocks.");
+        tooltip.add(TextFormatting.GRAY + "Throw: "
+            + com.nanonaitor.arsenal.config.ArsenalConfig.reach.ballThrowReachPerCharge + " base blocks per charge.");
+        if (getTier() == WeaponTier.SILVER && net.minecraftforge.fml.common.Loader.isModLoaded("setbonus"))
+            tooltip.add(TextFormatting.YELLOW + "Matching RLCraft Silver set: second rotation reaches full charge.");
         tooltip.add(TextFormatting.DARK_GRAY + "Reach and attack-speed modifiers apply.");
         if (getTier() == WeaponTier.GOLD) {
             tooltip.add(TextFormatting.GRAY

@@ -1,20 +1,26 @@
 {
-    "type":  "forge:ore_shaped",
-    "pattern":  [
-                    "  B",
-                    " C ",
-                    "C  "
-                ],
-    "key":  {
-                "C":  {
-                          "type":  "forge:ore_dict",
-                          "ore":  "chainIron"
-                      },
-                "B":  {
-                          "item":  "minecraft:gold_block"
-                      }
-            },
-    "result":  {
-                   "item":  "nanonaitors_arsenal:ball_and_chain_gold"
-               }
+  "type": "forge:ore_shaped",
+  "pattern": [
+    "  B",
+    " C ",
+    "C  "
+  ],
+  "key": {
+    "C": {
+      "type": "forge:ore_dict",
+      "ore": "chainIron"
+    },
+    "B": {
+      "item": "minecraft:gold_block"
+    }
+  },
+  "result": {
+    "item": "nanonaitors_arsenal:ball_and_chain_gold"
+  },
+  "conditions": [
+    {
+      "type": "nanonaitors_arsenal:weapon_enabled",
+      "family": "ball_and_chain"
+    }
+  ]
 }

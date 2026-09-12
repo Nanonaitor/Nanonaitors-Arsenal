@@ -1,1 +1,27 @@
-{"type":"minecraft:crafting_shaped","pattern":["MM "," S "," MM"],"key":{"M":{"type":"forge:ore_dict","ore":"ingotGold"},"S":{"type":"forge:ore_dict","ore":"handleWeapon"}},"result":{"item":"nanonaitors_arsenal:double_bladed_scimitar_gold"}}
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "MM ",
+    " S ",
+    " MM"
+  ],
+  "key": {
+    "M": {
+      "type": "forge:ore_dict",
+      "ore": "ingotGold"
+    },
+    "S": {
+      "type": "forge:ore_dict",
+      "ore": "handleWeapon"
+    }
+  },
+  "result": {
+    "item": "nanonaitors_arsenal:double_bladed_scimitar_gold"
+  },
+  "conditions": [
+    {
+      "type": "nanonaitors_arsenal:weapon_enabled",
+      "family": "double_bladed_scimitar"
+    }
+  ]
+}

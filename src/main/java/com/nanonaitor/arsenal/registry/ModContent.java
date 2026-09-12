@@ -156,11 +156,14 @@ public final class ModContent {
 
     @SubscribeEvent
     public static void registerEnchantments(RegistryEvent.Register<Enchantment> event) {
-        LONG_CHAIN = new EnchantmentLongChain();
-        ROTATION_FORCE = new EnchantmentRotationForce();
-        RECOVERY = new EnchantmentRecovery();
-        BREECHED = new EnchantmentBreeched();
-        event.getRegistry().registerAll(LONG_CHAIN, ROTATION_FORCE, RECOVERY, BREECHED);
+        if (com.nanonaitor.arsenal.config.ArsenalConfig.enchantments.enableLongChain)
+            event.getRegistry().register(LONG_CHAIN = new EnchantmentLongChain());
+        if (com.nanonaitor.arsenal.config.ArsenalConfig.enchantments.enableRotationForce)
+            event.getRegistry().register(ROTATION_FORCE = new EnchantmentRotationForce());
+        if (com.nanonaitor.arsenal.config.ArsenalConfig.enchantments.enableRecovery)
+            event.getRegistry().register(RECOVERY = new EnchantmentRecovery());
+        if (com.nanonaitor.arsenal.config.ArsenalConfig.enchantments.enableBreeched)
+            event.getRegistry().register(BREECHED = new EnchantmentBreeched());
     }
 
     @SubscribeEvent

@@ -83,7 +83,19 @@ public abstract class ItemArsenalShield extends ItemShield {
         // causing unbounded recursion and a StackOverflowError during startup.
         return enchantment == Enchantments.UNBREAKING
             || enchantment == Enchantments.MENDING
-            || enchantment == ModContent.RECOVERY;
+            || com.nanonaitor.arsenal.config.ArsenalConfig.shields.allowShieldEnchantments
+                && (enchantment == ModContent.RECOVERY
+                    || enchantment.type != null
+                        && enchantment.type != net.minecraft.enchantment.EnumEnchantmentType.BREAKABLE
+                        && enchantment.type != net.minecraft.enchantment.EnumEnchantmentType.ALL
+                        && enchantment.type.canEnchantItem(net.minecraft.init.Items.SHIELD));
+    }
+
+    @Override public boolean isBookEnchantable(ItemStack stack, ItemStack book) {
+        if (com.nanonaitor.arsenal.config.ArsenalConfig.shields.allowShieldEnchantments) return true;
+        for (Enchantment enchantment : net.minecraft.enchantment.EnchantmentHelper.getEnchantments(book).keySet())
+            if (enchantment != Enchantments.UNBREAKING && enchantment != Enchantments.MENDING) return false;
+        return true;
     }
 
     @Override public int getItemEnchantability() { return 15; }

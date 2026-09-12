@@ -1,9 +1,27 @@
 {
   "type": "minecraft:crafting_shaped",
-  "pattern": [" M ", "MMM", " S "],
+  "pattern": [
+    " M ",
+    "MMM",
+    " S "
+  ],
   "key": {
-    "M": { "type": "forge:ore_dict", "ore": "ingotIron" },
-    "S": { "type": "forge:ore_dict", "ore": "handleWeapon" }
+    "M": {
+      "type": "forge:ore_dict",
+      "ore": "ingotIron"
+    },
+    "S": {
+      "type": "forge:ore_dict",
+      "ore": "handleWeapon"
+    }
   },
-  "result": { "item": "nanonaitors_arsenal:morning_star_iron" }
+  "result": {
+    "item": "nanonaitors_arsenal:morning_star_iron"
+  },
+  "conditions": [
+    {
+      "type": "nanonaitors_arsenal:weapon_enabled",
+      "family": "morning_star"
+    }
+  ]
 }

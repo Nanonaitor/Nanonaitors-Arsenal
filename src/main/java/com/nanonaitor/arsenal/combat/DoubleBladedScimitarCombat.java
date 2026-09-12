@@ -148,8 +148,8 @@ public final class DoubleBladedScimitarCombat {
         if (hit) {
             if (!isDirectMelee(event.getSource()) && source instanceof EntityLivingBase
                 && ModContent.STUNNED != null) {
-                ((EntityLivingBase) source).addPotionEffect(
-                    new PotionEffect(ModContent.STUNNED, 20, 0, false, true));
+                com.nanonaitor.arsenal.config.ConfiguredEffects.apply((EntityLivingBase)source,
+                    com.nanonaitor.arsenal.config.ArsenalConfig.effects.bladeStaffReflect, 20, 0);
             }
             ItemStack weapon = defender.getHeldItemMainhand();
             defender.getCooldownTracker().removeCooldown(weapon.getItem());

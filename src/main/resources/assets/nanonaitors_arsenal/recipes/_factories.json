@@ -1,0 +1,5 @@
+{
+  "conditions": {
+    "weapon_enabled": "com.nanonaitor.arsenal.config.WeaponRecipeCondition"
+  }
+}

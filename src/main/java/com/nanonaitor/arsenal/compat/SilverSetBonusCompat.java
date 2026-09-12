@@ -126,6 +126,16 @@ public final class SilverSetBonusCompat {
             && isSetComplete(goldArmorSet, wearer);
     }
 
+    public static boolean isQuicksilverSetActive(EntityLivingBase wearer) {
+        return Loader.isModLoaded("setbonus") && silverBonusDetected
+            && isSetComplete(silverArmorSet, wearer);
+    }
+
+    public static boolean hasMatchingMetalSet(EntityLivingBase wearer, WeaponTier tier) {
+        return tier == WeaponTier.GOLD && isMagicInfusedGoldSetActive(wearer)
+            || tier == WeaponTier.SILVER && isQuicksilverSetActive(wearer);
+    }
+
     @SubscribeEvent
     public static void onPlayerTick(TickEvent.PlayerTickEvent event) {
         if (event.phase != TickEvent.Phase.START) return;

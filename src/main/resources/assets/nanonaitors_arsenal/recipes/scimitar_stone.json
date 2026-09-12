@@ -1,1 +1,27 @@
-{"type":"minecraft:crafting_shaped","pattern":[" MM","MM ","S  "],"key":{"M":{"type":"forge:ore_dict","ore":"cobblestone"},"S":{"type":"forge:ore_dict","ore":"handleWeapon"}},"result":{"item":"nanonaitors_arsenal:scimitar_stone"}}
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " MM",
+    "MM ",
+    "S  "
+  ],
+  "key": {
+    "M": {
+      "type": "forge:ore_dict",
+      "ore": "cobblestone"
+    },
+    "S": {
+      "type": "forge:ore_dict",
+      "ore": "handleWeapon"
+    }
+  },
+  "result": {
+    "item": "nanonaitors_arsenal:scimitar_stone"
+  },
+  "conditions": [
+    {
+      "type": "nanonaitors_arsenal:weapon_enabled",
+      "family": "scimitar"
+    }
+  ]
+}

@@ -62,7 +62,8 @@ public final class DragonForgeCompat {
         for (Map<WeaponTier, ? extends ItemArsenalWeapon> family : families()) {
             ItemArsenalWeapon input = family.get(WeaponTier.DRAGONBONE);
             ItemArsenalWeapon output = family.get(target);
-            if (input == null || output == null
+            if (!com.nanonaitor.arsenal.config.ContentSwitches.enabled(input)
+                || !com.nanonaitor.arsenal.config.ContentSwitches.enabled(output)
                 || hasRecipe(recipes, recipeClass, input, output)) continue;
             // Preserve durability, name, enchantments, qualities and other NBT.
             recipes.add(constructor.newInstance(new ItemStack(input), blood.copy(),

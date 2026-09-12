@@ -18,11 +18,11 @@ public final class ChainWeaponStats {
     private ChainWeaponStats() {}
 
     public static double flailReach(EntityPlayer player, ItemStack stack) {
-        return Math.max(MIN_REACH, FlailCombat.RADIUS + reachBonus(player, stack));
+        return Math.max(MIN_REACH, com.nanonaitor.arsenal.config.ArsenalConfig.reach.flailRadius + reachBonus(player, stack));
     }
 
     public static double flailVerticalReach(EntityPlayer player, ItemStack stack) {
-        return Math.max(MIN_REACH, FlailCombat.RADIUS + attributeReachBonus(player));
+        return Math.max(MIN_REACH, com.nanonaitor.arsenal.config.ArsenalConfig.reach.flailRadius + attributeReachBonus(player));
     }
 
     public static double longChainBonus(EntityPlayer player, ItemStack stack) {
@@ -31,14 +31,14 @@ public final class ChainWeaponStats {
     }
 
     public static double ballWindupReach(EntityPlayer player, ItemStack stack) {
-        return Math.max(MIN_REACH, BallAndChainCombat.WINDUP_REACH
+        return Math.max(MIN_REACH, com.nanonaitor.arsenal.config.ArsenalConfig.reach.ballWindupReach
             + reachBonus(player, stack));
     }
 
     public static double ballThrowReach(EntityPlayer player, ItemStack stack,
                                         int effectiveCharge) {
         return Math.max(MIN_REACH, effectiveCharge
-            * BallAndChainCombat.THROW_REACH_PER_CHARGE + reachBonus(player, stack));
+            * com.nanonaitor.arsenal.config.ArsenalConfig.reach.ballThrowReachPerCharge + reachBonus(player, stack));
     }
 
     public static int swingIntervalTicks(EntityPlayer player, ItemStack stack) {

@@ -16,12 +16,12 @@ public final class ScimitarCombat {
     public static void applyWeakness(EntityLivingBase target, EntityLivingBase attacker,
                                      ItemScimitar item) {
         int amplifier = getBaseWeaknessAmplifier(item.getTier());
-        if (item.getTier() == WeaponTier.GOLD
-            && SilverSetBonusCompat.isMagicInfusedGoldSetActive(attacker)) {
+        if (SilverSetBonusCompat.hasMatchingMetalSet(attacker, item.getTier())) {
             amplifier = 1; // Weakness II while Gold's full-set infusion is active.
         }
-        target.addPotionEffect(new PotionEffect(MobEffects.WEAKNESS,
-            WEAKNESS_DURATION_TICKS, amplifier, false, true));
+        com.nanonaitor.arsenal.config.ConfiguredEffects.apply(target,
+            com.nanonaitor.arsenal.config.ArsenalConfig.effects.scimitarHit,
+            WEAKNESS_DURATION_TICKS, amplifier);
     }
 
     public static int getBaseWeaknessAmplifier(WeaponTier tier) {
