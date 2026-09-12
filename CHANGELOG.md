@@ -1,161 +1,52 @@
 # Changelog
 
-## Unreleased
+## 2.0.1 - 2026-09-11
 
-## 2.0.4 - 2026-09-11
+Consolidates the local 2.0.1–2.0.4 test builds into the next public 1.12.2 update.
 
-- Added configurable weapon-family crafting/upgrade recipe switches and
-  enchantment registration switches, plus an in-game config GUI. Weapon switches
-  preserve existing items, gameplay, creative/JEI item listings and recycling.
-- Added configurable attack potion lists with registry IDs, one-based levels,
-  durations, optional tier defaults, and empty-list disabling.
-- Added Flail and Ball & Chain base-reach settings, a shield-enchantment toggle,
-  and entity-ID immunity entries for Stunned (including externally applied stun).
-- Silver Scimitars now inflict default Weakness II with RLCraft's matching Silver
-  set bonus; Silver Ball & Chain jumps to full charge on rotation two with that
-  set. Gold retains its existing two-rotation full charge, including with its set.
-- Configuration changes require restart; disabling enchantment registrations can
-  remove old enchantments from saves. Weapon recipe switches do not delete items.
-  See CONFIGURATION.md before changing settings.
+### Configuration and compatibility
 
-- Replaced all 19 Blade Staff tier textures with the new 32x32 double-bladed
-  artwork, using tier palettes for the blade ends and retaining the handle.
+- Added an in-game config menu and weapon-family crafting/upgrade recipe switches.
+  Existing weapons remain registered, visible and usable; recycling is unchanged.
+- Added individual Arsenal enchantment enable switches, configurable potion-effect
+  lists, Flail/Ball & Chain reach settings, and shield-enchantment application control.
+- Added a registry-ID Stunned immunity blacklist, including externally applied Stunned.
+- Silver Scimitars gain default Weakness II with RLCraft's matching Silver set.
+  Silver Ball & Chain reaches full charge on its second rotation with that set.
+  Gold retains its existing two-rotation full-charge behavior.
+- Added a Reskillable Defense 16 requirement for the Sun-War Bulwark.
+- See CONFIGURATION.md for syntax, defaults and restart requirements.
+  Disabling enchantment registrations can remove existing enchantments from saves;
+  disabling weapon recipes does not remove items.
+
+### Combat and fixes
+
+- Fixed overlapping Ball & Chain swing audio from vanilla, RLCombat/Better Combat
+  and Dynamic Surroundings. Charge input no longer starts parallel vanilla attacks;
+  timed winding, outgoing and returning damage/audio windows remain intact.
+- Claw right-click now gives entity interactions priority over linked-claw attacks.
+- Dual-Scimitar auto-attacks respect actual attack-speed modifiers.
+- Blade Staff splash works with an occupied offhand; Sweeping Edge and Arc Slash
+  are rejected/removed from Blade Staffs to prevent overlapping sweep effects.
+- Added Breeched, a shield curse that doubles disable cooldowns and conflicts with Recovery.
+- Fixed Bulwark movement/FOV pulsing, retained its carry penalty with an occupied
+  offhand, and corrected its localized display name.
+- Removed duplicate Rotation Force tooltip explanations.
+
+### Artwork and rendering
+
+- Rebuilt both shield renderers from their custom geometry; adjusted hand,
+  blocking and inventory poses and removed a duplicate Tartsy face.
+- Bulwark's inventory icon stays unchanged while blocking.
+- Updated Dragonbone and desert/jungle Myrmex art for Ball & Chain, Flail,
+  Morning Star and Scimitar, including relevant active/swinging textures.
+- Replaced all 19 Blade Staff tier textures with the new 32×32 artwork.
   Weapon pixels are fully opaque; empty background pixels remain transparent.
-- 2.0.3: Consume Ball and Chain attack mouse events and queued/held vanilla
-  attack input, preventing parallel targeted melee swings. Charge and rendering
-  read the physical configured attack button instead; fast-spin boost remains
-  physical-button based and server-timed damage/audio cadence is unchanged.
-- 2.0.2: Correct RLCombat's sound-event prefix to `player.swing_` (the OGG
-  filenames use `swing_`), include `player.swordslash`, and suppress Dynamic
-  Surroundings sword/blunt/tool swing overlays for the Ball and Chain wielder.
-- 2.0.1: Isolated Ball and Chain damage-window audio under dedicated sound IDs.
-  Suppress nearby local vanilla melee and RLCombat swing sounds while wielding
-  the weapon, including delayed sounds after mouse release. Wind-up sweeps and
-  outbound/return damage passes retain their timed swing or successful-hit sound.
-- Added a Reskillable Defense 16 requirement to equip and use the Sun-War
-  Bulwark when Reskillable is installed.
-- Replaced the Dragonbone and desert/jungle Myrmex weapon art supplied for
-  Ball and Chain, Flail (including swinging frames), Morning Star, and Scimitar;
-  superseded PNGs were overwritten in place so no duplicate legacy set remains.
-- Made the Bulwark blocking model use the exact normal-model GUI transform so
-  its inventory and hotbar icon cannot change while the player is shielding.
-- Updated the Bulwark third-person test to right-hand `[0, 30, 15]` and
-  left-hand `[10, 22, 22]`; moved its held first-person pose outward and made
-  its blocking pose rise four units from that resting position.
-- Kept the Bulwark's `[0, 30, 17]` third-person test position and made its
-  first-person blocking transforms exactly match its confirmed-visible held
-  transforms.
-- Updated the Bulwark positioning test to right-hand translation `[0, 30,
-  17]` and left-hand `[10, 22, 24]`, and restored its first-person blocking
-  transforms to the proven visible Tartsy/vanilla shield anchors.
-- Updated Bulwark positioning test 1 to right-hand translation `[0, 30, 20]`
-  and equivalent left-hand translation `[10, 22, 27]`.
-- Updated the Bulwark positioning test to right-hand translation `[0, 30,
-  25]` and equivalent left-hand translation `[10, 22, 32]`.
-- Updated the Bulwark positioning test to right-hand translation `[0, 30,
-  35]` and equivalent left-hand translation `[10, 22, 42]`.
-- Updated the Bulwark positioning test to right-hand translation `[0, 33,
-  33]` and equivalent left-hand translation `[10, 25, 40]`.
-- Updated the Bulwark positioning test to right-hand translation `[0, 20,
-  35]` and equivalent left-hand translation `[10, 12, 42]`.
-- Updated the Bulwark positioning test to right-hand translation `[0, 30,
-  30]` and equivalent left-hand translation `[10, 22, 37]`.
-- Updated the Bulwark positioning test to right-hand translation `[0, 50,
-  30]` and equivalent left-hand translation `[10, 42, 37]`.
-- Updated the Bulwark positioning test to right-hand translation `[-5, 50,
-  0]` and equivalent left-hand translation `[5, 42, 7]`.
-- Updated the Bulwark positioning test to right-hand translation `[-5, 50,
-  30]` and equivalent left-hand translation `[5, 42, 37]`.
-- Updated the Bulwark positioning test to right-hand translation `[15, 50,
-  15]` and equivalent left-hand translation `[25, 42, 22]`.
-- Set the test Bulwark third-person right-hand blocking translation to
-  `[0, 50, 0]` and applied its equivalent left-hand offset `[10, 42, 7]`.
-- Centered the player-level Bulwark blocking pose using the interpolated X
-  midpoint between its confirmed far-left and far-right test positions.
-- Preserved the Bulwark's player-level blocking height and vanilla depth while
-  compensating its X position for the raised-arm sideways displacement.
-- Raised the vanilla-anchored Bulwark blocking model by 30 model units so it
-  sits at the player's level instead of extending below the ground.
-- Restored the Bulwark's third-person blocking X/Z coordinates to Minecraft's
-  vanilla shield hand anchors while retaining the custom model's vertical lift.
-- Preserved the Bulwark's centered third-person guard placement while moving
-  its depth forward so it renders in front of the torso and near the hands.
-- Shifted the Bulwark's third-person blocking pose across the remaining side
-  gap to cover the wielder's torso and moved it slightly farther forward.
-- Closed the remaining sideways gap in the Bulwark's third-person blocking
-  pose and shifted it slightly forward after it sat just behind the wielder.
-- Corrected the Bulwark blocking pose's sideways overshoot while preserving
-  the manually tuned right-hand height and depth.
-- Applied the manually tuned third-person Bulwark blocking position to the
-  packaged model and mirrored the same offset relationship for the off hand.
-- Lowered both third-person Bulwark blocking transforms by 30 model units
-  after confirming that increasing their JSON Y translation raises the model.
-- Re-centered the Bulwark's third-person blocking depth between the confirmed
-  front/behind positions and lowered the pose substantially beside the player.
-- Lowered the Bulwark's third-person blocking pose after the previous vertical
-  overshoot and pulled it another 16 model units toward the wielder.
-- Pulled the Bulwark's third-person blocking pose another 24 model units
-  inward along the confirmed depth axis without altering its height or angle.
-- Lowered the Bulwark slightly within inventory slots, moved both first-person
-  poses lower and farther toward the screen edge, and corrected its blocking
-  third-person placement along the player-depth axis so it meets the body.
-- Pulled the Bulwark's third-person blocking pose substantially closer to the
-  wielder, raised its inventory icon into the slot, and raised its normal and
-  blocking first-person poses so the shield remains visible on-screen.
-- Corrected the reversed inward axis on the Bulwark's raised third-person
-  blocking pose so the shield sits beside the wielder instead of floating away.
-- Raised the Bulwark slightly and moved it inward in its resting third-person
-  pose so its handle meets the wielder's hand; raised both blocking poses
-  substantially and moved them much closer to the player's body.
-- Closed the remaining resting third-person gap between the Bulwark and the
-  wielder's arm, and raised both third-person blocking poses by 16 model units.
-- Corrected the reversed horizontal adjustment on the rotated third-person
-  Bulwark and moved it inward from the previous good resting position.
-- Raised the resting third-person Bulwark another 12 model units and moved it
-  another 6 units inward so its body sits over the wielding arm.
-- Corrected the direction of the Bulwark's resting hand offset and raised its
-  non-blocking first- and third-person poses substantially over the held hand.
-- Raised Tartsy's non-blocking first-person pose further into view and moved
-  both non-blocking Bulwark third-person poses inward over the held hand.
-- Raised Tartsy's resting first-person pose and moved its third-person model
-  slightly closer to the wielder's hand.
-- Corrected the Sun-War Bulwark's upside-down orientation and reduced its
-  enlarged model from 150% to 120% of base size.
-- Flipped both custom shield meshes 180 degrees around their centered local
-  axes so their fronts face outward in inventory and first-/third-person views.
-- Increased the Sun-War Bulwark model to 150% size in every render context.
-- Stopped replacing the Bulwark movement modifier every tick, eliminating the
-  movement-FOV zoom pulse while preserving its carry and guard slowdowns.
-- Replaced the lossy vanilla-JSON conversions of both shield models with a
-  dedicated renderer using their original Blockbench geometry, exact pivots,
-  and multi-axis rotations. Removed a duplicated Tartsy face that caused
-  coplanar flickering.
-- Recentered both custom shield renderers and replaced their old conversion-
-  specific display transforms with stable vanilla shield hand, guard, GUI,
-  ground, and frame poses so they remain attached naturally at every angle.
-- Restored the Sun-War Bulwark's proper localized display name instead of the
-  vanilla ItemShield fallback name, "Shield."
-- Reoriented the Tartsy Shield's resting main-hand third-person model, angled
-  both third-person guarding poses 60 degrees outward, and lowered its resting
-  first-person presentation to preserve more of the player's view.
-- Fixed the Sun-War Bulwark losing its 40% carry movement penalty when the
-  opposite hand became occupied; its 15% passive damage reduction and carry
-  slowdown now remain active together while held.
-- Removed the fixed dual-Scimitar auto-attack speed clamp so real attack-speed
-  bonuses and penalties now control its alternating cadence.
-- Blade Staff melee splash remains active with an occupied offhand, while
-  Sweeping Edge and Rin's So Many Enchantments' Arc Slash are now rejected and
-  removed from Blade Staffs to prevent overlapping sweep effects.
-- Replaced the Tartsy Shield with the supplied Charge Targsy 3D model and
-  texture, adapted to Minecraft's supported item-model rotations.
-- Replaced the Sun-War Bulwark with the supplied custom 3D model and texture.
-- Claws now give villagers, mounts, and other entities first priority on right
-  click before the linked-claw attack is considered.
-- Prevented RLCombat/Better Combat from layering its local swing swoosh over
-  the Ball and Chain's timed swing audio.
-- Removed duplicate Rotation Force explanation lines from item tooltips.
-- Added the Breeched curse, which doubles Tartsy Shield and Sun-War Bulwark
-  disable cooldowns and cannot be combined with Recovery.
+
+### Validation
+
+- Build includes 60 configuration/charge checks and 35 sound regression checks.
+- All 36 static weapon recipes have validated configuration conditions.
 
 ## 2.0.0 - 2026-08-31
 

@@ -1,4 +1,4 @@
-# Arsenal 1.12.2 configuration (2.0.4)
+# Arsenal 1.12.2 configuration (2.0.1)
 
 File: `<Minecraft profile>/config/nanonaitors_arsenal.cfg`.
 In game: **Mods → Nanonaitor's Arsenal → Config**. The category pages contain
