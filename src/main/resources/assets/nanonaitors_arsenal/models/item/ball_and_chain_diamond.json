@@ -1,0 +1,14 @@
+{
+  "parent": "nanonaitors_arsenal:item/ball_and_chain_held_sprite",
+  "textures": {
+    "layer0": "nanonaitors_arsenal:item/ball_and_chain_diamond_sprite"
+  },
+  "overrides": [
+    {
+      "predicate": {
+        "nanonaitors_arsenal:active": 1
+      },
+      "model": "nanonaitors_arsenal:item/ball_and_chain_diamond_active_port"
+    }
+  ]
+}

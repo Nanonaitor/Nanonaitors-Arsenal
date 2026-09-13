@@ -1,0 +1,26 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "M": {
+      "item": "minecraft:diamond"
+    },
+    "S": {
+      "item": "minecraft:stick"
+    }
+  },
+  "pattern": [
+    " M ",
+    "MMM",
+    " S "
+  ],
+  "result": {
+    "item": "nanonaitors_arsenal:morning_star_diamond"
+  },
+  "conditions": [
+    {
+      "type": "nanonaitors_arsenal:weapon_enabled",
+      "weapon": "morning_star"
+    }
+  ]
+}

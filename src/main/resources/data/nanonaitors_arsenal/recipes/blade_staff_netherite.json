@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:smithing_transform",
+  "template": {
+    "item": "minecraft:netherite_upgrade_smithing_template"
+  },
+  "base": {
+    "item": "nanonaitors_arsenal:blade_staff_diamond"
+  },
+  "addition": {
+    "item": "minecraft:netherite_ingot"
+  },
+  "result": {
+    "item": "nanonaitors_arsenal:blade_staff_netherite"
+  },
+  "conditions": [
+    {
+      "type": "nanonaitors_arsenal:weapon_enabled",
+      "weapon": "blade_staff"
+    }
+  ]
+}

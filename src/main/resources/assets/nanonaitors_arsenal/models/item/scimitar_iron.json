@@ -1,0 +1,14 @@
+{
+  "parent": "nanonaitors_arsenal:item/scimitar_base",
+  "textures": {
+    "layer0": "nanonaitors_arsenal:item/scimitar_iron"
+  },
+  "overrides": [
+    {
+      "predicate": {
+        "nanonaitors_arsenal:active": 1
+      },
+      "model": "nanonaitors_arsenal:item/scimitar_iron_active_port"
+    }
+  ]
+}

@@ -1,0 +1,59 @@
+# Gradle and Forge outputs
+/.gradle/
+/build/
+/run/
+/tmp/
+/eclipse/
+/reobf/
+/mcmodsrepo/
+
+# Local inspection, test-profile backups, and unpublished concepts
+/.inspection/
+/profile-backups/
+/art_sources/
+/design-notes/
+
+# Minecraft development data
+/config/
+/crash-reports/
+/logs/
+/saves/
+
+# Local dependency JARs
+/libs/
+
+# IDE metadata
+/.idea/
+/.settings/
+/.vscode/
+/.classpath
+/.project
+/bin/
+/out/
+*.iml
+*.ipr
+*.iws
+*.launch
+
+# Logs, crash dumps, secrets, and temporary files
+*.log
+*.tmp
+*.bak
+*.class
+*.hprof
+hs_err_pid*
+.env
+.env.*
+.DS_Store
+Thumbs.db
+
+# Forge MDK downloads/reference files
+/forge*changelog.txt
+/forge-mdk.zip
+
+# Unused 26.1 migration inputs (also excluded by processResources).
+/src/main/resources/assets/nanonaitors_arsenal/items/
+/src/main/resources/data/nanonaitors_arsenal/recipe/
+/src/main/resources/data/nanonaitors_arsenal/enchantment/
+/src/main/resources/data/**/tags/item/
+/src/main/resources/data/**/tags/block/

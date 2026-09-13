@@ -1,0 +1,26 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "M": {
+      "tag": "forge:cobblestone"
+    },
+    "S": {
+      "item": "minecraft:stick"
+    }
+  },
+  "pattern": [
+    " MM",
+    "MM ",
+    "S  "
+  ],
+  "result": {
+    "item": "nanonaitors_arsenal:scimitar_stone"
+  },
+  "conditions": [
+    {
+      "type": "nanonaitors_arsenal:weapon_enabled",
+      "weapon": "scimitar"
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "parent": "item/handheld",
+  "textures": {
+    "layer0": "nanonaitors_arsenal:item/blade_staff_netherite"
+  },
+  "display": {
+    "thirdperson_righthand": {
+      "scale": [
+        1.5,
+        1.5,
+        1.5
+      ]
+    },
+    "thirdperson_lefthand": {
+      "scale": [
+        1.5,
+        1.5,
+        1.5
+      ]
+    },
+    "firstperson_righthand": {
+      "scale": [
+        1.875,
+        1.875,
+        1.875
+      ]
+    },
+    "firstperson_lefthand": {
+      "scale": [
+        1.875,
+        1.875,
+        1.875
+      ]
+    }
+  }
+}

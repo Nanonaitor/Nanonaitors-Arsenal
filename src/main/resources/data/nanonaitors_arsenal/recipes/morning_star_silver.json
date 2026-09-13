@@ -1,0 +1,33 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "M": {
+      "tag": "forge:ingots/silver"
+    },
+    "S": {
+      "item": "minecraft:stick"
+    }
+  },
+  "pattern": [
+    " M ",
+    "MMM",
+    " S "
+  ],
+  "result": {
+    "item": "nanonaitors_arsenal:morning_star_silver"
+  },
+  "conditions": [
+    {
+      "type": "forge:not",
+      "value": {
+        "type": "forge:tag_empty",
+        "tag": "forge:ingots/silver"
+      }
+    },
+    {
+      "type": "nanonaitors_arsenal:weapon_enabled",
+      "weapon": "morning_star"
+    }
+  ]
+}

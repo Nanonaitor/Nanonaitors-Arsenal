@@ -1,0 +1,4 @@
+{
+  "parent": "nanonaitors_arsenal:item/sun_war_bulwark_base",
+  "overrides": [{"predicate":{"blocking":1},"model":"nanonaitors_arsenal:item/sun_war_bulwark_blocking"}]
+}

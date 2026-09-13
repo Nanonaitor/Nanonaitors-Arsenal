@@ -1,0 +1,39 @@
+{
+  "loader": "forge:separate_transforms",
+  "gui_light": "front",
+  "base": {
+    "parent": "nanonaitors_arsenal:item/ball_and_chain_living_idle"
+  },
+  "perspectives": {
+    "gui": {
+      "parent": "minecraft:item/generated",
+      "textures": {
+        "layer0": "nanonaitors_arsenal:item/ball_and_chain_living_active_sprite"
+      }
+    },
+    "firstperson_righthand": {
+      "textures": {
+        "particle": "nanonaitors_arsenal:item/ball_and_chain_living"
+      },
+      "elements": []
+    },
+    "firstperson_lefthand": {
+      "textures": {
+        "particle": "nanonaitors_arsenal:item/ball_and_chain_living"
+      },
+      "elements": []
+    },
+    "thirdperson_righthand": {
+      "textures": {
+        "particle": "nanonaitors_arsenal:item/ball_and_chain_living"
+      },
+      "elements": []
+    },
+    "thirdperson_lefthand": {
+      "textures": {
+        "particle": "nanonaitors_arsenal:item/ball_and_chain_living"
+      },
+      "elements": []
+    }
+  }
+}

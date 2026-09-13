@@ -1,0 +1,13 @@
+{
+  "replace": false,
+  "values": [
+    {
+      "id": "defiled_lands_preborn:umbrium_ingot",
+      "required": false
+    },
+    {
+      "id": "defiledlands:umbrium_ingot",
+      "required": false
+    }
+  ]
+}

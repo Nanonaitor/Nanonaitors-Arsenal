@@ -1,0 +1,67 @@
+package com.nanonaitor.arsenal.client;
+
+import net.minecraft.client.model.HumanoidModel;
+import net.minecraft.client.Minecraft;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.util.Mth;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.HumanoidArm;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.ItemStack;
+import net.minecraftforge.client.extensions.common.IClientItemExtensions;
+
+/** Supplies a low, two-handed carry instead of the vanilla one-arm block pose. */
+public final class BatteringRamClientExtensions implements IClientItemExtensions {
+    private static final HumanoidModel.ArmPose LOW_CARRY = HumanoidModel.ArmPose.create(
+        "NANONAITORS_BATTERING_RAM_LOW_CARRY", true,
+        BatteringRamClientExtensions::poseLowCarry);
+    private static final HumanoidModel.ArmPose BRACED_CHARGE = HumanoidModel.ArmPose.create(
+        "NANONAITORS_BATTERING_RAM_BRACED_CHARGE", true,
+        BatteringRamClientExtensions::poseBracedCharge);
+
+    @Override
+    public HumanoidModel.ArmPose getArmPose(LivingEntity entity, InteractionHand hand, ItemStack stack) {
+        if (!entity.getOffhandItem().isEmpty()) return null;
+        boolean charging = entity == Minecraft.getInstance().player
+            ? ClientControls.ramActive()
+            : entity.isUsingItem() && entity.getUseItem() == stack;
+        return charging ? BRACED_CHARGE : LOW_CARRY;
+    }
+
+    private static void poseLowCarry(HumanoidModel<? extends LivingEntity> model,
+            LivingEntity state, HumanoidArm arm) {
+        // The right hand stays on the rear grip while the left reaches the forward grip.
+        model.rightArm.xRot = -1.02F;
+        model.rightArm.yRot = -0.18F;
+        model.rightArm.zRot = -0.06F;
+        model.leftArm.xRot = -1.52F;
+        model.leftArm.yRot = 0.22F;
+        model.leftArm.zRot = 0.06F;
+    }
+
+    static void poseBracedCharge(HumanoidModel<? extends LivingEntity> model,
+            LivingEntity state, HumanoidArm arm) {
+        // Lean into the ram and lock both hands around its grips. Keep the arms
+        // rigid so the long held model does not amplify a small arm oscillation
+        // into visible third-person jitter.
+        model.body.xRot = 0.24F;
+        model.body.yRot = 0.0F;
+        model.body.zRot = 0.0F;
+        model.rightArm.xRot = -1.52F;
+        model.rightArm.yRot = -0.25F;
+        model.rightArm.zRot = -0.08F;
+        model.leftArm.xRot = -1.52F;
+        model.leftArm.yRot = 0.25F;
+        model.leftArm.zRot = 0.08F;
+
+        // Keep a committed running stride even when a collision momentarily stops
+        // movement. A small knee bend keeps the stance lower and weight-forward.
+        float stride = Mth.cos(state.tickCount * 0.45F) * 0.85F;
+        model.rightLeg.xRot = stride;
+        model.leftLeg.xRot = -stride;
+        model.rightLeg.yRot = 0.0F;
+        model.leftLeg.yRot = 0.0F;
+        model.rightLeg.zRot = 0.025F;
+        model.leftLeg.zRot = -0.025F;
+    }
+}

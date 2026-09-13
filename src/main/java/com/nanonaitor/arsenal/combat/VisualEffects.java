@@ -1,0 +1,67 @@
+package com.nanonaitor.arsenal.combat;
+
+import com.nanonaitor.arsenal.item.WeaponTier;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.phys.Vec3;
+
+public final class VisualEffects {
+    public static void flail(ServerLevel level, ServerPlayer player, WeaponTier tier) {
+        double base = Math.toRadians(player.getYRot());
+        for (int i = 0; i < 32; i++) {
+            double angle = base + Math.PI * 2.0D * i / 32.0D;
+            level.sendParticles(ParticleTypes.SWEEP_ATTACK,
+                player.getX() + Math.cos(angle) * 4.0D, player.getY() + 1.0D,
+                player.getZ() + Math.sin(angle) * 4.0D, 1, 0, 0, 0, 0);
+        }
+    }
+    public static void morningStarSweep(ServerLevel level, ServerPlayer player,
+            WeaponTier tier, double range, double forwardReach) {
+        // A sparse line marks the real lateral hitbox without filling the view.
+        Vec3 look = player.getLookAngle().multiply(1.0D, 0.0D, 1.0D).normalize();
+        Vec3 right = new Vec3(-look.z, 0.0D, look.x);
+        for (int i = 0; i <= 8; i++) {
+            double side = -range + range * 2.0D * i / 8.0D;
+            Vec3 point = player.position().add(look.scale(forwardReach)).add(right.scale(side));
+            level.sendParticles(ParticleTypes.SWEEP_ATTACK,
+                point.x, player.getY() + 1.0D, point.z, 1, 0, 0, 0, 0);
+        }
+    }
+    public static void morningStarCharge(ServerLevel level, ServerPlayer player, double progress) {
+        Vec3 look = player.getLookAngle().multiply(1.0D, 0.0D, 1.0D);
+        Vec3 right = new Vec3(-look.z, 0.0D, look.x);
+        Vec3 point = player.position().add(0.0D, 1.85D + progress * 0.25D, 0.0D)
+            .add(right.scale(0.30D)).subtract(look.scale(0.12D));
+        level.sendParticles(progress >= 1.0D ? ParticleTypes.ENCHANTED_HIT : ParticleTypes.CRIT,
+            point.x, point.y, point.z, progress >= 1.0D ? 4 : 2,
+            0.08D, 0.10D, 0.08D, 0.02D);
+    }
+    public static void ballWindup(ServerLevel level, ServerPlayer player, WeaponTier tier, int charge) {
+        Vec3 look = player.getLookAngle();
+        level.sendParticles(ParticleTypes.CRIT, player.getX() + look.x * 1.2D,
+            player.getY() + 1.0D + Math.sin(player.tickCount * 0.5D) * 0.7D,
+            player.getZ() + look.z * 1.2D, 3, 0.08D, 0.08D, 0.08D, 0.02D);
+    }
+    public static void armorFracture(ServerLevel level, LivingEntity target, int stacks) {
+        double y = target.getY() + target.getBbHeight() * 0.55D;
+        level.sendParticles(ParticleTypes.DAMAGE_INDICATOR, target.getX(), y, target.getZ(),
+            8 + stacks * 2, target.getBbWidth() * 0.35D, target.getBbHeight() * 0.25D,
+            target.getBbWidth() * 0.35D, 0.12D);
+        level.sendParticles(ParticleTypes.CRIT, target.getX(), y, target.getZ(),
+            12, target.getBbWidth() * 0.45D, target.getBbHeight() * 0.35D,
+            target.getBbWidth() * 0.45D, 0.18D);
+    }
+    public static void ballFullCharge(ServerLevel level, ServerPlayer player) {
+        level.sendParticles(ParticleTypes.ENCHANTED_HIT, player.getX(), player.getY() + 1.1D,
+            player.getZ(), 24, 0.65D, 0.55D, 0.65D, 0.16D);
+    }
+    public static void ballRelease(ServerLevel level, ServerPlayer player, WeaponTier tier,
+            CombatEvents.BallState state, double progress) {
+        double distance = state.distance() * Math.sin(Math.PI * progress);
+        Vec3 point = player.getEyePosition().add(player.getLookAngle().scale(distance));
+        level.sendParticles(ParticleTypes.CRIT, point.x, point.y, point.z, 5, 0.12D, 0.12D, 0.12D, 0.02D);
+    }
+    private VisualEffects() {}
+}

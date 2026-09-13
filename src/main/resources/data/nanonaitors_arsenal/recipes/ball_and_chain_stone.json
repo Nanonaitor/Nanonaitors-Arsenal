@@ -1,0 +1,26 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "B": {
+      "item": "minecraft:stone"
+    },
+    "C": {
+      "item": "minecraft:chain"
+    }
+  },
+  "pattern": [
+    "  B",
+    " C ",
+    "C  "
+  ],
+  "result": {
+    "item": "nanonaitors_arsenal:ball_and_chain_stone"
+  },
+  "conditions": [
+    {
+      "type": "nanonaitors_arsenal:weapon_enabled",
+      "weapon": "ball_and_chain"
+    }
+  ]
+}

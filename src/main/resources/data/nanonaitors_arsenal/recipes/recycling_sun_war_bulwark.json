@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:smelting",
+  "category": "misc",
+  "cookingtime": 200,
+  "experience": 0.1,
+  "ingredient": {
+    "item": "nanonaitors_arsenal:sun_war_bulwark"
+  },
+  "result": {
+    "count": 12,
+    "item": "minecraft:gold_ingot"
+  }
+}

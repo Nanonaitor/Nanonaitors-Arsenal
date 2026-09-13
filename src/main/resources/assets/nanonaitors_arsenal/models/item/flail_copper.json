@@ -1,0 +1,14 @@
+{
+  "parent": "item/handheld",
+  "textures": {
+    "layer0": "nanonaitors_arsenal:item/flail_copper"
+  },
+  "overrides": [
+    {
+      "predicate": {
+        "nanonaitors_arsenal:active": 1
+      },
+      "model": "nanonaitors_arsenal:item/flail_copper_active_port"
+    }
+  ]
+}

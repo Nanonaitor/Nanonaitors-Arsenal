@@ -1,0 +1,13 @@
+{
+  "replace": false,
+  "values": [
+    {
+      "id": "srparasites:infectious_blade_fragment",
+      "required": false
+    },
+    {
+      "id": "srp_spartans:infectious_long_blade_fragment",
+      "required": false
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "B": {
+      "item": "minecraft:iron_block"
+    },
+    "C": {
+      "item": "minecraft:chain"
+    }
+  },
+  "pattern": [
+    "  B",
+    " C ",
+    "C  "
+  ],
+  "result": {
+    "item": "nanonaitors_arsenal:ball_and_chain_umbrium"
+  },
+  "conditions": [
+    {
+      "type": "forge:not",
+      "value": {
+        "type": "forge:tag_empty",
+        "tag": "nanonaitors_arsenal:materials/umbrium"
+      }
+    },
+    {
+      "type": "nanonaitors_arsenal:weapon_enabled",
+      "weapon": "ball_and_chain"
+    }
+  ]
+}

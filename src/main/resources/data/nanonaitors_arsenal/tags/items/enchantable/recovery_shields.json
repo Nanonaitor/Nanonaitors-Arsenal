@@ -1,0 +1,14 @@
+{
+  "replace": false,
+  "values": [
+    "nanonaitors_arsenal:sun_war_bulwark",
+    "nanonaitors_arsenal:tartsy_shield",
+    "nanonaitors_arsenal:blade_staff_wood",
+    "nanonaitors_arsenal:blade_staff_stone",
+    "nanonaitors_arsenal:blade_staff_copper",
+    "nanonaitors_arsenal:blade_staff_gold",
+    "nanonaitors_arsenal:blade_staff_iron",
+    "nanonaitors_arsenal:blade_staff_diamond",
+    "nanonaitors_arsenal:blade_staff_netherite"
+  ]
+}

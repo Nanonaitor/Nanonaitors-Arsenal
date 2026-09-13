@@ -1,0 +1,6 @@
+{
+  "parent": "nanonaitors_arsenal:item/ball_and_chain_held_sprite",
+  "textures": {
+    "layer0": "nanonaitors_arsenal:item/ball_and_chain_iced_dragonbone_sprite"
+  }
+}

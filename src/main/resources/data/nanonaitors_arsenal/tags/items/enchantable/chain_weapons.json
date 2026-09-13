@@ -1,0 +1,19 @@
+{
+  "replace": false,
+  "values": [
+    "nanonaitors_arsenal:flail_wood",
+    "nanonaitors_arsenal:flail_stone",
+    "nanonaitors_arsenal:flail_copper",
+    "nanonaitors_arsenal:flail_gold",
+    "nanonaitors_arsenal:flail_iron",
+    "nanonaitors_arsenal:flail_diamond",
+    "nanonaitors_arsenal:flail_netherite",
+    "nanonaitors_arsenal:ball_and_chain_wood",
+    "nanonaitors_arsenal:ball_and_chain_stone",
+    "nanonaitors_arsenal:ball_and_chain_copper",
+    "nanonaitors_arsenal:ball_and_chain_gold",
+    "nanonaitors_arsenal:ball_and_chain_iron",
+    "nanonaitors_arsenal:ball_and_chain_diamond",
+    "nanonaitors_arsenal:ball_and_chain_netherite"
+  ]
+}

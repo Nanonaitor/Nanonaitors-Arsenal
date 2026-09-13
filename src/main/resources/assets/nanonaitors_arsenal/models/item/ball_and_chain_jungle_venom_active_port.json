@@ -1,0 +1,39 @@
+{
+  "loader": "forge:separate_transforms",
+  "gui_light": "front",
+  "base": {
+    "parent": "nanonaitors_arsenal:item/ball_and_chain_jungle_venom_idle"
+  },
+  "perspectives": {
+    "gui": {
+      "parent": "minecraft:item/generated",
+      "textures": {
+        "layer0": "nanonaitors_arsenal:item/ball_and_chain_jungle_venom_active_sprite"
+      }
+    },
+    "firstperson_righthand": {
+      "textures": {
+        "particle": "nanonaitors_arsenal:item/ball_and_chain_jungle_venom"
+      },
+      "elements": []
+    },
+    "firstperson_lefthand": {
+      "textures": {
+        "particle": "nanonaitors_arsenal:item/ball_and_chain_jungle_venom"
+      },
+      "elements": []
+    },
+    "thirdperson_righthand": {
+      "textures": {
+        "particle": "nanonaitors_arsenal:item/ball_and_chain_jungle_venom"
+      },
+      "elements": []
+    },
+    "thirdperson_lefthand": {
+      "textures": {
+        "particle": "nanonaitors_arsenal:item/ball_and_chain_jungle_venom"
+      },
+      "elements": []
+    }
+  }
+}

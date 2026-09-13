@@ -1,0 +1,24 @@
+{
+  "type": "nanonaitors_arsenal:upgrade",
+  "ingredients": [
+    {
+      "item": "nanonaitors_arsenal:claws_desert_myrmex"
+    },
+    {
+      "item": "iceandfire:myrmex_stinger"
+    }
+  ],
+  "result": {
+    "item": "nanonaitors_arsenal:claws_desert_venom"
+  },
+  "conditions": [
+    {
+      "type": "forge:item_exists",
+      "item": "iceandfire:myrmex_stinger"
+    },
+    {
+      "type": "nanonaitors_arsenal:weapon_enabled",
+      "weapon": "claws"
+    }
+  ]
+}

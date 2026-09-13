@@ -1,0 +1,33 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "M": {
+      "tag": "nanonaitors_arsenal:materials/jungle_myrmex"
+    },
+    "S": {
+      "item": "minecraft:stick"
+    }
+  },
+  "pattern": [
+    "MM ",
+    " S ",
+    " MM"
+  ],
+  "result": {
+    "item": "nanonaitors_arsenal:blade_staff_jungle_myrmex"
+  },
+  "conditions": [
+    {
+      "type": "forge:not",
+      "value": {
+        "type": "forge:tag_empty",
+        "tag": "nanonaitors_arsenal:materials/jungle_myrmex"
+      }
+    },
+    {
+      "type": "nanonaitors_arsenal:weapon_enabled",
+      "weapon": "blade_staff"
+    }
+  ]
+}

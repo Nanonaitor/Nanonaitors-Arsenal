@@ -1,0 +1,36 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "M": {
+      "tag": "nanonaitors_arsenal:materials/umbrium"
+    },
+    "C": {
+      "item": "minecraft:chain"
+    },
+    "S": {
+      "item": "minecraft:stick"
+    }
+  },
+  "pattern": [
+    "MM ",
+    " C ",
+    "  S"
+  ],
+  "result": {
+    "item": "nanonaitors_arsenal:flail_umbrium"
+  },
+  "conditions": [
+    {
+      "type": "forge:not",
+      "value": {
+        "type": "forge:tag_empty",
+        "tag": "nanonaitors_arsenal:materials/umbrium"
+      }
+    },
+    {
+      "type": "nanonaitors_arsenal:weapon_enabled",
+      "weapon": "flail"
+    }
+  ]
+}

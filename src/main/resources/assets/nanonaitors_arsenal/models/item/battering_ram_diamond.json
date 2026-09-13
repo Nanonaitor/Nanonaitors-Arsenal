@@ -1,0 +1,18 @@
+{
+  "parent": "nanonaitors_arsenal:item/battering_ram_base",
+  "textures": {
+    "log": "minecraft:block/oak_log",
+    "log_end": "minecraft:block/oak_log_top",
+    "band": "minecraft:block/iron_block",
+    "grip": "minecraft:block/oak_planks",
+    "metal": "minecraft:block/diamond_block"
+  },
+  "overrides": [
+    {
+      "predicate": {
+        "nanonaitors_arsenal:active": 1
+      },
+      "model": "nanonaitors_arsenal:item/battering_ram_diamond_active_port"
+    }
+  ]
+}

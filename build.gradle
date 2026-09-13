@@ -1,0 +1,49 @@
+plugins {
+    id 'java'
+    id 'net.minecraftforge.gradle' version '[6.0,6.2)'
+    id 'org.spongepowered.mixin' version '0.7.+'
+}
+version = '0.1.0-beta.7'
+group = 'com.nanonaitor.arsenal'
+base.archivesName = 'nanonaitors-arsenal-1.20.1'
+java.toolchain.languageVersion = JavaLanguageVersion.of(17)
+minecraft {
+    mappings channel: 'official', version: '1.20.1'
+    copyIdeResources = true
+    runs {
+        configureEach {
+            workingDirectory project.file('run')
+            mods { nanonaitors_arsenal { source sourceSets.main } }
+        }
+        client {
+            if (project.hasProperty('clientSmokeTest')) property 'arsenal.clientSmokeTest', 'true'
+        }
+        server { args '--nogui' }
+        gameTestServer { property 'forge.enabledGameTestNamespaces', 'nanonaitors_arsenal,forge' }
+    }
+}
+dependencies {
+    minecraft 'net.minecraftforge:forge:1.20.1-47.4.18'
+    annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
+}
+mixin {
+    add sourceSets.main, 'arsenal.refmap.json'
+    config 'arsenal.mixins.json'
+}
+jar { manifest { attributes 'MixinConfigs': 'arsenal.mixins.json' } }
+tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }
+processResources {
+    inputs.property 'version', project.version
+    filesMatching('META-INF/mods.toml') { expand version: project.version }
+}
+jar.finalizedBy('reobfJar')
+tasks.configureEach {
+    if (name == 'runGameTestServer') doFirst { copy { from 'gameteststructures'; into 'run/gameteststructures' } }
+}
+processResources {
+    exclude 'assets/nanonaitors_arsenal/items/**'
+    exclude 'data/nanonaitors_arsenal/recipe/**'
+    exclude 'data/nanonaitors_arsenal/enchantment/**'
+    exclude 'data/**/tags/item/**'
+    exclude 'data/**/tags/block/**'
+}

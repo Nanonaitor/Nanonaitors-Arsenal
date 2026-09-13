@@ -1,0 +1,6 @@
+{
+  "parent": "item/generated",
+  "textures": {
+    "layer0": "nanonaitors_arsenal:item/flail_spikeball_dragonbone_trail_near"
+  }
+}

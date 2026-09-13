@@ -1,0 +1,24 @@
+{
+  "type": "nanonaitors_arsenal:upgrade",
+  "ingredients": [
+    {
+      "item": "nanonaitors_arsenal:claws_dragonbone"
+    },
+    {
+      "item": "iceandfire:lightning_dragon_blood"
+    }
+  ],
+  "result": {
+    "item": "nanonaitors_arsenal:claws_electric_dragonbone"
+  },
+  "conditions": [
+    {
+      "type": "forge:item_exists",
+      "item": "iceandfire:lightning_dragon_blood"
+    },
+    {
+      "type": "nanonaitors_arsenal:weapon_enabled",
+      "weapon": "claws"
+    }
+  ]
+}

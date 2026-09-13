@@ -1,0 +1,26 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "equipment",
+  "key": {
+    "B": {
+      "item": "minecraft:gold_block"
+    },
+    "C": {
+      "item": "minecraft:chain"
+    }
+  },
+  "pattern": [
+    "  B",
+    " C ",
+    "C  "
+  ],
+  "result": {
+    "item": "nanonaitors_arsenal:ball_and_chain_gold"
+  },
+  "conditions": [
+    {
+      "type": "nanonaitors_arsenal:weapon_enabled",
+      "weapon": "ball_and_chain"
+    }
+  ]
+}

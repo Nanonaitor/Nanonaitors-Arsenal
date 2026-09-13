@@ -1,0 +1,24 @@
+{
+  "type": "nanonaitors_arsenal:upgrade",
+  "ingredients": [
+    {
+      "item": "nanonaitors_arsenal:blade_staff_dragonbone"
+    },
+    {
+      "item": "iceandfire:ice_dragon_blood"
+    }
+  ],
+  "result": {
+    "item": "nanonaitors_arsenal:blade_staff_iced_dragonbone"
+  },
+  "conditions": [
+    {
+      "type": "forge:item_exists",
+      "item": "iceandfire:ice_dragon_blood"
+    },
+    {
+      "type": "nanonaitors_arsenal:weapon_enabled",
+      "weapon": "blade_staff"
+    }
+  ]
+}
