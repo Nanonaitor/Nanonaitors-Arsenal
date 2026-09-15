@@ -43,6 +43,7 @@ public final class BallAndChainInputHandler {
             return;
         }
         EntityPlayer player = mc.player;
+        if (player != null && ShieldUsePriority.requested(player)) return;
         if (player != null && player.getHeldItemMainhand().getItem()
             instanceof ItemBallAndChain) {
             // Own both edges: otherwise RLCombat starts an ordinary targeted
@@ -80,7 +81,8 @@ public final class BallAndChainInputHandler {
     public static void onClientTick(TickEvent.ClientTickEvent event) {
         Minecraft mc = Minecraft.getMinecraft();
         if (mc.player != null && mc.currentScreen == null
-            && mc.player.getHeldItemMainhand().getItem() instanceof ItemBallAndChain) {
+            && mc.player.getHeldItemMainhand().getItem() instanceof ItemBallAndChain
+            && !ShieldUsePriority.requested(mc.player)) {
             // START prevents held-click attacks in Minecraft's tick; END also
             // covers combat mods polling the binding after that tick.
             clearVanillaAttack(mc);
@@ -98,6 +100,7 @@ public final class BallAndChainInputHandler {
         }
         boolean holdingWeapon = player.getHeldItemMainhand().getItem()
             instanceof ItemBallAndChain;
+        if (holdingWeapon && ShieldUsePriority.requested(player)) BallAndChainAnimationHandler.cancelForShield(player);
         boolean retrieving = BallAndChainAnimationHandler.isReleaseAnimationActive(player);
         boolean canGuard = holdingWeapon
             && !retrieving
@@ -116,6 +119,7 @@ public final class BallAndChainInputHandler {
             guarding = true;
         }
         boolean canSwing = holdingWeapon
+            && !ShieldUsePriority.requested(player)
             && !retrieving
             && !guarding
             && minecraft.currentScreen == null
@@ -130,6 +134,7 @@ public final class BallAndChainInputHandler {
                 lastHeartbeatTick = Long.MIN_VALUE;
             }
             if (holdingWeapon && !retrieving && !guarding && player.isHandActive()
+                && !ShieldUsePriority.requested(player)
                 && player.getActiveHand() == EnumHand.MAIN_HAND) {
                 player.resetActiveHand();
             }

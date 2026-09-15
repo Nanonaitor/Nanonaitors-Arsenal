@@ -120,14 +120,17 @@ public final class DoubleBladedScimitarCombat {
         else if (!apply && present != null) speed.removeModifier(present);
     }
 
-    @SubscribeEvent(priority = EventPriority.LOWEST)
+    @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void reflect(LivingAttackEvent event) {
-        if (RETURNING.get() || !(event.getEntityLiving() instanceof EntityPlayer)) return;
+        if (!(event.getEntityLiving() instanceof EntityPlayer)) return;
         EntityPlayer defender = (EntityPlayer) event.getEntityLiving();
-        if (!isReflecting(defender)) return;
+        if (!isReflecting(defender) || !reflectionCombatSource(event.getSource()) || event.getAmount()<=0.0F) return;
+        Entity source = reflectionAttacker(event.getSource());
+        if(source==defender)return;
+        // Protection does not depend on the attacker accepting the returned damage.
+        // Magic/armor-piercing projectile damage is combat damage, not environment damage.
         event.setCanceled(true);
-        Entity source = event.getSource().getTrueSource();
-        if (source == null || source == defender || event.getAmount() <= 0.0F) return;
+        if(RETURNING.get() || defender.world.isRemote || defender.hurtResistantTime>0 || !(source instanceof EntityLivingBase))return;
         if (!defender.world.isRemote && source instanceof EntityLivingBase) {
             PendingEffectReflection pending = new PendingEffectReflection(
                 (EntityLivingBase) source,
@@ -158,6 +161,34 @@ public final class DoubleBladedScimitarCombat {
             defender.world.playSound(null, defender.posX, defender.posY, defender.posZ,
                 SoundEvents.ENTITY_PLAYER_ATTACK_SWEEP, SoundCategory.PLAYERS,
                 0.8F, 1.25F);
+        }
+    }
+
+    private static Entity reflectionAttacker(DamageSource source) {
+        Entity owner=source.getTrueSource();
+        if(owner instanceof EntityLivingBase)return owner;
+        Entity projectile=source.getImmediateSource();
+        if(projectile instanceof net.minecraft.entity.projectile.EntityThrowable)
+            return ((net.minecraft.entity.projectile.EntityThrowable)projectile).getThrower();
+        if(projectile instanceof net.minecraft.entity.projectile.EntityArrow)
+            return ((net.minecraft.entity.projectile.EntityArrow)projectile).shootingEntity;
+        if(projectile instanceof net.minecraft.entity.projectile.EntityFireball)
+            return ((net.minecraft.entity.projectile.EntityFireball)projectile).shootingEntity;
+        return owner;
+    }
+    private static boolean reflectionCombatSource(DamageSource source) {
+        return reflectionAttacker(source) instanceof EntityLivingBase || source.isProjectile()
+            || source.getImmediateSource() instanceof net.minecraft.entity.IProjectile;
+    }
+    /** Protection fallback for mods entering the hurt pipeline directly. No second reflection. */
+    @SubscribeEvent(priority=EventPriority.LOWEST)
+    public static void protectReflection(LivingHurtEvent event) {
+        if(!(event.getEntityLiving() instanceof EntityPlayer))return;
+        EntityPlayer player=(EntityPlayer)event.getEntityLiving();
+        if(isReflecting(player) && reflectionCombatSource(event.getSource())
+            && reflectionAttacker(event.getSource())!=player) {
+            event.setAmount(0.0F);
+            event.setCanceled(true);
         }
     }
 

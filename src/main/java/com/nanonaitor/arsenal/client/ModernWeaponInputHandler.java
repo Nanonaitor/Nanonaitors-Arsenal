@@ -18,7 +18,6 @@ import net.minecraft.item.ItemTool;
 import net.minecraft.util.EnumHand;
 import net.minecraft.util.math.RayTraceResult;
 import net.minecraftforge.client.event.MouseEvent;
-import net.minecraftforge.client.event.RenderHandEvent;
 import net.minecraftforge.client.event.RenderSpecificHandEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.eventhandler.EventPriority;
@@ -42,6 +41,11 @@ public final class ModernWeaponInputHandler {
     public static void mouse(MouseEvent event) {
         EntityPlayerSP player = Minecraft.getMinecraft().player;
         if (player == null) return;
+        if (event.getButton() == 0 && player.getHeldItemMainhand().getItem() instanceof ItemScimitar
+            && player.getHeldItemOffhand().getItem() instanceof ItemScimitar) {
+            event.setCanceled(true);
+            return;
+        }
         if (event.getButton() == 0
             && player.getHeldItemMainhand().getItem() instanceof ItemMorningStar
             && !isUsingShield(player)) {
@@ -55,7 +59,7 @@ public final class ModernWeaponInputHandler {
             // Defenders and Scimitars intentionally do not count as shields here.
             if (player.getHeldItemOffhand().getItem() instanceof ItemShield) {
                 if (morning) cancelMorningCharge(player);
-            } else {
+            } else if (!(player.getHeldItemOffhand().getItem() instanceof ItemScimitar)) {
                 event.setCanceled(true);
                 return;
             }
@@ -126,9 +130,17 @@ public final class ModernWeaponInputHandler {
         boolean auxiliaryScimitar = !(player.getHeldItemMainhand().getItem() instanceof ItemScimitar)
             && player.getHeldItemOffhand().getItem() instanceof ItemScimitar;
         boolean offhandButton = Mouse.isButtonDown(1);
-        boolean guard = dualScimitars && player.isHandActive();
+        boolean disabled = com.nanonaitor.arsenal.compat.ScimitarShieldCompat.disabled(player);
+        if (disabled && player.isHandActive()) player.resetActiveHand();
+        boolean guard = dualScimitars && !disabled && (player.isHandActive() || offhandButton);
         player.getEntityData().setBoolean("ArsenalScimitarGuard", guard);
+        if (mc.currentScreen == null && guard && attack && !attackWasDown
+            && com.nanonaitor.arsenal.compat.ScimitarShieldCompat.isGuarding(player)) {
+            ModNetwork.CHANNEL.sendToServer(new ModernWeaponControlMessage(
+                ModernWeaponControlMessage.SCIMITAR_BASH, true));
+        }
         boolean auxiliaryAttack = auxiliaryScimitar && offhandButton && !offhandWasDown
+            && !ShieldUsePriority.requested(player)
             && !mainHandUseHasPriority(mc, player);
         if (mc.currentScreen == null && !guard && auxiliaryAttack) {
             // A lone off-hand Scimitar behaves like a clicked weapon, not an
@@ -138,12 +150,11 @@ public final class ModernWeaponInputHandler {
             ModNetwork.CHANNEL.sendToServer(new ModernWeaponControlMessage(
                 ModernWeaponControlMessage.SCIMITAR_ATTACK, true));
         }
-        if (mc.currentScreen == null && !guard && dualScimitars && attack) {
-            double speed = Math.max(0.1D, player.getEntityAttribute(
-                net.minecraft.entity.SharedMonsterAttributes.ATTACK_SPEED).getAttributeValue());
-            double cooldown = 20.0D / Math.max(0.1D, speed);
+        if (mc.currentScreen == null && !guard && !offhandButton && !disabled && dualScimitars && attack) {
+            double cooldown = com.nanonaitor.arsenal.compat.ScimitarAttackBridge.pairedInterval(player);
             if (lastScimitar == Long.MIN_VALUE || now - lastScimitar + 0.5D >= cooldown) {
                 boolean offhand = nextScimitarOffhand;
+                player.isSwingInProgress = false;
                 player.swingArm(offhand ? EnumHand.OFF_HAND : EnumHand.MAIN_HAND);
                 ModNetwork.CHANNEL.sendToServer(new ModernWeaponControlMessage(
                     ModernWeaponControlMessage.SCIMITAR_ATTACK, offhand));
@@ -166,10 +177,16 @@ public final class ModernWeaponInputHandler {
         offhandWasDown = offhandButton;
     }
 
-    @SubscribeEvent
+    @SubscribeEvent(priority = EventPriority.HIGHEST, receiveCanceled = true)
     public static void renderHand(RenderSpecificHandEvent event) {
         EntityPlayerSP player = Minecraft.getMinecraft().player;
         if (player == null) return;
+        if (BallAndChainAnimationHandler.isGuarding(player)) {
+            event.setCanceled(true);
+            if (event.getHand() == EnumHand.MAIN_HAND)
+                WeaponPartRenderer.renderCarryOnShieldBall(player.getHeldItemMainhand());
+            return;
+        }
         if (morning && event.getHand() == EnumHand.MAIN_HAND
             && event.getItemStack().getItem() instanceof ItemMorningStar) {
             event.setCanceled(true);
@@ -177,22 +194,12 @@ public final class ModernWeaponInputHandler {
                 morningCharge(player));
             return;
         }
-        if (!player.getEntityData().getBoolean("ArsenalScimitarGuard")
+        if (!com.nanonaitor.arsenal.compat.ScimitarShieldCompat.isGuarding(player)
             || !(event.getItemStack().getItem() instanceof ItemScimitar)) return;
         // Render both blades ourselves so vanilla cannot move one outside the
         // camera. They are mirrored into the classic crossed-sword guard.
         event.setCanceled(true);
         WeaponPartRenderer.renderBlockingScimitar(event.getItemStack(), event.getHand());
-    }
-
-    /** Carry On-style full-hand rendering for the large guarding ball. */
-    @SubscribeEvent(priority = EventPriority.HIGHEST)
-    public static void renderFullHand(RenderHandEvent event) {
-        EntityPlayerSP player = Minecraft.getMinecraft().player;
-        if (player == null || Minecraft.getMinecraft().gameSettings.thirdPersonView != 0
-            || !BallAndChainAnimationHandler.isGuarding(player)) return;
-        WeaponPartRenderer.renderCarryOnShieldBall(player.getHeldItemMainhand());
-        event.setCanceled(true);
     }
 
     public static float morningCharge(EntityPlayerSP player) {
@@ -254,13 +261,18 @@ public final class ModernWeaponInputHandler {
     private static boolean mainHandUseHasPriority(Minecraft minecraft,
                                                    EntityPlayerSP player) {
         ItemStack main = player.getHeldItemMainhand();
+        if (main.getItem() instanceof ItemShield) return true;
         if (main.isEmpty()) return false;
         if (minecraft.objectMouseOver != null
             && minecraft.objectMouseOver.typeOfHit == RayTraceResult.Type.BLOCK) return true;
         // A Ball and Chain cannot guard or use its wind-up acceleration with
         // an occupied offhand. In that loadout, right-click remains available
         // to an off-hand Scimitar instead of being consumed by BLOCK action.
-        if (main.getItem() instanceof ItemBallAndChain
+        if ((main.getItem() instanceof ItemBallAndChain
+            || main.getItem() instanceof ItemMorningStar
+            || main.getItem() instanceof com.nanonaitor.arsenal.item.ItemFlail
+            || (main.getItem() instanceof com.nanonaitor.arsenal.item.ItemBatteringRam
+                && !com.nanonaitor.arsenal.compat.ArsenalCompatManager.canUseTwoHanded(player)))
             && player.getHeldItemOffhand().getItem() instanceof ItemScimitar) return false;
         if (main.getItemUseAction() != EnumAction.NONE) return true;
         return !(main.getItem() instanceof ItemSword

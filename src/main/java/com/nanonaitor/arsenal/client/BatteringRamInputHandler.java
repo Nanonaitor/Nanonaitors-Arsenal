@@ -27,7 +27,7 @@ public final class BatteringRamInputHandler {
         Minecraft minecraft = Minecraft.getMinecraft();
         if (player == minecraft.player) {
             return cameraLocked
-                && minecraft.gameSettings.keyBindAttack.isKeyDown()
+                && minecraft.gameSettings.keyBindUseItem.isKeyDown()
                 && player.getHeldItemMainhand().getItem() instanceof ItemBatteringRam
                 && ArsenalCompatManager.canUseTwoHanded(player);
         }
@@ -52,7 +52,7 @@ public final class BatteringRamInputHandler {
         boolean canCharge = holdingRam && ArsenalCompatManager.canUseTwoHanded(player)
             && hasChargeEnergy
             && minecraft.currentScreen == null
-            && minecraft.gameSettings.keyBindAttack.isKeyDown();
+            && minecraft.gameSettings.keyBindUseItem.isKeyDown();
         if (!canCharge) {
             cameraLocked = false;
             if (holdingRam && player.isHandActive()

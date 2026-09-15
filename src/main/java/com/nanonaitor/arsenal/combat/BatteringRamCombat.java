@@ -270,6 +270,7 @@ public final class BatteringRamCombat {
         float baseDamage = (float) player.getEntityAttribute(
             SharedMonsterAttributes.ATTACK_DAMAGE).getAttributeValue();
         for (EntityLivingBase target : targets) {
+            if (!CombatTargetRules.canHit(player, target)) continue;
             float enchantmentDamage = EnchantmentHelper.getModifierForCreature(
                 stack, target.getCreatureAttribute());
             if (target.attackEntityFrom(DamageSource.causePlayerDamage(player),

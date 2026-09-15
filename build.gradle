@@ -15,7 +15,7 @@ repositories {
 apply plugin: 'net.minecraftforge.gradle'
 apply plugin: 'eclipse'
 
-version = '2.0.1'
+version = '2.0.6'
 group = 'com.nanonaitor.arsenal'
 archivesBaseName = 'nanonaitors-arsenal-1.12.2'
 
@@ -83,3 +83,8 @@ task soundRegression(type: JavaExec, dependsOn: testClasses) {
     main = 'com.nanonaitor.arsenal.client.ChainSwingSoundFilterTest'
 }
 check.dependsOn configurationRegression, soundRegression
+task guardRegression(type: JavaExec, dependsOn: testClasses) {
+    classpath = sourceSets.test.runtimeClasspath
+    main = 'com.nanonaitor.arsenal.combat.GuardRulesTest'
+}
+check.dependsOn guardRegression

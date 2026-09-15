@@ -82,8 +82,8 @@ public final class WeaponPartRenderer {
         GlStateManager.enableBlend();
         GlStateManager.enableRescaleNormal();
         RenderHelper.enableStandardItemLighting();
-        GlStateManager.scale(2.35D, 2.35D, 2.35D);
-        GlStateManager.translate(0.0D, -0.60D, -1.0D);
+        GlStateManager.translate(0.0D, -0.52D, -1.05D);
+        GlStateManager.scale(1.25D, 1.25D, 1.25D);
         GlStateManager.rotate(8.0F, 1.0F, 0.0F, 0.0F);
         Minecraft.getMinecraft().getRenderItem().renderItem(
             animationPart(held, BALL), ItemCameraTransforms.TransformType.NONE);

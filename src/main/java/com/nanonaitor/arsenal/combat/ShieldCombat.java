@@ -110,22 +110,35 @@ public final class ShieldCombat {
                 SoundEvents.BLOCK_METAL_PLACE, SoundCategory.PLAYERS, 1.125F, 0.90F);
             return;
         }
-        if (player.isHandActive() && player.getActiveItemStack().getItem() instanceof ItemScimitar
-            && player.getHeldItemMainhand().getItem() instanceof ItemScimitar
-            && player.getHeldItemOffhand().getItem() instanceof ItemScimitar && isFrontDamage(player, source)) {
-            event.setCanceled(true);
-            player.getHeldItemMainhand().damageItem(1, player);
-            player.getHeldItemOffhand().damageItem(1, player);
-            player.world.playSound(null, player.posX, player.posY, player.posZ,
-                SoundEvents.BLOCK_METAL_PLACE, SoundCategory.PLAYERS, 1.125F, 0.90F);
-            return;
-        }
 
-        if (isGuarding(player, ItemSunWarBulwark.class) && isBulwarkReady(player)
+        if (isGuarding(player, ItemSunWarBulwark.class) && isBulwarkReady(player) && isBulwarkOffCooldown(player)
             && isBulwarkCombatDamage(source)) {
             event.setCanceled(true);
             findEquipped(player, ItemSunWarBulwark.class).damageItem(1, player);
+            com.nanonaitor.arsenal.item.ItemSunWarBulwark.recordBlock(player,
+                findEquipped(player, ItemSunWarBulwark.class));
             playBlock(player, 0.65F);
+        }
+    }
+
+    /** Run after NORMAL-priority Counter Attack, rather than hiding the hit from it. */
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    public static void scimitarGuard(LivingAttackEvent event) {
+        if (!(event.getEntityLiving() instanceof EntityPlayer) || event.getAmount() <= 0) return;
+        EntityPlayer player=(EntityPlayer)event.getEntityLiving();
+        ItemStack main=player.getHeldItemMainhand(),off=player.getHeldItemOffhand();
+        if (!player.isHandActive() || !(player.getActiveItemStack().getItem() instanceof ItemScimitar)
+            || !(main.getItem() instanceof ItemScimitar) || !(off.getItem() instanceof ItemScimitar)
+            || player.getCooldownTracker().hasCooldown(main.getItem()) || player.getCooldownTracker().hasCooldown(off.getItem())
+            || player.getItemInUseMaxCount() < com.nanonaitor.arsenal.compat.ScimitarShieldCompat.raiseDelay()
+            || event.getSource().isUnblockable() || !isFrontDamage(player,event.getSource())) return;
+        event.setCanceled(true);
+        com.nanonaitor.arsenal.compat.ScimitarShieldCompat.blocked(player,event.getSource(),event.getAmount());
+        if (!player.world.isRemote) {
+            int wear=com.nanonaitor.arsenal.combat.GuardRules.scimitarWear(event.getAmount());
+            main.damageItem(wear,player);
+            off.damageItem(wear,player);
+            if (main.isEmpty() || off.isEmpty()) player.resetActiveHand();
         }
     }
 
@@ -155,6 +168,14 @@ public final class ShieldCombat {
                     SoundEvents.ENTITY_PLAYER_ATTACK_CRIT, SoundCategory.PLAYERS, 1.0F, 1.0F);
             }
         }
+        applyBulwarkPassiveReduction(event);
+    }
+
+    // Establish base damage before LevelUp/SME alter it; never overwrite their critical bonus.
+    @SubscribeEvent(priority = EventPriority.HIGHEST)
+    public static void bulwarkBaseDamage(LivingHurtEvent event) {
+        DamageSource source = event.getSource();
+        if ("arsenal_bulwark_bash".equals(source.damageType)) return;
         if (source.getTrueSource() instanceof EntityPlayer) {
             EntityPlayer attacker = (EntityPlayer) source.getTrueSource();
             if (isBulwarkReady(attacker)) {
@@ -167,6 +188,10 @@ public final class ShieldCombat {
             }
         }
 
+    }
+
+    private static void applyBulwarkPassiveReduction(LivingHurtEvent event) {
+        DamageSource source = event.getSource();
         if (!(event.getEntityLiving() instanceof EntityPlayer)) return;
         EntityPlayer player = (EntityPlayer) event.getEntityLiving();
         if (findEquipped(player, ItemSunWarBulwark.class) != ItemStack.EMPTY && !isVoid(source)) {
@@ -178,6 +203,11 @@ public final class ShieldCombat {
     public static void onPlayerTick(TickEvent.PlayerTickEvent event) {
         EntityPlayer player = event.player;
         if (event.phase == TickEvent.Phase.START) {
+            if (com.nanonaitor.arsenal.compat.ScimitarShieldCompat.disabled(player)
+                && player.isHandActive()) {
+                player.getEntityData().setBoolean("ArsenalScimitarGuard",false);
+                player.resetActiveHand();
+            }
             updateBulwarkMovement(player);
             updateOccupiedAttackSpeed(player);
             updateBallWindMovement(player);
@@ -238,7 +268,7 @@ public final class ShieldCombat {
     }
 
     public static void bash(EntityPlayer player) {
-        if (player.world.isRemote || !isBulwarkReady(player)
+        if (player.world.isRemote || !isBulwarkReady(player) || !isBulwarkOffCooldown(player)
             || !isGuarding(player, ItemSunWarBulwark.class)) return;
         long now = player.world.getTotalWorldTime();
         NBTTagCompound data = player.getEntityData();
@@ -252,13 +282,13 @@ public final class ShieldCombat {
             // MmmMmmMmmMmm's dummy reports isEntityAlive() as false while it
             // is still a valid damage target. Match the proven Ram behavior.
             target -> target != player && !target.isDead && !player.isOnSameTeam(target));
-        float damage = armorScaledDamage(player) * attackChargeMultiplier(player);
+        float damage = armorScaledDamage(player);
         for (EntityLivingBase target : targets) {
-            if (player.getDistanceSq(target) > 16.0D) continue;
+            if (player.getDistanceSq(target) > 16.0D || !CombatTargetRules.canHit(player,target)) continue;
             boolean hit;
             RaceWeaponAffinityCompat.beginAttack(bulwark);
             try {
-                hit = target.attackEntityFrom(DamageSource.causePlayerDamage(player), damage);
+                hit = target.attackEntityFrom(new EntityDamageSource("arsenal_bulwark_bash",player), damage);
             } finally {
                 RaceWeaponAffinityCompat.endAttack();
             }

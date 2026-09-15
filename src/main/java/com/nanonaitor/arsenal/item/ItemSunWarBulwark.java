@@ -18,6 +18,42 @@ public final class ItemSunWarBulwark extends ItemArsenalShield {
     public ItemSunWarBulwark() { super("sun_war_bulwark", 4096); }
 
     @Override
+    public boolean shouldCauseReequipAnimation(ItemStack oldStack, ItemStack newStack, boolean slotChanged) {
+        // Strain/durability synchronization must not repeatedly lower the held shield.
+        return slotChanged || oldStack.getItem() != newStack.getItem();
+    }
+
+    public static int strain(ItemStack stack) {
+        return stack.hasTagCompound()?stack.getTagCompound().getInteger("ArsenalGuardStrain"):0;
+    }
+    public static void recordBlock(EntityPlayer player,ItemStack stack) {
+        if(player.world.isRemote || stack.isEmpty())return;
+        if(!stack.hasTagCompound())stack.setTagCompound(new net.minecraft.nbt.NBTTagCompound());
+        if(strain(stack)==0)stack.getTagCompound().setLong("ArsenalGuardRecovery",player.world.getTotalWorldTime());
+        int load=strain(stack)+1;
+        if(load>=com.nanonaitor.arsenal.combat.GuardRules.MAX_STRAIN){
+            load=0;
+            player.getCooldownTracker().setCooldown(stack.getItem(),com.nanonaitor.arsenal.combat.GuardRules.RECOVERY_TICKS);
+            player.getEntityData().setBoolean("ArsenalBulwarkMenuGuard",false);
+            player.resetActiveHand();
+            player.world.setEntityState(player,(byte)30);
+        }
+        stack.getTagCompound().setInteger("ArsenalGuardStrain",load);
+        if(!stack.getTagCompound().hasKey("ArsenalGuardRecovery"))
+            stack.getTagCompound().setLong("ArsenalGuardRecovery",player.world.getTotalWorldTime());
+    }
+    @Override public void onUpdate(ItemStack stack,net.minecraft.world.World world,
+            net.minecraft.entity.Entity entity,int slot,boolean selected){
+        super.onUpdate(stack,world,entity,slot,selected);
+        if(world.isRemote || strain(stack)<=0)return;
+        long now=world.getTotalWorldTime(),last=stack.getTagCompound().getLong("ArsenalGuardRecovery");
+        if(now<last || now-last>=20){
+            stack.getTagCompound().setInteger("ArsenalGuardStrain",com.nanonaitor.arsenal.combat.GuardRules.recoveredStrain(strain(stack),now-last));
+            stack.getTagCompound().setLong("ArsenalGuardRecovery",now-(now-last)%20);
+        }
+    }
+
+    @Override
     public boolean canBeginGuard(EntityPlayer player, EnumHand hand) {
         boolean held = player.getHeldItem(hand).getItem() == this;
         boolean free = hand == EnumHand.MAIN_HAND ? player.getHeldItemOffhand().isEmpty()
@@ -26,7 +62,7 @@ public final class ItemSunWarBulwark extends ItemArsenalShield {
             player.sendStatusMessage(new net.minecraft.util.text.TextComponentString(
                 "I need both hands to shield with the bulwark!"), true);
         }
-        return held && free;
+        return held && free && !player.getCooldownTracker().hasCooldown(this);
     }
 
     public boolean isTwoHandedReady(EntityPlayer player) {
@@ -51,6 +87,8 @@ public final class ItemSunWarBulwark extends ItemArsenalShield {
     }
 
     @Override protected void appendShieldDetails(List<String> tooltip) {
+        line(tooltip, TextFormatting.YELLOW, "Guard Strain: 25 blocked hits force 3 seconds of recovery");
+        line(tooltip, TextFormatting.YELLOW, "Guard Strain recovers by 1 point each second");
         line(tooltip, TextFormatting.AQUA, "15% passive damage reduction when ready");
         line(tooltip, TextFormatting.BLUE, "Can shield all directed attacks from any direction");
         line(tooltip, TextFormatting.RED, "Damage: 1 + total armor points");

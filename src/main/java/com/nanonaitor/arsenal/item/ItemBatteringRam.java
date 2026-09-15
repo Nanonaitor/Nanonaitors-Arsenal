@@ -29,18 +29,31 @@ public final class ItemBatteringRam extends ItemArsenalWeapon {
 
     @Override
     public boolean onLeftClickEntity(ItemStack stack, EntityPlayer player, Entity entity) {
-        return !ArsenalCompatManager.canUseTwoHanded(player);
+        return player.isHandActive() && player.getActiveItemStack() == stack;
+    }
+
+    @Override
+    public boolean hitEntity(ItemStack stack, net.minecraft.entity.EntityLivingBase target,
+                             net.minecraft.entity.EntityLivingBase attacker) {
+        if (!attacker.world.isRemote) {
+            target.knockBack(attacker, 0.5F,
+                Math.sin(Math.toRadians(attacker.rotationYaw)),
+                -Math.cos(Math.toRadians(attacker.rotationYaw)));
+            target.velocityChanged = true;
+        }
+        return super.hitEntity(stack, target, attacker);
     }
 
     @Override
     public void addInformation(ItemStack stack, World world, List<String> tooltip,
                                ITooltipFlag flag) {
         if (!ArsenalTooltip.begin(tooltip, TextFormatting.GOLD,
-                "Hold left-click to charge forward.")) return;
+                "Hold right-click to charge forward.")) return;
+        tooltip.add(TextFormatting.GRAY + "Left-click: normal attack with extra knockback.");
         tooltip.add(TextFormatting.RED + "Two-Handed");
         tooltip.add(TextFormatting.GRAY + getBreakDescription());
         tooltip.add(TextFormatting.GRAY + "Costs 1 durability per block or enemy hit.");
-        tooltip.add(TextFormatting.DARK_GRAY + "Requires an empty offhand.");
+        tooltip.add(TextFormatting.DARK_GRAY + "Charging requires an empty offhand.");
     }
 
     private String getBreakDescription() {

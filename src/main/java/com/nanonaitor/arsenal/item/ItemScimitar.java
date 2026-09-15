@@ -21,17 +21,45 @@ public final class ItemScimitar extends ItemArsenalWeapon {
     }
 
     @Override public int getMaxItemUseDuration(ItemStack stack) { return 72000; }
-    // Keep the use action immutable. Toggling it through synchronized stack
-    // NBT made the client briefly leave BLOCK between updates, causing the
-    // crossed guard to lower and raise repeatedly.
-    @Override public EnumAction getItemUseAction(ItemStack stack) { return EnumAction.BLOCK; }
+    // Changes only with the equipment pairing, never with each held-use tick.
+    @Override public EnumAction getItemUseAction(ItemStack stack) {
+        return stack.hasTagCompound() && stack.getTagCompound().getBoolean("ArsenalScimitarPaired")
+            ? EnumAction.BLOCK:EnumAction.NONE;
+    }
+    private static void setPaired(ItemStack stack,boolean paired) {
+        if(!stack.hasTagCompound()) {
+            if(!paired)return;
+            stack.setTagCompound(new net.minecraft.nbt.NBTTagCompound());
+        }
+        if(stack.getTagCompound().getBoolean("ArsenalScimitarPaired")!=paired)
+            stack.getTagCompound().setBoolean("ArsenalScimitarPaired",paired);
+    }
+    @Override public void onUpdate(ItemStack stack,World world,net.minecraft.entity.Entity entity,int slot,boolean selected) {
+        super.onUpdate(stack,world,entity,slot,selected);
+        if(entity instanceof EntityPlayer) {
+            EntityPlayer player=(EntityPlayer)entity;
+            boolean paired=com.nanonaitor.arsenal.compat.ScimitarShieldCompat.isPair(player)
+                && (stack==player.getHeldItemMainhand() || stack==player.getHeldItemOffhand());
+            setPaired(stack,paired);
+            if(!paired && player.isHandActive() && player.getActiveItemStack()==stack)player.resetActiveHand();
+        }
+    }
 
     @Override
     public ActionResult<ItemStack> onItemRightClick(World world, EntityPlayer player, EnumHand hand) {
         ItemStack held = player.getHeldItem(hand);
         boolean dual = player.getHeldItemMainhand().getItem() instanceof ItemScimitar
             && player.getHeldItemOffhand().getItem() instanceof ItemScimitar;
-        if (!dual) return new ActionResult<>(EnumActionResult.PASS, held);
+        if (!dual) {
+            EnumHand other=hand==EnumHand.MAIN_HAND?EnumHand.OFF_HAND:EnumHand.MAIN_HAND;
+            if (player.getHeldItem(other).getItem() instanceof net.minecraft.item.ItemShield)
+                return new ActionResult<>(EnumActionResult.PASS,held);
+            return new ActionResult<>(EnumActionResult.FAIL,held);
+        }
+        if (player.getCooldownTracker().hasCooldown(player.getHeldItemMainhand().getItem())
+            || player.getCooldownTracker().hasCooldown(player.getHeldItemOffhand().getItem()))
+            return new ActionResult<>(EnumActionResult.FAIL,held);
+        setPaired(held,true);
         player.setActiveHand(hand);
         return new ActionResult<>(EnumActionResult.SUCCESS, held);
     }

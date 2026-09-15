@@ -49,6 +49,7 @@ public final class ModernBackportCombat {
 
     public static void handleControl(EntityPlayerMP player, byte action, boolean active) {
         if (action == ModernWeaponControlMessage.MORNING_STAR) morningStar(player, active);
+        else if (action == ModernWeaponControlMessage.SCIMITAR_BASH) scimitarBash(player);
         else if (action == ModernWeaponControlMessage.MORNING_CANCEL) cancelMorning(player);
         else if (action == ModernWeaponControlMessage.SCIMITAR_ATTACK) scimitar(player, active);
         else if (action == ModernWeaponControlMessage.BULWARK_MENU_GUARD) menuGuard(player, active);
@@ -62,6 +63,7 @@ public final class ModernBackportCombat {
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void cancelMorningVanillaAttack(AttackEntityEvent event) {
+        if (com.nanonaitor.arsenal.compat.ScimitarAttackBridge.isControlledOffhandAttack()) return;
         if (event.getEntityPlayer().getHeldItemMainhand().getItem() instanceof ItemMorningStar)
             event.setCanceled(true);
     }
@@ -102,6 +104,10 @@ public final class ModernBackportCombat {
     }
 
     private static void morningStar(EntityPlayerMP player, boolean active) {
+        if (player.isSpectator() || !com.nanonaitor.arsenal.compat.ReskillableCompat.canUse(player, player.getHeldItemMainhand())) {
+            cancelMorning(player);
+            return;
+        }
         if (!active) {
             if (!MORNING.containsKey(player)
                 && player.getHeldItemMainhand().getItem() instanceof ItemMorningStar)
@@ -140,7 +146,10 @@ public final class ModernBackportCombat {
         MorningState state = MORNING.remove(player);
         if (state == null) return;
         ItemStack stack = player.getHeldItemMainhand();
-        if (!(stack.getItem() instanceof ItemMorningStar)) { player.resetActiveHand(); return; }
+        if (!(stack.getItem() instanceof ItemMorningStar) || player.isSpectator()
+            || !com.nanonaitor.arsenal.compat.ReskillableCompat.canUse(player, stack)) {
+            player.resetActiveHand(); return;
+        }
         ItemMorningStar item = (ItemMorningStar) stack.getItem();
         long elapsed = Math.max(0L, player.world.getTotalWorldTime() - state.started);
         int quarters = Math.min(4, (int)Math.floor(elapsed * 4.0D / chargeTicks()));
@@ -180,10 +189,15 @@ public final class ModernBackportCombat {
         float base = (float)player.getEntityAttribute(SharedMonsterAttributes.ATTACK_DAMAGE).getAttributeValue();
         boolean hit = false;
         for (EntityLivingBase target : targets) {
+            if (!CombatTargetRules.canHit(player, target)) continue;
             float damage = (base + EnchantmentHelper.getModifierForCreature(stack,
                 target.getCreatureAttribute())) * multiplier;
             if (target.attackEntityFrom(DamageSource.causePlayerDamage(player), damage)) {
                 hit = true;
+                EnchantmentHelper.applyThornEnchantments(target,player);
+                EnchantmentHelper.applyArthropodEnchantments(player,target);
+                int fireAspect=EnchantmentHelper.getFireAspectModifier(player);
+                if(fireAspect>0)target.setFire(fireAspect*4);
                 item.hitEntity(stack, target, player);
                 if (full && ModContent.ARMOR_FRACTURE != null) {
                     PotionEffect old = target.getActivePotionEffect(ModContent.ARMOR_FRACTURE);
@@ -223,45 +237,96 @@ public final class ModernBackportCombat {
         }
     }
 
+    private static void scimitarBash(EntityPlayerMP player) {
+        if (!com.nanonaitor.arsenal.compat.ScimitarShieldCompat.isGuarding(player)
+            || !com.nanonaitor.arsenal.compat.ScimitarShieldCompat.bashEnabled()) return;
+        ItemStack main = player.getHeldItemMainhand(), off = player.getHeldItemOffhand();
+        if (!com.nanonaitor.arsenal.compat.ReskillableCompat.canUse(player, main)
+            || !com.nanonaitor.arsenal.compat.ReskillableCompat.canUse(player, off)) return;
+        net.minecraft.entity.Entity entity = scimitarTarget(player, 4.0D);
+        if (entity instanceof EntityLivingBase && CombatTargetRules.canHit(player, (EntityLivingBase)entity)) {
+            EntityLivingBase target = (EntityLivingBase)entity;
+            float damage = com.nanonaitor.arsenal.compat.ScimitarAttackBridge.bashDamage(player, target);
+            if (target.attackEntityFrom(new net.minecraft.util.EntityDamageSource("arsenal_scimitar_bash",player), damage)) {
+                com.nanonaitor.arsenal.compat.ScimitarAttackBridge.bashEnchantments(player,target);
+                main.getItem().hitEntity(main, target, player);
+                off.getItem().hitEntity(off, target, player);
+                int knock = Math.max(EnchantmentHelper.getEnchantmentLevel(net.minecraft.init.Enchantments.KNOCKBACK,main),
+                    EnchantmentHelper.getEnchantmentLevel(net.minecraft.init.Enchantments.KNOCKBACK,off));
+                target.knockBack(player,1.0F+knock,player.posX-target.posX,player.posZ-target.posZ);
+                int fire = Math.max(EnchantmentHelper.getEnchantmentLevel(net.minecraft.init.Enchantments.FIRE_ASPECT,main),
+                    EnchantmentHelper.getEnchantmentLevel(net.minecraft.init.Enchantments.FIRE_ASPECT,off));
+                if(fire>0)target.setFire(fire*4);
+            }
+        }
+        com.nanonaitor.arsenal.compat.ScimitarShieldCompat.disable(player,
+            com.nanonaitor.arsenal.compat.ScimitarShieldCompat.bashCooldown());
+        player.world.playSound(null,player.posX,player.posY,player.posZ,
+            com.nanonaitor.arsenal.registry.ModSounds.SCIMITAR_BASH,SoundCategory.PLAYERS,1.0F,1.0F);
+        player.addExhaustion(0.1F);
+    }
+
     private static void scimitar(EntityPlayerMP player, boolean offhand) {
+        boolean independentOffhand = offhand && (player.getHeldItemMainhand().getItem() instanceof ItemMorningStar
+            || player.getHeldItemMainhand().getItem() instanceof com.nanonaitor.arsenal.item.ItemFlail);
+        if (player.isHandActive() && !(independentOffhand && player.getActiveHand() == EnumHand.MAIN_HAND)) return;
         EnumHand hand = offhand ? EnumHand.OFF_HAND : EnumHand.MAIN_HAND;
         ItemStack stack = player.getHeldItem(hand);
         if (!(stack.getItem() instanceof ItemScimitar)) return;
+        if (player.isSpectator() || !com.nanonaitor.arsenal.compat.ReskillableCompat.canUse(player, stack)) return;
         boolean dual = player.getHeldItemMainhand().getItem() instanceof ItemScimitar
             && player.getHeldItemOffhand().getItem() instanceof ItemScimitar;
+        if (dual && com.nanonaitor.arsenal.compat.ScimitarShieldCompat.disabled(player)) return;
         if (!dual && !offhand) return;
         long now = player.world.getTotalWorldTime();
         boolean auxiliary = offhand && !dual;
         Map<UUID, Long> clock = auxiliary ? LAST_AUXILIARY_SCIMITAR : LAST_SCIMITAR;
         long last = clock.getOrDefault(player.getUniqueID(), Long.MIN_VALUE);
-        double speed = auxiliary
-            ? offhandScimitarAttackSpeed(player, stack)
-            : Math.max(0.1D, player.getEntityAttribute(
-                SharedMonsterAttributes.ATTACK_SPEED).getAttributeValue());
-        double cooldown = 20.0D / Math.max(0.1D, speed);
-        float attackMultiplier = 1.0F;
-        if (auxiliary) {
-            float strength = last == Long.MIN_VALUE ? 1.0F : (float)Math.max(0.0D,
-                Math.min(1.0D, (now - last + 0.5D) / cooldown));
-            attackMultiplier = 0.2F + strength * strength * 0.8F;
-        } else if (last != Long.MIN_VALUE && now - last + 0.5D < cooldown) {
+        double cooldown = dual ? com.nanonaitor.arsenal.compat.ScimitarAttackBridge.pairedInterval(player)
+            : com.nanonaitor.arsenal.compat.ScimitarAttackBridge.cooldown(player, offhand);
+        if (!auxiliary && last != Long.MIN_VALUE && now - last + 0.5D < cooldown) {
             return;
         }
         clock.put(player.getUniqueID(), now);
-        EntityLivingBase target = aimedTarget(player, reach(player));
+        net.minecraft.entity.Entity target = scimitarTarget(player,
+            com.nanonaitor.arsenal.compat.ScimitarAttackBridge.reach(player, offhand));
+        player.isSwingInProgress = false;
         player.swingArm(hand);
         if (target != null) {
-            double current = player.getEntityAttribute(SharedMonsterAttributes.ATTACK_DAMAGE).getAttributeValue();
-            if (offhand) {
-                current -= mainHandDamageBonus(player.getHeldItemMainhand());
-                current += mainHandDamageBonus(stack);
-            }
-            float damage = ((float)current + EnchantmentHelper.getModifierForCreature(stack,
-                target.getCreatureAttribute())) * attackMultiplier;
-            if (target.attackEntityFrom(DamageSource.causePlayerDamage(player), damage))
-                ((ItemScimitar) stack.getItem()).hitEntity(stack, target, player);
+            com.nanonaitor.arsenal.compat.ScimitarAttackBridge.strike(player, target, offhand);
         }
-        if (dual || !offhand) player.resetCooldown();
+    }
+
+    private static net.minecraft.entity.Entity scimitarTarget(EntityPlayer player, double reach) {
+        Vec3d start = player.getPositionEyes(1.0F), end = start.add(player.getLookVec().scale(reach));
+        net.minecraft.util.math.RayTraceResult wall = player.world.rayTraceBlocks(start, end, false, true, false);
+        double closest = wall == null ? reach : start.distanceTo(wall.hitVec);
+        net.minecraft.entity.Entity best = null;
+        for (net.minecraft.entity.Entity candidate : player.world.getEntitiesWithinAABBExcludingEntity(player,
+                player.getEntityBoundingBox().expand(end.x-start.x,end.y-start.y,end.z-start.z).grow(1.0D))) {
+            if (!candidate.canBeCollidedWith() || candidate.isDead || player.isOnSameTeam(candidate)) continue;
+            if (candidate instanceof EntityPlayer && (((EntityPlayer)candidate).isSpectator()
+                || !player.canAttackPlayer((EntityPlayer)candidate))) continue;
+            AxisAlignedBB bounds = candidate.getEntityBoundingBox().grow(candidate.getCollisionBorderSize());
+            net.minecraft.util.math.RayTraceResult hit = bounds.calculateIntercept(start,end);
+            double distance = bounds.contains(start) ? 0.0D : hit == null ? Double.MAX_VALUE : start.distanceTo(hit.hitVec);
+            if (distance < closest) { closest = distance; best = candidate; }
+        }
+        return best;
+    }
+
+    @SubscribeEvent(priority = EventPriority.HIGHEST)
+    public static void exclusiveScimitarInput(AttackEntityEvent event) {
+        EntityPlayer player = event.getEntityPlayer();
+        if (player.isHandActive() && player.getActiveItemStack().getItem() instanceof ItemShield
+            && player.getHeldItemMainhand().getItem() instanceof ItemScimitar) {
+            event.setCanceled(true);
+            return;
+        }
+        boolean dual = player.getHeldItemMainhand().getItem() instanceof ItemScimitar
+            && player.getHeldItemOffhand().getItem() instanceof ItemScimitar;
+        if (dual && (player.isHandActive()
+            || !com.nanonaitor.arsenal.compat.ScimitarAttackBridge.isControlledAttack())) event.setCanceled(true);
     }
 
     private static double reach(EntityPlayer player) {
@@ -279,13 +344,7 @@ public final class ModernBackportCombat {
 
     public static double offhandScimitarAttackSpeed(EntityPlayer player,
                                                      ItemStack offhand) {
-        double speed = player.getEntityAttribute(SharedMonsterAttributes.ATTACK_SPEED)
-            .getAttributeValue();
-        speed -= mainHandAttributeBonus(player.getHeldItemMainhand(),
-            SharedMonsterAttributes.ATTACK_SPEED.getName());
-        speed += mainHandAttributeBonus(offhand,
-            SharedMonsterAttributes.ATTACK_SPEED.getName());
-        return Math.max(0.1D, speed);
+        return 20.0D / com.nanonaitor.arsenal.compat.ScimitarAttackBridge.cooldown(player, true);
     }
 
     private static double mainHandAttributeBonus(ItemStack stack, String attribute) {

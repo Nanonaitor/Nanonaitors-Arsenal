@@ -18,9 +18,14 @@ import net.minecraft.world.World;
 
 public final class ItemBallAndChain extends ItemArsenalWeapon {
     public ItemBallAndChain(WeaponTier tier) {
-        super(tier, "ball_and_chain", 3.0D + tier.getMaterial().getAttackDamage(), -3.4D);
+        super(tier, "ball_and_chain", 3.0D + tier.getMaterial().getAttackDamage(), -3.5D);
         addPropertyOverride(new ResourceLocation(NanonaitorsArsenal.MOD_ID, "swinging"),
             (stack, world, entity) -> isActivelySwinging(stack, entity) ? 1.0F : 0.0F);
+        addPropertyOverride(new ResourceLocation(NanonaitorsArsenal.MOD_ID,"guarding"),
+            (stack,world,entity) -> entity instanceof EntityPlayer
+                && entity.getHeldItemMainhand().getItem()==this && entity.getHeldItemOffhand().isEmpty()
+                && entity.isHandActive() && entity.getActiveHand()==EnumHand.MAIN_HAND
+                && !entity.getEntityData().getBoolean("ArsenalBallAndChainActive") ? 1.0F:0.0F);
         addPropertyOverride(new ResourceLocation(NanonaitorsArsenal.MOD_ID, "animation_part"),
             (stack, world, entity) -> stack.hasTagCompound()
                 ? stack.getTagCompound().getInteger("ArsenalAnimationPart") : 0.0F);
@@ -29,8 +34,7 @@ public final class ItemBallAndChain extends ItemArsenalWeapon {
     private static boolean isActivelySwinging(ItemStack stack, EntityLivingBase entity) {
         return entity != null
             && entity.getHeldItemMainhand().getItem() == stack.getItem()
-            && (entity.getEntityData().getBoolean("ArsenalBallAndChainActive")
-                || entity.isHandActive());
+            && entity.getEntityData().getBoolean("ArsenalBallAndChainActive");
     }
 
     @Override
@@ -78,10 +82,10 @@ public final class ItemBallAndChain extends ItemArsenalWeapon {
         tooltip.add(TextFormatting.DARK_GRAY + "Reach and attack-speed modifiers apply.");
         if (getTier() == WeaponTier.GOLD) {
             tooltip.add(TextFormatting.GRAY
-                + "Throws deal 1.25x / 2.25x damage at charges 1 / 2.");
+                + "Throws deal 1x / 2x damage at charges 1 / 2.");
         } else {
             tooltip.add(TextFormatting.GRAY
-                + "Throws deal 1.25x / 1.75x / 2.25x damage.");
+                + "Throws deal 1x / 1.5x / 2x damage.");
         }
         tooltip.add(TextFormatting.GRAY + "Hits in both directions; stops at solid blocks.");
         tooltip.add(TextFormatting.DARK_RED + "Full-charge throw pierces "

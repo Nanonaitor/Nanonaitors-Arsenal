@@ -30,5 +30,7 @@ public final class ModNetwork {
             ModernWeaponControlMessage.class, 7, Side.SERVER);
         CHANNEL.registerMessage(TartsyBashMessage.Handler.class,
             TartsyBashMessage.class, 8, Side.SERVER);
+        CHANNEL.registerMessage(BallAndChainWindupMessage.Handler.class,
+            BallAndChainWindupMessage.class, 9, Side.CLIENT);
     }
 }

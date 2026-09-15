@@ -46,6 +46,7 @@ public final class ItemDoubleBladedScimitar extends ItemArsenalWeapon {
 
     @Override
     public boolean canApplyAtEnchantingTable(ItemStack stack, Enchantment enchantment) {
+        if (com.nanonaitor.arsenal.compat.BladeStaffComboCompat.isCombo(enchantment)) return enchantment.getMaxLevel()>0;
         return !isUnsupportedSweep(enchantment)
             && super.canApplyAtEnchantingTable(stack, enchantment);
     }
@@ -91,7 +92,6 @@ public final class ItemDoubleBladedScimitar extends ItemArsenalWeapon {
                                ITooltipFlag flag) {
         if (!ArsenalTooltip.begin(tooltip, TextFormatting.GOLD,
                 "Blade Staff with continuous attacks.")) return;
-        tooltip.add(TextFormatting.AQUA + "Empty off-hand: hold attack to auto-attack.");
         tooltip.add(TextFormatting.GOLD + "Melee hits damage other enemies within "
             + (getTier() == WeaponTier.SENTIENT ? "3" : "2") + " blocks of the target.");
         tooltip.add(TextFormatting.BLUE + "Right click: reflect attacks for 1 sec.");

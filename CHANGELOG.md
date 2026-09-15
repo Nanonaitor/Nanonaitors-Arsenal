@@ -1,5 +1,36 @@
 # Changelog
 
+## 2.0.6 - 2026-09-15
+
+Consolidates the 2.0.2–2.0.6 combat fixes for Minecraft 1.12.2.
+
+- Fixed offhand Scimitar attacks being cancelled by a mainhand Morning Star or Flail.
+- Battering Ram now uses right-click to charge. Normal left-click attacks work
+  with an occupied offhand and gain extra knockback. Charging still requires an
+  empty offhand unless the existing Titan exception applies.
+- Improved dual-Scimitar per-hand damage, enchantments, qualities, attack-speed
+  scheduling and multipart targeting through RLCombat integration.
+- Added dual-Scimitar bash with combined weapon damage; improved guard cooldown,
+  shield-break handling, durability sharing, Counter Attack compatibility and audio.
+- Fixed real-shield priority with Scimitars and Ball & Chain, and stale mining input.
+- Ball & Chain throw multipliers are now 1x / 1.5x / 2x, with 0.5 base attack speed.
+- Corrected Ball & Chain guard rendering: idle inventory art, hidden held sprite
+  and a separate lowered first-person ball visual.
+- Improved Blade Staff protection against attacker-attributed magic/projectiles,
+  with protection applied before attempting reflected damage. Environmental
+  damage remains excluded. Removed Arsenal's staff auto-swing and adjusted poses.
+- Added Blade Staff Combo-book anvil eligibility (not nunchaku combo-power behavior),
+  Morning Star Desolator support and applicable universal-curse eligibility.
+- Fixed Bulwark armor-based bash damage and added yellow Guard Strain: 25 blocked
+  hits disable the shield for three seconds; strain decays by one per second.
+- Improved LevelUp critical-hook ordering and custom-attack target checks.
+
+Validation: successful Forge build and 113 regression checks. Modpack-specific
+animation/combat interactions still require in-game testing. This update improves
+Ball & Chain exception cleanup but does not claim to fix the unverified external
+experimental damage-hook crash. Detailed implementation notes: BUGFIX-2.0.2.md
+through BUGFIX-2.0.5.md.
+
 ## 2.0.1 - 2026-09-11
 
 Consolidates the local 2.0.1–2.0.4 test builds into the next public 1.12.2 update.

@@ -60,6 +60,17 @@ public abstract class ItemArsenalWeapon extends ItemSword {
      */
     @Override
     public boolean canApplyAtEnchantingTable(ItemStack stack, Enchantment enchantment) {
+        if (enchantment.isCurse() && enchantment.type == EnumEnchantmentType.ALL) return true;
+        // SME uses its own NONE type and checks eligibility in this override.
+        // Unlike vanilla's fallback, SME's implementation does not recurse into Item.
+        if (enchantment.isCurse() && enchantment.getClass().getName().startsWith("com.shultrea.rin.enchantments.")) {
+            return enchantment.canApplyAtEnchantingTable(stack);
+        }
+        if (this instanceof ItemMorningStar && enchantment.getRegistryName() != null
+            && "somanyenchantments:desolator".equals(enchantment.getRegistryName().toString())) {
+            try { return (Boolean)enchantment.getClass().getMethod("isEnabled").invoke(enchantment); }
+            catch (ReflectiveOperationException exception) { return false; }
+        }
         if (enchantment instanceof EnchantmentLongChain
             || enchantment instanceof EnchantmentRotationForce) {
             return this instanceof ItemFlail || this instanceof ItemBallAndChain;

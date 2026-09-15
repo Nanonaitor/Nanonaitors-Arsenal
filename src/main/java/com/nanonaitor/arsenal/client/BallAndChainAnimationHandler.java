@@ -26,6 +26,25 @@ public final class BallAndChainAnimationHandler {
     private static final Map<EntityPlayer, ReleaseState> RELEASES = new WeakHashMap<>();
 
     private BallAndChainAnimationHandler() {}
+    public static void cancelForShield(EntityPlayer player) {
+        WINDUPS.remove(player);
+        RELEASES.remove(player);
+        player.getEntityData().setBoolean("ArsenalBallAndChainActive",false);
+    }
+
+    public static void receiveWindup(int entityId) {
+        Minecraft mc=Minecraft.getMinecraft();
+        if(mc.world==null)return;
+        Entity entity=mc.world.getEntityByID(entityId);
+        if(!(entity instanceof EntityPlayer) || entity==mc.player)return;
+        EntityPlayer player=(EntityPlayer)entity;
+        if(!(player.getHeldItemMainhand().getItem() instanceof ItemBallAndChain) || RELEASES.containsKey(player))return;
+        long now=mc.world.getTotalWorldTime();
+        WindupState state=WINDUPS.get(player);
+        if(state==null){state=new WindupState(now);WINDUPS.put(player,state);}
+        state.endTick=now+6;
+        player.getEntityData().setBoolean("ArsenalBallAndChainActive",true);
+    }
 
     public static void startReleaseAnimation(int entityId, int charge, float distance,
                                              float yaw, float pitch, int durationTicks) {
@@ -77,6 +96,10 @@ public final class BallAndChainAnimationHandler {
         }
         long now = minecraft.world.getTotalWorldTime();
         for (EntityPlayer player : minecraft.world.playerEntities) {
+            if (player.isHandActive() && player.getActiveItemStack().getItem() instanceof net.minecraft.item.ItemShield) {
+                cancelForShield(player);
+                continue;
+            }
             ItemStack held = player.getHeldItemMainhand();
             if (!(held.getItem() instanceof ItemBallAndChain)) {
                 player.getEntityData().setBoolean("ArsenalBallAndChainActive", false);
@@ -85,15 +108,19 @@ public final class BallAndChainAnimationHandler {
                 continue;
             }
             boolean localInput = player == minecraft.player
+                && !ShieldUsePriority.requested(player)
                 && minecraft.currentScreen == null
                 && !RELEASES.containsKey(player)
                 && !BallAndChainInputHandler.isGuardingInput()
                 && BallAndChainInputHandler.isAttackPhysicallyDown();
-            boolean remoteActive = player != minecraft.player && player.isHandActive()
-                && player.getActiveHand() == EnumHand.MAIN_HAND
-                && !RELEASES.containsKey(player);
             WindupState state = WINDUPS.get(player);
-            if (localInput || remoteActive) {
+            if (player==minecraft.player && BallAndChainInputHandler.isGuardingInput()
+                && !RELEASES.containsKey(player)) {
+                WINDUPS.remove(player);
+                player.getEntityData().setBoolean("ArsenalBallAndChainActive",false);
+                continue;
+            }
+            if (localInput) {
                 player.getEntityData().setBoolean("ArsenalBallAndChainActive", true);
                 if (state == null) {
                     state = new WindupState(now);
@@ -122,6 +149,7 @@ public final class BallAndChainAnimationHandler {
                 EntityPlayer player = entry.getKey();
                 releaseIterator.remove();
                 if (!WINDUPS.containsKey(player) && player.isHandActive()
+                    && player.getActiveItemStack().getItem() instanceof ItemBallAndChain
                     && player.getHeldItemMainhand().getItem() instanceof ItemBallAndChain) {
                     player.resetActiveHand();
                 }

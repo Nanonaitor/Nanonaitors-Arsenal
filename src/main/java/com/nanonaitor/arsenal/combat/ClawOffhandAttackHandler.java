@@ -27,6 +27,7 @@ public final class ClawOffhandAttackHandler {
     private ClawOffhandAttackHandler() {}
 
     public static void tryServerAttack(EntityPlayer player, EntityLivingBase target) {
+        if (!CombatTargetRules.canHit(player, target)) return;
         ItemStack main = player.getHeldItemMainhand();
         if (!(main.getItem() instanceof ItemClaws)) {
             return;

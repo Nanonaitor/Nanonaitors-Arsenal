@@ -47,7 +47,7 @@ public final class BallAndChainCombat {
     public static final double WINDUP_REACH = 3.0D;
     public static final double THROW_REACH_PER_CHARGE = 4.0D;
     private static final double LINE_RADIUS = 0.55D;
-    private static final float[] RELEASE_DAMAGE_MULTIPLIER = {0.0F, 1.25F, 1.75F, 2.25F};
+    private static final float[] RELEASE_DAMAGE_MULTIPLIER = {0.0F, 1.0F, 1.5F, 2.0F};
     private static final Map<EntityPlayer, SwingState> SWINGS = new WeakHashMap<>();
     private static final Map<EntityPlayer, ThrowState> THROWS = new WeakHashMap<>();
 
@@ -72,6 +72,7 @@ public final class BallAndChainCombat {
     }
 
     public static void updateSwinging(EntityPlayerMP player, boolean swinging) {
+        if (usingRealShield(player)) {SWINGS.remove(player);return;}
         if (!swinging) {
             release(player);
             return;
@@ -100,6 +101,7 @@ public final class BallAndChainCombat {
             return;
         }
         EntityPlayerMP player = (EntityPlayerMP) event.player;
+        if (usingRealShield(player)) {SWINGS.remove(player);THROWS.remove(player);return;}
         if (updateThrow(player)) {
             return;
         }
@@ -121,6 +123,9 @@ public final class BallAndChainCombat {
         if (!player.isHandActive()) {
             player.setActiveHand(EnumHand.MAIN_HAND);
         }
+        if (now % 2L == 0L) ModNetwork.CHANNEL.sendToAllAround(
+            new com.nanonaitor.arsenal.network.BallAndChainWindupMessage(player.getEntityId()),
+            new NetworkRegistry.TargetPoint(player.dimension,player.posX,player.posY,player.posZ,64.0D));
         if (now >= state.nextSwingTick) {
             state.nextSwingTick = now
                 + ChainWeaponStats.swingIntervalTicks(player, weapon);
@@ -168,6 +173,10 @@ public final class BallAndChainCombat {
             player.setActiveHand(EnumHand.MAIN_HAND);
         }
         return true;
+    }
+
+    private static boolean usingRealShield(EntityPlayer player) {
+        return player.isHandActive() && player.getActiveItemStack().getItem() instanceof net.minecraft.item.ItemShield;
     }
 
     private static boolean isValidWielder(EntityPlayerMP player, ItemStack stack) {
@@ -301,10 +310,14 @@ public final class BallAndChainCombat {
         if (antimall != null && previousAntimall == null) {
             target.addPotionEffect(new PotionEffect(antimall, 2, 0, false, false));
         }
-        boolean damaged = target.attackEntityFrom(
-            DamageSource.causePlayerDamage(player), damage);
-        if (antimall != null && previousAntimall == null) {
-            target.removePotionEffect(antimall);
+        boolean damaged = false;
+        try {
+            damaged = target.attackEntityFrom(DamageSource.causePlayerDamage(player), damage);
+        } finally {
+            // Do not leave temporary adaptation/i-frame changes behind if another
+            // mod throws from its damage hook. Do not swallow or retry damage.
+            if (antimall != null && previousAntimall == null) target.removePotionEffect(antimall);
+            if (!damaged && ignoreCurrentIFrames) target.hurtResistantTime = previousResistance;
         }
         if (!damaged) {
             if (ignoreCurrentIFrames) {
@@ -332,7 +345,7 @@ public final class BallAndChainCombat {
 
     private static boolean isValidTarget(EntityPlayerMP player,
                                          EntityLivingBase target) {
-        return target != player && !target.isDead && !player.isOnSameTeam(target);
+        return CombatTargetRules.canHit(player, target);
     }
 
     private static Vec3d horizontalLook(EntityPlayer player) {

@@ -41,6 +41,7 @@ public final class FlailCombat {
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void cancelVanillaAttack(AttackEntityEvent event) {
+        if (com.nanonaitor.arsenal.compat.ScimitarAttackBridge.isControlledOffhandAttack()) return;
         if (event.getEntityPlayer().getHeldItemMainhand().getItem() instanceof ItemFlail) {
             event.setCanceled(true);
         }
@@ -92,6 +93,7 @@ public final class FlailCombat {
         int fireAspect = EnchantmentHelper.getFireAspectModifier(player);
         int knockback = EnchantmentHelper.getKnockbackModifier(player);
         for (EntityLivingBase target : targets) {
+            if (!CombatTargetRules.canHit(player, target)) continue;
             float enchantmentDamage = EnchantmentHelper.getModifierForCreature(
                 weapon, target.getCreatureAttribute());
             if (!target.attackEntityFrom(DamageSource.causePlayerDamage(player),

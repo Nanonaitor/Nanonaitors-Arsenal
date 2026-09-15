@@ -32,9 +32,7 @@ public final class BatteringRamAnimationHandler {
             || player.getHeldItemOffhand().getItem() instanceof ItemSunWarBulwark;
         boolean morning = player.getHeldItemMainhand().getItem() instanceof ItemMorningStar
             && player.getEntityData().getBoolean("ArsenalMorningCharging");
-        boolean scimitars = player.getHeldItemMainhand().getItem() instanceof ItemScimitar
-            && player.getHeldItemOffhand().getItem() instanceof ItemScimitar
-            && player.isHandActive() && player.getActiveItemStack().getItem() instanceof ItemScimitar;
+        boolean scimitars = com.nanonaitor.arsenal.compat.ScimitarShieldCompat.isGuarding(player);
         boolean ballGuard = player.getHeldItemMainhand().getItem() instanceof ItemBallAndChain
             && player.isHandActive() && player.getActiveItemStack() == player.getHeldItemMainhand()
             && !player.getEntityData().getBoolean("ArsenalBallAndChainActive");
