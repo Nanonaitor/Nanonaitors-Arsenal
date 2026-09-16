@@ -6,10 +6,8 @@ import java.util.Map;
 import java.util.WeakHashMap;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.init.SoundEvents;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.event.entity.living.LivingAttackEvent;
-import net.minecraftforge.event.entity.living.LivingHurtEvent;
 import net.minecraftforge.event.entity.living.LivingKnockBackEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.eventhandler.EventPriority;
@@ -18,29 +16,31 @@ import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 @Mod.EventBusSubscriber(modid = NanonaitorsArsenal.MOD_ID)
 public final class ClawCombat {
     private static final Map<EntityPlayer, PendingAttack> PENDING_ATTACKS = new WeakHashMap<>();
+    private static final PairedClawHitLimiter<EntityPlayer,EntityLivingBase> HITS = new PairedClawHitLimiter<>();
+
+    public static boolean canPierceNow(EntityPlayer player,EntityLivingBase target) {
+        return HITS.ready(player,target,player.world.getTotalWorldTime());
+    }
+    public static void recordPiercingHit(EntityPlayer player,EntityLivingBase target) {
+        HITS.confirmed(player,target,player.world.getTotalWorldTime());
+    }
+    public static void clearPending(EntityPlayer player) { PENDING_ATTACKS.remove(player); }
 
     private ClawCombat() {}
 
-    public static void prepareMainHandAttack(EntityPlayer player, EntityLivingBase target,
+    public static boolean prepareMainHandAttack(EntityPlayer player, EntityLivingBase target,
                                              ItemClaws item, ItemStack stack,
                                              boolean fullyCharged) {
         boolean paired = ClawPairHandler.hasMatchingLinkedClaw(player, item);
         boolean canPierce = paired && fullyCharged;
-        boolean guaranteedCritical = paired && item.willGuaranteeCritical(stack,
-            fullyCharged);
+        if(canPierce && !canPierceNow(player,target)) {
+            PENDING_ATTACKS.remove(player);
+            return false;
+        }
         PENDING_ATTACKS.put(player, new PendingAttack(target.getEntityId(),
             player.world.getTotalWorldTime(), item, stack, paired,
-            fullyCharged, canPierce, guaranteedCritical));
-    }
-
-    @SubscribeEvent(priority = EventPriority.LOW)
-    public static void onLivingHurt(LivingHurtEvent event) {
-        if (!(event.getSource().getTrueSource() instanceof EntityPlayer)) return;
-        PendingAttack pending = matching((EntityPlayer) event.getSource().getTrueSource(),
-            event.getEntityLiving());
-        if (pending != null && pending.guaranteedCritical) {
-            event.setAmount(event.getAmount() * 1.5F);
-        }
+            fullyCharged, canPierce));
+        return true;
     }
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
@@ -51,6 +51,7 @@ public final class ClawCombat {
         EntityPlayer player = (EntityPlayer) event.getSource().getTrueSource();
         PendingAttack pending = matching(player, event.getEntityLiving());
         if (pending != null && pending.canPierce) {
+            if(!canPierceNow(player,event.getEntityLiving())) { event.setCanceled(true); return; }
             event.getEntityLiving().hurtResistantTime = 0;
             pending.pierced = true;
         }
@@ -67,11 +68,7 @@ public final class ClawCombat {
             item.resetPair(stack);
             return;
         }
-        boolean critical = item.confirmChargedPairedHit(stack, pending.fullyCharged);
-        if (pending.pierced || critical) {
-            target.world.playSound(null, target.posX, target.posY, target.posZ,
-                SoundEvents.ENTITY_PLAYER_ATTACK_CRIT, target.getSoundCategory(), 0.45F, 1.45F);
-        }
+        if (pending.pierced) recordPiercingHit(player,target);
     }
 
     /** Paired claws use reduced knockback so consecutive auto-attacks can combo. */
@@ -106,13 +103,11 @@ public final class ClawCombat {
         private final boolean paired;
         private final boolean fullyCharged;
         private final boolean canPierce;
-        private final boolean guaranteedCritical;
         private boolean pierced;
 
         private PendingAttack(int targetId, long worldTime, ItemClaws item,
                               ItemStack stack, boolean paired,
-                              boolean fullyCharged, boolean canPierce,
-                              boolean guaranteedCritical) {
+                              boolean fullyCharged, boolean canPierce) {
             this.targetId = targetId;
             this.worldTime = worldTime;
             this.item = item;
@@ -120,7 +115,6 @@ public final class ClawCombat {
             this.paired = paired;
             this.fullyCharged = fullyCharged;
             this.canPierce = canPierce;
-            this.guaranteedCritical = guaranteedCritical;
         }
     }
 }

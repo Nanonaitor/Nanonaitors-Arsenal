@@ -1,5 +1,32 @@
 # Changelog
 
+## 2.0.8 - 2026-09-15
+
+- Removed paired Claws' guaranteed fourth-hit critical and all critical banking.
+  Obsolete saved combo counters are cleared when existing main claws update.
+- Both hands now share a four-tick minimum between confirmed fully charged
+  i-frame-piercing hits for each player/target pair (0.2 seconds at 20 TPS).
+- Early offhand piercing attempts may wait up to four ticks for the shared
+  window, rechecking weapon, target, range and visibility before attacking.
+  A rejected piercing attempt does not consume durability or the server-side
+  offhand cooldown. Misses do not reserve the shared hit window.
+- Preserved linked claws, shared enchantments/durability, auto-attacks, base
+  damage and normal critical-hit mechanics. No offhand damage multiplier nerf.
+- Includes the 2.0.7 normal enchantment eligibility repair and special exceptions.
+- Added claw interval/isolation and legacy-counter cleanup regression tests.
+
+## 2.0.7 - 2026-09-15
+
+- Restored mod-defined enchanting eligibility instead of restricting weapons to
+  the vanilla WEAPON category plus a small whitelist. A guarded fallback uses
+  the enchantment category predicate when Forge calls back into the item.
+- Preserved Desolator's Morning Star exception, Blade Staff Combo, chain-only
+  enchantments, and existing Sweeping/Arc Slash restrictions. Disabled mod
+  enchantments retain their own eligibility checks.
+- Added 1,824 eligibility checks across all 19 tiers and eight weapon classes;
+  existing 113 configuration/combat/sound checks also pass.
+- No claw balance changes in this release. No profile installation or upload.
+
 ## 2.0.6 - 2026-09-15
 
 Consolidates the 2.0.2–2.0.6 combat fixes for Minecraft 1.12.2.

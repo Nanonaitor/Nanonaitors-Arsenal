@@ -15,7 +15,13 @@ repositories {
 apply plugin: 'net.minecraftforge.gradle'
 apply plugin: 'eclipse'
 
-version = '2.0.6'
+task enchantmentRegression(type: JavaExec, dependsOn: testClasses) {
+    classpath = sourceSets.test.runtimeClasspath
+    main = 'com.nanonaitor.arsenal.item.EnchantmentRegressionTest'
+}
+check.dependsOn enchantmentRegression
+
+version = '2.0.8'
 group = 'com.nanonaitor.arsenal'
 archivesBaseName = 'nanonaitors-arsenal-1.12.2'
 
@@ -88,3 +94,9 @@ task guardRegression(type: JavaExec, dependsOn: testClasses) {
     main = 'com.nanonaitor.arsenal.combat.GuardRulesTest'
 }
 check.dependsOn guardRegression
+
+task clawBalanceRegression(type: JavaExec, dependsOn: testClasses) {
+    classpath = sourceSets.test.runtimeClasspath
+    main = 'com.nanonaitor.arsenal.combat.ClawBalanceRegressionTest'
+}
+check.dependsOn clawBalanceRegression

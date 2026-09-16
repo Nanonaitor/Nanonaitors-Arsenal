@@ -20,7 +20,6 @@ import net.minecraft.util.EnumHand;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.text.TextFormatting;
 import net.minecraft.world.World;
-import net.minecraftforge.fml.common.Loader;
 
 /** Blade Staff. Legacy class and registry IDs are retained for save compatibility. */
 public final class ItemDoubleBladedScimitar extends ItemArsenalWeapon {
@@ -61,7 +60,7 @@ public final class ItemDoubleBladedScimitar extends ItemArsenalWeapon {
     private static boolean isUnsupportedSweep(Enchantment enchantment) {
         if (enchantment == Enchantments.SWEEPING) return true;
         ResourceLocation id = enchantment == null ? null : enchantment.getRegistryName();
-        return Loader.isModLoaded("somanyenchantments") && id != null
+        return id != null
             && "somanyenchantments".equals(id.getResourceDomain())
             && "arcslash".equals(id.getResourcePath());
     }

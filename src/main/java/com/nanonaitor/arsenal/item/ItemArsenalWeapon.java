@@ -21,6 +21,8 @@ import net.minecraft.item.ItemSword;
 import net.minecraft.world.World;
 
 public abstract class ItemArsenalWeapon extends ItemSword {
+    private static final ThreadLocal<Set<Enchantment>> CHECKING_ENCHANTMENTS =
+        ThreadLocal.withInitial(() -> Collections.newSetFromMap(new java.util.IdentityHashMap<Enchantment, Boolean>()));
     private final WeaponTier tier;
     private final double attackDamageModifier;
     private final double attackSpeedModifier;
@@ -60,16 +62,14 @@ public abstract class ItemArsenalWeapon extends ItemSword {
      */
     @Override
     public boolean canApplyAtEnchantingTable(ItemStack stack, Enchantment enchantment) {
-        if (enchantment.isCurse() && enchantment.type == EnumEnchantmentType.ALL) return true;
-        // SME uses its own NONE type and checks eligibility in this override.
-        // Unlike vanilla's fallback, SME's implementation does not recurse into Item.
-        if (enchantment.isCurse() && enchantment.getClass().getName().startsWith("com.shultrea.rin.enchantments.")) {
-            return enchantment.canApplyAtEnchantingTable(stack);
-        }
-        if (this instanceof ItemMorningStar && enchantment.getRegistryName() != null
+        if (enchantment.getRegistryName() != null
             && "somanyenchantments:desolator".equals(enchantment.getRegistryName().toString())) {
+            if (!(this instanceof ItemMorningStar)) return false;
             try { return (Boolean)enchantment.getClass().getMethod("isEnabled").invoke(enchantment); }
             catch (ReflectiveOperationException exception) { return false; }
+        }
+        if (com.nanonaitor.arsenal.compat.BladeStaffComboCompat.isCombo(enchantment)) {
+            return this instanceof ItemDoubleBladedScimitar && enchantment.getMaxLevel() > 0;
         }
         if (enchantment instanceof EnchantmentLongChain
             || enchantment instanceof EnchantmentRotationForce) {
@@ -78,11 +78,19 @@ public abstract class ItemArsenalWeapon extends ItemSword {
         if (enchantment == Enchantments.SWEEPING && !(this instanceof ItemScimitar)) {
             return false;
         }
-        // Avoid Item's fallback here: certain 1.12.2 compatibility paths can
-        // bounce from Item to Enchantment and back into this override forever.
-        return enchantment.type == EnumEnchantmentType.WEAPON
-            || enchantment == Enchantments.UNBREAKING
-            || enchantment == Enchantments.MENDING;
+        // Forge's default Enchantment method calls back into Item. On re-entry,
+        // use the normal category predicate instead of calling Enchantment again.
+        // Mod overrides (including SME's NONE category) keep their own settings.
+        Set<Enchantment> checking = CHECKING_ENCHANTMENTS.get();
+        if (!checking.add(enchantment)) {
+            return enchantment.type != null && enchantment.type.canEnchantItem(this);
+        }
+        try {
+            return enchantment.canApplyAtEnchantingTable(stack);
+        } finally {
+            checking.remove(enchantment);
+            if (checking.isEmpty()) CHECKING_ENCHANTMENTS.remove();
+        }
     }
 
     @Override

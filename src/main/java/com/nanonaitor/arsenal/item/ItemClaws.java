@@ -8,7 +8,6 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.text.TextFormatting;
 import net.minecraft.world.World;
 
@@ -23,7 +22,7 @@ public final class ItemClaws extends ItemArsenalWeapon {
     public boolean onLeftClickEntity(ItemStack stack, EntityPlayer player, Entity entity) {
         if (!player.world.isRemote && entity instanceof EntityLivingBase) {
             boolean fullyCharged = player.getCooledAttackStrength(0.5F) >= 1.0F;
-            ClawCombat.prepareMainHandAttack(player, (EntityLivingBase) entity,
+            return !ClawCombat.prepareMainHandAttack(player, (EntityLivingBase) entity,
                 this, stack, fullyCharged);
         }
         return false;
@@ -37,26 +36,15 @@ public final class ItemClaws extends ItemArsenalWeapon {
         return super.hitEntity(stack, target, attacker);
     }
 
-    public boolean willGuaranteeCritical(ItemStack stack, boolean fullyCharged) {
-        if (!fullyCharged) return false;
-        int chain = stack.hasTagCompound()
-            ? stack.getTagCompound().getInteger(CRIT_CHAIN_TAG) : 0;
-        return chain + 1 >= 4;
-    }
-
-    public boolean confirmChargedPairedHit(ItemStack stack, boolean fullyCharged) {
-        NBTTagCompound tag = tag(stack);
-        int chain = fullyCharged ? tag.getInteger(CRIT_CHAIN_TAG) + 1 : 0;
-        boolean critical = chain >= 4;
-        if (critical) chain = 0;
-        tag.setInteger(CRIT_CHAIN_TAG, chain);
-        return critical;
+    @Override
+    public void onUpdate(ItemStack stack,World world,Entity entity,int slot,boolean selected) {
+        super.onUpdate(stack,world,entity,slot,selected);
+        if(!world.isRemote)resetPair(stack); // Remove obsolete banked-crit data from existing claws.
     }
 
     public void resetPair(ItemStack stack) {
         if (stack.hasTagCompound()) {
-            // Remove the old alternation data as well so existing claws cleanly
-            // migrate to the paired auto-attack combo system.
+            // Remove obsolete critical/alternation state without touching item data.
             stack.getTagCompound().removeTag("LastConfirmedClaw");
             stack.getTagCompound().removeTag("LastConfirmedClawTarget");
             stack.getTagCompound().removeTag(CRIT_CHAIN_TAG);
@@ -68,15 +56,8 @@ public final class ItemClaws extends ItemArsenalWeapon {
         if (!ArsenalTooltip.begin(tooltip, TextFormatting.GOLD,
                 "Automatically equips its paired offhand claw.")) return;
         tooltip.add(TextFormatting.GRAY + "Hold left/right click to auto-attack with each claw.");
-        tooltip.add(TextFormatting.GRAY + "Fully charged paired hits pierce i-frames.");
-        tooltip.add(TextFormatting.YELLOW + "Every 4th fully charged paired hit is a critical.");
+        tooltip.add(TextFormatting.GRAY + "Fully charged paired hits pierce i-frames, at most once per 4 ticks per target.");
         tooltip.add(TextFormatting.DARK_GRAY + "A different offhand item disables all paired abilities.");
     }
 
-    private static NBTTagCompound tag(ItemStack stack) {
-        if (!stack.hasTagCompound()) {
-            stack.setTagCompound(new NBTTagCompound());
-        }
-        return stack.getTagCompound();
-    }
 }

@@ -23,10 +23,15 @@ import net.minecraftforge.fml.common.gameevent.TickEvent;
 public final class ClawOffhandAttackHandler {
     private static final Map<EntityPlayer, Long> LAST_ATTACK_TICK = new WeakHashMap<>();
     private static final Map<EntityPlayer, Long> PENDING_SWING_TICK = new WeakHashMap<>();
+    private static final Map<EntityPlayer, DeferredAttack> DEFERRED = new WeakHashMap<>();
 
     private ClawOffhandAttackHandler() {}
 
     public static void tryServerAttack(EntityPlayer player, EntityLivingBase target) {
+        tryServerAttack(player,target,true);
+    }
+
+    private static void tryServerAttack(EntityPlayer player, EntityLivingBase target,boolean mayDefer) {
         if (!CombatTargetRules.canHit(player, target)) return;
         ItemStack main = player.getHeldItemMainhand();
         if (!(main.getItem() instanceof ItemClaws)) {
@@ -42,12 +47,15 @@ public final class ClawOffhandAttackHandler {
         double cooldownTicks = 20.0D / claws.getDisplayedAttackSpeed();
         float strength = last == Long.MIN_VALUE ? 1.0F
             : MathHelper.clamp((float) ((now - last + 0.5D) / cooldownTicks), 0.0F, 1.0F);
-        LAST_ATTACK_TICK.put(player, now);
-
         boolean fullyCharged = strength >= 1.0F;
         boolean canPierce = fullyCharged;
-        boolean guaranteedCritical = claws.willGuaranteeCritical(main,
-            fullyCharged);
+        if(canPierce && !ClawCombat.canPierceNow(player,target)) {
+            if(mayDefer && !DEFERRED.containsKey(player))DEFERRED.put(player,new DeferredAttack(target,main,now+4));
+            return;
+        }
+        DEFERRED.remove(player);
+        LAST_ATTACK_TICK.put(player, now);
+        ClawCombat.clearPending(player);
         int previousResistance = target.hurtResistantTime;
         if (canPierce) {
             target.hurtResistantTime = 0;
@@ -59,7 +67,6 @@ public final class ClawOffhandAttackHandler {
             main, target.getCreatureAttribute());
         float damage = baseDamage * (0.2F + strength * strength * 0.8F)
             + enchantmentDamage * strength;
-        if (guaranteedCritical) damage *= 1.5F;
 
         // RLCombat inspects the equipped offhand while resolving player damage
         // and can apply its generic weaker-offhand rule to this custom paired
@@ -88,7 +95,7 @@ public final class ClawOffhandAttackHandler {
         // default weakerOffhand rule keys off the active swing hand and would
         // otherwise halve this paired-weapon attack.
         PENDING_SWING_TICK.put(player, now + 2L);
-        boolean critical = claws.confirmChargedPairedHit(main, fullyCharged);
+        if(canPierce)ClawCombat.recordPiercingHit(player,target);
         main.damageItem(1, player);
         player.addExhaustion(0.1F);
 
@@ -111,20 +118,36 @@ public final class ClawOffhandAttackHandler {
         player.world.playSound(null, player.posX, player.posY, player.posZ,
             SoundEvents.ENTITY_PLAYER_ATTACK_SWEEP, player.getSoundCategory(),
             0.8F, 1.15F);
-        if (canPierce || critical) {
-            player.world.playSound(null, target.posX, target.posY, target.posZ,
-                SoundEvents.ENTITY_PLAYER_ATTACK_CRIT, target.getSoundCategory(),
-                0.45F, 1.45F);
-        }
     }
 
     @SubscribeEvent
     public static void animateDelayedOffhand(TickEvent.PlayerTickEvent event) {
         if (event.phase != TickEvent.Phase.END || event.player.world.isRemote) return;
+        DeferredAttack attack=DEFERRED.get(event.player);
+        if(attack!=null) {
+            EntityLivingBase target=attack.target.get();
+            long now=event.player.world.getTotalWorldTime();
+            if(target==null || now>attack.expires || event.player.getHeldItemMainhand()!=attack.stack
+                || !CombatTargetRules.canHit(event.player,target) || event.player.getDistanceSq(target)>36
+                || !event.player.canEntityBeSeen(target))DEFERRED.remove(event.player);
+            else if(ClawCombat.canPierceNow(event.player,target)) {
+                DEFERRED.remove(event.player);
+                tryServerAttack(event.player,target,false);
+            }
+        }
         Long due = PENDING_SWING_TICK.get(event.player);
         if (due == null || event.player.world.getTotalWorldTime() < due) return;
         PENDING_SWING_TICK.remove(event.player);
         event.player.swingArm(EnumHand.OFF_HAND);
+    }
+
+    private static final class DeferredAttack {
+        final java.lang.ref.WeakReference<EntityLivingBase> target;
+        final ItemStack stack;
+        final long expires;
+        DeferredAttack(EntityLivingBase target,ItemStack stack,long expires) {
+            this.target=new java.lang.ref.WeakReference<>(target);this.stack=stack;this.expires=expires;
+        }
     }
 
 }
