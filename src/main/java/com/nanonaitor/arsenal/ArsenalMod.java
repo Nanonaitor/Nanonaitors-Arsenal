@@ -33,12 +33,16 @@ public final class ArsenalMod {
         com.nanonaitor.arsenal.registry.ModRecipes.SERIALIZERS.register(group);
         com.nanonaitor.arsenal.enchantment.ModEnchantments.ENCHANTMENTS.register(group);
         net.minecraftforge.fml.ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, ArsenalConfig.SPEC);
+        net.minecraftforge.fml.ModLoadingContext.get().registerConfig(ModConfig.Type.SERVER,
+            com.nanonaitor.arsenal.compat.LevelRequirements.SPEC,com.nanonaitor.arsenal.compat.LevelRequirements.FILE);
         ModNetwork.init();
         net.minecraftforge.common.crafting.CraftingHelper.register(com.nanonaitor.arsenal.config.WeaponRecipeCondition.SERIALIZER);
         com.nanonaitor.arsenal.combat.TierEffects.register();
         var bus = net.minecraftforge.common.MinecraftForge.EVENT_BUS;
         bus.addListener((LivingAttackEvent e) -> { if (CombatEvents.onLivingAttack(e)) e.setCanceled(true); });
         bus.addListener(CombatEvents::onLivingHurt);
+        bus.addListener(net.minecraftforge.eventbus.api.EventPriority.HIGHEST, CombatEvents::prepareBulwarkDamage);
+        bus.addListener(net.minecraftforge.eventbus.api.EventPriority.LOWEST, CombatEvents::protectStaffAtHurt);
         bus.addListener(CombatEvents::onLivingKnockBack);
         bus.addListener(StunnedEffect::onLivingTick);
         bus.addListener((AttackEntityEvent e) -> { if (CombatEvents.onAttackEntity(e)) e.setCanceled(true); });

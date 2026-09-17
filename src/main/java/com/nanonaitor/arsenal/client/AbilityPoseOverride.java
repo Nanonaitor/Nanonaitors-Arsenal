@@ -28,6 +28,8 @@ public final class AbilityPoseOverride {
                 }
             }
             case SCIMITAR -> {
+                if(entity instanceof net.minecraft.world.entity.player.Player p
+                    && com.nanonaitor.arsenal.combat.ParityRules.disabled(p)) break;
                 if(entity.isUsingItem() && entity.getOffhandItem().getItem() instanceof ArsenalWeaponItem off
                     && off.kind()==WeaponKind.SCIMITAR){
                     ScimitarClientExtensions.poseCrossed(model,entity,arm);active=true;

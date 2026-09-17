@@ -6,6 +6,12 @@
   "overrides": [
     {
       "predicate": {
+        "nanonaitors_arsenal:guarding": 1
+      },
+      "model": "nanonaitors_arsenal:item/ball_and_chain_living_guard"
+    },
+    {
+      "predicate": {
         "nanonaitors_arsenal:active": 1
       },
       "model": "nanonaitors_arsenal:item/ball_and_chain_living_active_port"

@@ -25,6 +25,8 @@ public final class ScimitarClientExtensions implements IClientItemExtensions {
     }
 
     private static boolean dualScimitars(LivingEntity entity) {
+        if(entity instanceof net.minecraft.world.entity.player.Player p
+            && com.nanonaitor.arsenal.combat.ParityRules.disabled(p)) return false;
         return entity.getMainHandItem().getItem() instanceof ArsenalWeaponItem main
             && entity.getOffhandItem().getItem() instanceof ArsenalWeaponItem off
             && main.kind() == WeaponKind.SCIMITAR && off.kind() == WeaponKind.SCIMITAR;

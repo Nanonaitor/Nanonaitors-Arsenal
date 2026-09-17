@@ -42,11 +42,35 @@ public class ArsenalWeaponItem extends net.minecraft.world.item.SwordItem {
     public WeaponTier tier() { return tier; }
     public WeaponKind kind() { return kind; }
 
+    @Override public boolean canAttackBlock(net.minecraft.world.level.block.state.BlockState state,
+            Level level,net.minecraft.core.BlockPos pos,Player player) {
+        return kind!=WeaponKind.CLAWS && kind!=WeaponKind.LINKED_CLAWS
+            && super.canAttackBlock(state,level,pos,player);
+    }
+    @Override public boolean canPerformAction(ItemStack stack,net.minecraftforge.common.ToolAction action) {
+        if(kind==WeaponKind.BLADE_STAFF && action==net.minecraftforge.common.ToolActions.SWORD_SWEEP)return false;
+        return super.canPerformAction(stack,action);
+    }
+    private boolean forbiddenSweep(net.minecraft.world.item.enchantment.Enchantment enchantment) {
+        var id=net.minecraftforge.registries.ForgeRegistries.ENCHANTMENTS.getKey(enchantment);
+        return kind==WeaponKind.BLADE_STAFF && (enchantment==net.minecraft.world.item.enchantment.Enchantments.SWEEPING_EDGE
+            || id!=null && id.getPath().equals("arc_slash"));
+    }
+    @Override public boolean canApplyAtEnchantingTable(ItemStack stack,net.minecraft.world.item.enchantment.Enchantment enchantment) {
+        return !forbiddenSweep(enchantment) && super.canApplyAtEnchantingTable(stack,enchantment);
+    }
+    @Override public boolean isBookEnchantable(ItemStack stack,ItemStack book) {
+        return net.minecraft.world.item.enchantment.EnchantmentHelper.getEnchantments(book).keySet().stream()
+            .noneMatch(this::forbiddenSweep) && super.isBookEnchantable(stack,book);
+    }
+
     @Override public void initializeClient(java.util.function.Consumer<net.minecraftforge.client.extensions.common.IClientItemExtensions> consumer) {
         consumer.accept(new com.nanonaitor.arsenal.client.WeaponClientExtensions());
     }
 
     @Override public net.minecraft.world.InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
+        if(!com.nanonaitor.arsenal.compat.LevelRequirements.canUse(player,player.getItemInHand(hand),true))
+            return net.minecraft.world.InteractionResultHolder.fail(player.getItemInHand(hand));
         if (kind == WeaponKind.BALL_AND_CHAIN && hand == InteractionHand.MAIN_HAND
             && player.getOffhandItem().isEmpty()) {
             player.startUsingItem(hand);
@@ -56,6 +80,13 @@ public class ArsenalWeaponItem extends net.minecraft.world.item.SwordItem {
             && player.getMainHandItem().getItem() instanceof ArsenalWeaponItem main
             && player.getOffhandItem().getItem() instanceof ArsenalWeaponItem off
             && main.kind() == WeaponKind.SCIMITAR && off.kind() == WeaponKind.SCIMITAR) {
+            if(!com.nanonaitor.arsenal.compat.LevelRequirements.canUse(player,player.getOffhandItem(),true)
+                || !com.nanonaitor.arsenal.compat.LevelRequirements.canUse(player,player.getMainHandItem(),true))
+                return net.minecraft.world.InteractionResultHolder.fail(player.getItemInHand(hand));
+            if (com.nanonaitor.arsenal.combat.ParityRules.disabled(player))
+                return net.minecraft.world.InteractionResultHolder.fail(player.getItemInHand(hand));
+            player.getMainHandItem().getOrCreateTag().putBoolean("ArsenalPaired",true);
+            player.getOffhandItem().getOrCreateTag().putBoolean("ArsenalPaired",true);
             player.startUsingItem(hand);
             return net.minecraft.world.InteractionResultHolder.consume(player.getItemInHand(hand));
         }
@@ -71,21 +102,38 @@ public class ArsenalWeaponItem extends net.minecraft.world.item.SwordItem {
         // The ram has its own stable two-handed carry/charge poses. BLOCK would
         // layer Minecraft's one-handed shield transform over those poses and make
         // the first-person model fight or snap while the charge is active.
-        return kind == WeaponKind.SCIMITAR ? UseAnim.BLOCK : UseAnim.NONE;
+        return kind == WeaponKind.SCIMITAR && stack.hasTag()
+            && stack.getTag().getBoolean("ArsenalPaired") ? UseAnim.BLOCK : UseAnim.NONE;
     }
 
     @Override public boolean hurtEnemy(ItemStack stack, LivingEntity target, LivingEntity attacker) {
+        if(kind==WeaponKind.CLAWS && attacker instanceof Player player && !player.level().isClientSide)
+            com.nanonaitor.arsenal.combat.CombatEvents.confirmClawHit(player,target);
+        if (kind == WeaponKind.BATTERING_RAM && !attacker.level().isClientSide) {
+            target.knockback(.5D, Math.sin(Math.toRadians(attacker.getYRot())),
+                -Math.cos(Math.toRadians(attacker.getYRot())));
+            target.hurtMarked = true;
+        }
         stack.hurtAndBreak(1, attacker, entity -> entity.broadcastBreakEvent(EquipmentSlot.MAINHAND));
         return true;
     }
 
     @Override public void appendHoverText(ItemStack stack, Level context,
             List<Component> lines, TooltipFlag flag) {
-        lines.add(Component.literal(summary()).withStyle(ChatFormatting.GOLD));
-        if (!com.nanonaitor.arsenal.client.ClientTooltip.expanded()) {
-            lines.add(Component.literal("Hold SHIFT for details").withStyle(ChatFormatting.DARK_GRAY));
-            return;
-        }
+        boolean expanded=com.nanonaitor.arsenal.client.ClientTooltip.expanded();
+        WeaponTooltipLayout.heading(lines,expanded,switch(kind) {
+            case MORNING_STAR -> "Charged Strike, Armor Fracture";
+            case SCIMITAR -> "Weakening, Dual Wield, Cross-Guard";
+            case CLAWS -> "Paired Claws, I-Frame Piercing";
+            case LINKED_CLAWS -> "Linked Equipment";
+            case FLAIL -> "Spinning Strike";
+            case BATTERING_RAM -> "Two-Handed Charge, Knockback";
+            case BALL_AND_CHAIN -> "Charged Throw, Armor Piercing";
+            case BLADE_STAFF -> "Sweeping Hits, Timed Reflection";
+        });
+        if(!expanded)return;
+        int detailStart=lines.size();
+        lines.add(Component.literal(summary()));
         switch (kind) {
             case MORNING_STAR -> {
                 lines.add(Component.literal("Each charge quarter adds +10% damage.").withStyle(ChatFormatting.GOLD));
@@ -100,9 +148,12 @@ public class ArsenalWeaponItem extends net.minecraft.world.item.SwordItem {
                     .withStyle(ChatFormatting.GOLD));
                 lines.add(Component.literal("Dual wield and use to cross-guard.")
                     .withStyle(ChatFormatting.GRAY));
+                lines.add(Component.literal("Attack while cross-guarding to bash with both blades."));
+                lines.add(Component.literal("Bash combines both weapons' damage; 1.5 sec cooldown."));
+                lines.add(Component.literal("Release Attack before another bash. Shield break disables guard."));
             }
             case CLAWS -> {
-                lines.add(Component.literal("Fully charged paired hits pierce invulnerability!")
+                lines.add(Component.literal("Fully charged paired hits pierce invulnerability, at most once per 4 ticks per target.")
                     .withStyle(ChatFormatting.GRAY));
             }
             case LINKED_CLAWS -> lines.add(Component.literal("Linked to the matching main-hand claws.").withStyle(ChatFormatting.DARK_GRAY));
@@ -127,7 +178,7 @@ public class ArsenalWeaponItem extends net.minecraft.world.item.SwordItem {
                     .withStyle(ChatFormatting.DARK_RED));
             }
             case BLADE_STAFF -> {
-                lines.add(Component.literal("Empty offhand: hold attack to auto-strike at full charge.").withStyle(ChatFormatting.YELLOW));
+                lines.add(Component.literal("Normal attacks use the game's regular attack controls.").withStyle(ChatFormatting.YELLOW));
                 lines.add(Component.literal("Melee hits damage other enemies within "
                     + ("sentient".equals(tier.id) ? "3" : "2")
                     + " blocks of the target.").withStyle(ChatFormatting.GOLD));
@@ -138,6 +189,7 @@ public class ArsenalWeaponItem extends net.minecraft.world.item.SwordItem {
                 lines.add(Component.literal("An occupied offhand disables reflection and halves attack speed.").withStyle(ChatFormatting.DARK_RED));
             }
         }
+        WeaponTooltipLayout.details(lines,detailStart);
     }
     private String summary() {
         return switch (kind) {
@@ -146,9 +198,9 @@ public class ArsenalWeaponItem extends net.minecraft.world.item.SwordItem {
             case CLAWS -> "Hold left/right click to auto-attack.";
             case LINKED_CLAWS -> "Linked to the matching main-hand claws.";
             case FLAIL -> "Hold attack to strike every target within 4 blocks.";
-            case BATTERING_RAM -> "2-Handed siege weapon.";
+            case BATTERING_RAM -> "Hold use to charge with an empty offhand; attack for extra knockback.";
             case BALL_AND_CHAIN -> "Hold Attack to Swing, let go to release.";
-            case BLADE_STAFF -> "Two-ended blade with auto-attacks and timed reflection.";
+            case BLADE_STAFF -> "Two-ended blade with timed combat-damage reflection.";
         };
     }
 }

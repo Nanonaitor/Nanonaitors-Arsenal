@@ -8,7 +8,8 @@ import net.minecraftforge.network.simple.SimpleChannel;
 public final class ModNetwork {
  public static final byte FLAIL=1, BALL_CHAIN=2, RAM=3, BULWARK_BASH=4, CLAW=5, CLAW_MAIN=6, MORNING_STAR=7, BULWARK_ATTACK=8, BULWARK_MENU_GUARD=9, SCIMITAR_ATTACK=10, BALL_WIND_BOOST=11, TARTSY_BASH=12, BLADE_STAFF_ATTACK=13, BLADE_STAFF_REFLECT=14;
  public static final byte CANCEL_WEAPON_INPUTS=15;
- private static final String VERSION="2";
+ public static final byte SCIMITAR_BASH=16;
+ private static final String VERSION="3";
  private static final SimpleChannel CHANNEL=NetworkRegistry.newSimpleChannel(new ResourceLocation(ArsenalMod.MOD_ID,"controls"),()->VERSION,VERSION::equals,VERSION::equals);
  public static void init(){
   CHANNEL.messageBuilder(ControlPacket.class,0,NetworkDirection.PLAY_TO_SERVER)

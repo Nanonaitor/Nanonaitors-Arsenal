@@ -22,6 +22,9 @@ public final class TierEffects {
  private static final ThreadLocal<AttackContext> ATTACK_CONTEXT=new ThreadLocal<>();
  public static ItemStack attackingStack(Player player){var context=ATTACK_CONTEXT.get();return context!=null && context.owner.equals(player.getUUID())?context.stack:player.getMainHandItem();}
  public static boolean hurtWithStack(ItemStack stack,LivingEntity target,net.minecraft.world.damagesource.DamageSource source,float amount){
+  return hurtEntityWithStack(stack,target,source,amount);
+ }
+ public static boolean hurtEntityWithStack(ItemStack stack,Entity target,net.minecraft.world.damagesource.DamageSource source,float amount){
   if(!(source.getEntity() instanceof Player p))return target.hurt(source,amount);
   var previous=ATTACK_CONTEXT.get();ATTACK_CONTEXT.set(new AttackContext(p.getUUID(),stack));
   try{return target.hurt(source,amount);}finally{if(previous==null)ATTACK_CONTEXT.remove();else ATTACK_CONTEXT.set(previous);}

@@ -144,6 +144,15 @@ public final class ClientWeaponRenderer {
             pose.popPose();
             return;
         }
+        if (minecraft.player.getMainHandItem().getItem() instanceof ArsenalWeaponItem ball
+            && ball.kind()==WeaponKind.BALL_AND_CHAIN && minecraft.player.getOffhandItem().isEmpty()
+            && minecraft.player.isUsingItem() && minecraft.player.getUseItem()==minecraft.player.getMainHandItem()
+            && !ClientControls.ballWindup(minecraft.level.getGameTime()) && !ClientControls.ballRelease(minecraft.level.getGameTime())) {
+            event.setCanceled(true);
+            if(event.getHand()==InteractionHand.MAIN_HAND) renderItem(event.getPoseStack(),event.getMultiBufferSource(),
+                event.getPackedLight(),0,ballVisualStack(ball.tier()),0,-.52D,-1.05D,1.25F);
+            return;
+        }
         if (event.getHand() != InteractionHand.MAIN_HAND
             || !(event.getItemStack().getItem() instanceof ArsenalWeaponItem weapon)) return;
         long now = minecraft.level.getGameTime();
@@ -346,6 +355,7 @@ public final class ClientWeaponRenderer {
     }
 
     private static boolean isDualScimitarGuard(Minecraft minecraft, ItemStack stack) {
+        if (!com.nanonaitor.arsenal.combat.ParityRules.guarding(minecraft.player)) return false;
         if (!minecraft.player.isUsingItem()
             || !(minecraft.player.getUseItem().getItem() instanceof ArsenalWeaponItem used)
             || used.kind() != WeaponKind.SCIMITAR) return false;

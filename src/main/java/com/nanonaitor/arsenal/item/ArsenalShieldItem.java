@@ -21,6 +21,17 @@ public final class ArsenalShieldItem extends ShieldItem {
     private final Type type;
     public ArsenalShieldItem(Type type, Properties properties) { super(properties); this.type = type; }
     public Type shieldType() { return type; }
+    @Override public boolean shouldCauseReequipAnimation(ItemStack oldStack,ItemStack newStack,boolean slotChanged) {
+        if(slotChanged || oldStack.getItem()!=newStack.getItem())return true;
+        ItemStack oldCopy=oldStack.copy(),newCopy=newStack.copy();
+        for(ItemStack copy:java.util.List.of(oldCopy,newCopy)) {
+            if(copy.hasTag()) {
+                copy.getTag().remove("ArsenalGuardStrain");
+                if(copy.getTag().isEmpty())copy.setTag(null);
+            }
+        }
+        return !ItemStack.matches(oldCopy,newCopy);
+    }
     @Override public com.google.common.collect.Multimap<net.minecraft.world.entity.ai.attributes.Attribute,net.minecraft.world.entity.ai.attributes.AttributeModifier> getDefaultAttributeModifiers(net.minecraft.world.entity.EquipmentSlot slot){
         if(type!=Type.SUN_WAR || slot!=net.minecraft.world.entity.EquipmentSlot.MAINHAND)return super.getDefaultAttributeModifiers(slot);
         return com.google.common.collect.ImmutableMultimap.of(
@@ -38,7 +49,7 @@ public final class ArsenalShieldItem extends ShieldItem {
     }
 
     @Override public net.minecraft.world.InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
-        if (type == Type.TARTSY && player.getCooldowns().isOnCooldown(stackFor(player, hand).getItem())) {
+        if (player.getCooldowns().isOnCooldown(stackFor(player, hand).getItem())) {
             return net.minecraft.world.InteractionResultHolder.fail(player.getItemInHand(hand));
         }
         ItemStack opposite = hand == InteractionHand.MAIN_HAND ? player.getOffhandItem() : player.getMainHandItem();
@@ -61,30 +72,30 @@ public final class ArsenalShieldItem extends ShieldItem {
 
     @Override public void appendHoverText(ItemStack stack, Level context,
             List<Component> lines, TooltipFlag flag) {
+        boolean expanded=com.nanonaitor.arsenal.client.ClientTooltip.expanded();
+        WeaponTooltipLayout.heading(lines,expanded,type==Type.TARTSY
+            ? "Spiked Guard, Assault Bash" : "Two-Handed Guard, Armor Bash, Guard Strain");
+        if(!expanded)return;
+        int detailStart=lines.size();
         if (type == Type.TARTSY) {
             lines.add(Component.literal("One-handed spiked assault shield.").withStyle(ChatFormatting.GOLD));
-            if (!com.nanonaitor.arsenal.client.ClientTooltip.expanded()) {
-                lines.add(Component.literal("Hold SHIFT for details").withStyle(ChatFormatting.DARK_GRAY));
-                return;
-            }
             lines.add(Component.literal("Negates any one hit, then disables for 4 secs.").withStyle(ChatFormatting.AQUA));
             lines.add(Component.literal("Attack while guarding to charge forward.").withStyle(ChatFormatting.BLUE));
             lines.add(Component.literal("Dash: 1 sec immunity, 2 damage and Stunned for 1 sec.").withStyle(ChatFormatting.DARK_PURPLE));
             lines.add(Component.literal("A confirmed dash hit primes one guaranteed critical.").withStyle(ChatFormatting.RED));
+            WeaponTooltipLayout.details(lines,detailStart);
             return;
         }
         lines.add(Component.literal("Extremely durable, two-handed bulwark; 15% passive damage reduction.").withStyle(ChatFormatting.GOLD));
-        if (!com.nanonaitor.arsenal.client.ClientTooltip.expanded()) {
-            lines.add(Component.literal("Hold SHIFT for details").withStyle(ChatFormatting.DARK_GRAY));
-            return;
-        }
         lines.add(Component.literal("Can shield all directed attacks from any direction.").withStyle(ChatFormatting.AQUA));
-        lines.add(Component.literal("Damage: 1 + armor points, scaled by attack charge. Guard and attack for a 4-block bash.").withStyle(ChatFormatting.RED));
+        lines.add(Component.literal("Bash: full 1 + armor points. Normal attacks still scale with charge.").withStyle(ChatFormatting.RED));
+        lines.add(Component.literal("Guard Strain: 25 hits disable guard for 3 secs; loses 1 point/sec.").withStyle(ChatFormatting.YELLOW));
         lines.add(Component.literal("Wait about 4 secs between attacks for full damage.").withStyle(ChatFormatting.YELLOW));
         lines.add(Component.literal("40% slower while carried; 75% slower while guarding.").withStyle(ChatFormatting.GRAY));
         lines.add(Component.literal("Guarding requires the opposite hand to be empty.").withStyle(ChatFormatting.DARK_RED));
         lines.add(Component.literal("An occupied opposite hand halves attack speed.").withStyle(ChatFormatting.DARK_RED));
         lines.add(Component.literal("Does not stop environmental hazards.").withStyle(ChatFormatting.DARK_GRAY));
+        WeaponTooltipLayout.details(lines,detailStart);
     }
     private static ItemStack stackFor(Player player, InteractionHand hand) { return player.getItemInHand(hand); }
 }

@@ -1,17 +1,19 @@
 # Nanonaitor's Arsenal — Forge 1.20.1
 
-Version **0.1.0-beta.7**. Independent port targeting **Java 17 / Forge 47.4.18**,
+Version **0.1.5**. Independent port targeting **Java 17 / Forge 47.4.18**,
 the Forge version installed in Restless Horizons. Core mechanics are based on
-Arsenal 1.12.2 2.0.1; the newer Java branch supplies the modern input and model foundation.
+Arsenal 1.12.2, with fixes reviewed through 2.0.6. See [PARITY-0.1.1.md](PARITY-0.1.1.md) for changes, tests and compatibility limits.
 
-This is a test beta, not a claim of complete 1.12.2 parity or full modpack certification.
+This release does not claim complete 1.12.2 parity or full modpack certification.
+Optional JustLevelingFork Strength requirements, tier defaults and the config switch
+are documented in [LEVEL-REQUIREMENTS-0.1.2.md](LEVEL-REQUIREMENTS-0.1.2.md).
 This branch is independent of the 1.12.2 and 26.1.2 source trees.
 
 ## Install for testing
 
 1. Back up your test world's folder before adding a new mod.
 2. Use a **Minecraft Java 1.20.1 Forge** profile with Forge 47.4.18 or later 47.x.
-3. Copy `build/libs/nanonaitors-arsenal-1.20.1-0.1.0-beta.7.jar` into that profile's `mods` folder.
+3. Copy `build/libs/nanonaitors-arsenal-1.20.1-0.1.0.jar` into that profile's `mods` folder.
 4. Do not include a 1.12.2/26.1.2 Arsenal JAR or a second version of this port.
 5. Start Minecraft and find the **Arsenal** creative tab. A new world is not required,
    but a disposable creative world is recommended for the first tests.
@@ -28,11 +30,11 @@ Controls below use the default attack/use bindings (left/right mouse).
 | --- | --- |
 | Morning Star | Hold Attack to charge, release to sweep. Full charge applies stacking Armor Fracture and a 20% Stunned chance. |
 | Scimitar | Weakness on hits. Paired blades alternate attacks; hold Use to cross-guard. A lone offhand Scimitar can attack with Use. |
-| Claws | Empty offhand creates a linked matching claw. Attack/Use drive each hand; fully charged paired hits bypass normal hit immunity, and every fourth charged combo hit is a critical. |
+| Claws | Empty offhand creates a linked matching claw. Attack/Use drive each hand; fully charged paired hits bypass normal hit immunity with a shared four-tick minimum per player/target. No guaranteed combo critical. |
 | Flail | Hold Attack for timed area strikes and the rendered chain/spike-ball orbit. |
-| Battering Ram | Hold Attack with an empty offhand to charge forward and crush eligible blocks. Hunger must exceed three bars; charge direction is locked. Respects Forge block-break cancellation. |
+| Battering Ram | Hold Use with an empty offhand to charge forward and crush eligible blocks. Attack normally for extra knockback. Hunger must exceed three bars; charge direction is locked. |
 | Ball & Chain | Hold Attack to wind, release to throw/return. Hold Use while winding for faster rotation. Use while idle with an empty offhand to guard. |
-| Blade Staff | Hold Attack with an empty offhand to auto-strike. Hits splash nearby enemies. Use for a one-second reflection window. |
+| Blade Staff | Normal attack controls; hits splash nearby enemies. Use for a one-second combat reflection window. Does not block environmental damage. |
 | Tartsy Shield | Use to guard; Attack while guarding to dash. A confirmed dash hit primes a critical hit. |
 | Sun-War Bulwark | Two-handed guard, armor-scaled bash, passive mitigation and movement penalties. |
 
@@ -40,9 +42,9 @@ Controls below use the default attack/use bindings (left/right mouse).
 
 | Effective charge | Base reach | Throw damage |
 | --- | --- | --- |
-| 1 | 4 blocks | 1.25× |
-| 2 | 8 blocks | 1.75× |
-| 3 | 12 blocks | 2.25× |
+| 1 | 4 blocks | 1× |
+| 2 | 8 blocks | 1.5× |
+| 3 | 12 blocks | 2× |
 
 Gold reaches full power in two rotations. Silver does so with its matching armor
 set when the set-bonus option is enabled. Long Chain and live Forge reach attributes
@@ -98,7 +100,7 @@ the registry entry or existing saved enchantment data.
 ## Important differences / still needs playtesting
 
 - Blooded Dragonbone and venom upgrades use data-preserving crafting recipes.
-  Native Dragonforge processing is **not** integrated in this beta: the inspected
+  Native Dragonforge processing is **not** integrated in this release: the inspected
   1.20.1 API lacks the original preserve-NBT option. This avoids silently losing
   names, enchantments, quality data and wear during an upgrade.
 - Electric Dragonbone has its damage matchup bonus, knockback and a visual-only

@@ -12,8 +12,9 @@ final class ClientModels {
     boolean active=stack.hasTag() && stack.getTag().getBoolean("ArsenalActive");
     if(entity!=null){
      boolean using=entity.isUsingItem() && entity.getUseItem()==stack;
-     if(kind==WeaponKind.BLADE_STAFF || kind==WeaponKind.BATTERING_RAM || kind==WeaponKind.BALL_AND_CHAIN) active|=using;
-     if(kind==WeaponKind.SCIMITAR) active=entity.isUsingItem()
+     if(kind==WeaponKind.BLADE_STAFF || kind==WeaponKind.BATTERING_RAM) active|=using;
+     if(kind==WeaponKind.SCIMITAR) active=entity instanceof net.minecraft.world.entity.player.Player p
+         && com.nanonaitor.arsenal.combat.ParityRules.guarding(p)
          && entity.getMainHandItem().getItem() instanceof ArsenalWeaponItem main && main.kind()==WeaponKind.SCIMITAR
          && entity.getOffhandItem().getItem() instanceof ArsenalWeaponItem off && off.kind()==WeaponKind.SCIMITAR;
      if(kind==WeaponKind.BLADE_STAFF) active=AbilityVisualState.staffReflecting(entity);
@@ -24,6 +25,10 @@ final class ClientModels {
     }
     return active?1:0;
    })));
+  ModItems.WEAPONS.get(WeaponKind.BALL_AND_CHAIN).values().forEach(entry ->
+   ItemProperties.register(entry.get(),new ResourceLocation(ArsenalMod.MOD_ID,"guarding"),(stack,level,entity,seed)->
+    entity!=null && entity.isUsingItem() && entity.getUseItem()==stack && entity.getOffhandItem().isEmpty()
+      && !(stack.hasTag() && stack.getTag().getBoolean("ArsenalActive")) ? 1 : 0));
   for(var shield:new net.minecraft.world.item.Item[]{ModItems.SUN_WAR.get(),ModItems.TARTSY_SHIELD.get()})
    ItemProperties.register(shield,new ResourceLocation("blocking"),(stack,level,entity,seed)->entity!=null && entity.isUsingItem() && entity.getUseItem()==stack?1:0);
  }

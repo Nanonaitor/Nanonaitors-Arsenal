@@ -82,6 +82,7 @@ public final class CombatEvents {
         new HashMap<>();
     private static final ThreadLocal<Boolean> REFLECTING_DAMAGE = ThreadLocal.withInitial(() -> false);
     private static final ThreadLocal<Boolean> BLADE_STAFF_AOE_DAMAGE = ThreadLocal.withInitial(() -> false);
+    private static final ThreadLocal<Boolean> BULWARK_BASH_DAMAGE = ThreadLocal.withInitial(() -> false);
     private static final String TARTSY_CRIT = "ArsenalTartsyCritical";
     private static final java.util.UUID PERMANENT_FRACTURE = java.util.UUID.nameUUIDFromBytes("nanonaitors_arsenal:ball_chain_fracture".getBytes(java.nio.charset.StandardCharsets.UTF_8));
     private static final String CLAW_LAST_HAND = "ArsenalClawLastHand", CLAW_LAST_TARGET = "ArsenalClawLastTarget",
@@ -94,9 +95,11 @@ public final class CombatEvents {
         ItemStack active = player.getUseItem();
         ItemStack main = player.getMainHandItem();
         DamageSource source = event.getSource();
-        if (!REFLECTING_DAMAGE.get() && main.getItem() instanceof ArsenalWeaponItem staff
+        if (main.getItem() instanceof ArsenalWeaponItem staff
             && staff.kind() == WeaponKind.BLADE_STAFF && player.getOffhandItem().isEmpty()
-            && BLADE_STAFF_REFLECT_UNTIL.getOrDefault(player.getUUID(), Long.MIN_VALUE) >= now) {
+            && BLADE_STAFF_REFLECT_UNTIL.getOrDefault(player.getUUID(), Long.MIN_VALUE) >= now
+            && combatSource(player, source) && event.getAmount() > 0) {
+            if (REFLECTING_DAMAGE.get() || player.invulnerableTime > 0) return true;
             if (!player.level().isClientSide && source.getEntity() instanceof LivingEntity attacker
                 && attacker != player && player.level() instanceof ServerLevel level) {
                 PendingEffectReflection pending = new PendingEffectReflection(attacker,
@@ -104,13 +107,15 @@ public final class CombatEvents {
                     now + 2L);
                 PENDING_BLADE_STAFF_EFFECTS.put(player.getUUID(), pending);
                 REFLECTING_DAMAGE.set(true);
+                boolean returned;
                 try {
-                    attacker.hurt(player.damageSources().playerAttack(player), event.getAmount());
-                    if (!isDirectMelee(source)) {
+                    returned = attacker.hurt(player.damageSources().playerAttack(player), event.getAmount());
+                    if (returned && !isDirectMelee(source)) {
                         com.nanonaitor.arsenal.config.ConfiguredEffects.apply(attacker,"bladeStaffReflect",20,0);
                     }
                 }
                 finally { REFLECTING_DAMAGE.set(false); }
+                if (!returned) return true;
                 transferReflectedEffects(player, pending);
                 player.getCooldowns().addCooldown(main.getItem(), recoveryCooldown(player, main, 10));
                 BLADE_STAFF_REFLECT_UNTIL.remove(player.getUUID());
@@ -142,7 +147,7 @@ public final class CombatEvents {
             && !BALLS.containsKey(player.getUUID()) && directedShieldBlocks(player, source)) {
             blocked = true;
         } else if (active.getItem() instanceof ArsenalWeaponItem weapon
-            && weapon.kind() == WeaponKind.SCIMITAR && hasDualScimitars(player)
+            && weapon.kind() == WeaponKind.SCIMITAR && ParityRules.guarding(player)
             && directedShieldBlocks(player, source)) {
             blocked = true;
         }
@@ -150,9 +155,26 @@ public final class CombatEvents {
         if (!player.level().isClientSide) {
             if (active.getItem() instanceof ArsenalWeaponItem weapon
                 && weapon.kind() == WeaponKind.SCIMITAR && hasDualScimitars(player)) {
-                damage(player.getMainHandItem(), player, 1);
-                damage(player.getOffhandItem(), player, 1);
+                int wear = ParityRules.blockWear(event.getAmount());
+                damage(player.getMainHandItem(), player, wear);
+                damage(player.getOffhandItem(), player, wear);
+                var referenceId=new ResourceLocation("spartanshields","iron_basic_shield");
+                ItemStack reference=new ItemStack(BuiltInRegistries.ITEM.containsKey(referenceId)
+                    ? BuiltInRegistries.ITEM.get(referenceId) : net.minecraft.world.item.Items.SHIELD);
+                if (source.getEntity() instanceof LivingEntity attacker
+                    && attacker.getMainHandItem().canDisableShield(reference,player,attacker)
+                    && player.getRandom().nextFloat() < .25F
+                        + .05F * EnchantmentHelper.getBlockEfficiency(attacker) + (attacker.isSprinting() ? .75F : 0)) {
+                    ParityRules.disable(player, 100);
+                    player.level().broadcastEntityEvent(player, (byte)30);
+                }
             } else damage(active, player, 1);
+            if (active.getItem() instanceof ArsenalShieldItem shield
+                && shield.shieldType() == ArsenalShieldItem.Type.SUN_WAR) {
+                int strain = active.getOrCreateTag().getInt("ArsenalGuardStrain") + 1;
+                active.getOrCreateTag().putInt("ArsenalGuardStrain", strain >= 25 ? 0 : strain);
+                if (strain >= 25) { player.getCooldowns().addCooldown(active.getItem(),60); player.stopUsingItem(); }
+            }
             boolean metalGuard = active.getItem() instanceof ArsenalWeaponItem weapon
                 && (weapon.kind() == WeaponKind.BALL_AND_CHAIN
                     || weapon.kind() == WeaponKind.SCIMITAR && hasDualScimitars(player));
@@ -181,15 +203,6 @@ public final class CombatEvents {
                 level.sendParticles(ParticleTypes.CRIT, event.getEntity().getX(), event.getEntity().getY(0.6D), event.getEntity().getZ(), 16, .3D, .3D, .3D, .15D);
                 level.playSound(null, event.getEntity().blockPosition(), SoundEvents.PLAYER_ATTACK_CRIT, SoundSource.PLAYERS, 1.0F, 1.0F);
             }
-        }
-        if (TierEffects.attackingStack(attacker).getItem() instanceof ArsenalShieldItem shield
-            && shield.shieldType() == ArsenalShieldItem.Type.SUN_WAR) {
-            PendingBulwarkAttack pending = PENDING_BULWARK.remove(attacker.getUUID());
-            float chargeMultiplier = pending != null && pending.targetId == event.getEntity().getId()
-                && attacker.level().getGameTime() - pending.gameTime <= 1L
-                ? pending.chargeMultiplier : attackChargeMultiplier(attacker);
-            event.setAmount(bulwarkDamage(attacker) * chargeMultiplier);
-            return;
         }
         ItemStack weapon = TierEffects.attackingStack(attacker);
         if (!(weapon.getItem() instanceof ArsenalWeaponItem arsenal)) return;
@@ -225,7 +238,6 @@ public final class CombatEvents {
             int amplifier = TierEffects.weakness(attacker, arsenal.tier());
             com.nanonaitor.arsenal.config.ConfiguredEffects.apply(target,"scimitarHit",200,amplifier);
         }
-        if (arsenal.kind() == WeaponKind.CLAWS) updateClawChain(event, attacker, target, pending);
     }
 
     /** Paired claws trade crowd control for combo consistency. */
@@ -237,6 +249,8 @@ public final class CombatEvents {
 
     public static boolean onAttackEntity(AttackEntityEvent event) {
         Player player = event.getEntity();
+        if(!com.nanonaitor.arsenal.compat.LevelRequirements.canUse(player,player.getMainHandItem(),true))return true;
+        if (hasDualScimitars(player)) return true;
         if (shieldOwnsInput(player)) return true;
         if (player.getMainHandItem().getItem() instanceof ArsenalShieldItem shield
             && shield.shieldType() == ArsenalShieldItem.Type.SUN_WAR) {
@@ -247,6 +261,7 @@ public final class CombatEvents {
             return false;
         }
         if (!(player.getMainHandItem().getItem() instanceof ArsenalWeaponItem weapon)) return false;
+        if (weapon.kind()==WeaponKind.BATTERING_RAM && RAMS.containsKey(player.getUUID())) return true;
         if (weapon.kind() == WeaponKind.BLADE_STAFF
             && BLADE_STAFF_REFLECT_UNTIL.getOrDefault(player.getUUID(), Long.MIN_VALUE) >= player.level().getGameTime()) return true;
         if (weapon.kind() == WeaponKind.FLAIL || weapon.kind() == WeaponKind.BALL_AND_CHAIN
@@ -255,7 +270,11 @@ public final class CombatEvents {
             && event.getTarget() instanceof LivingEntity target
             && !player.level().isClientSide && player.getAttackStrengthScale(0.5F) >= 1.0F
             && hasMatchingClaws(player);
-        if (piercedFrames && event.getTarget() instanceof LivingEntity target) target.invulnerableTime = 0;
+        if (piercedFrames && event.getTarget() instanceof LivingEntity target) {
+            if(!CLAW_HITS.ready(player,target,player.level().getGameTime()))return true;
+            CLAW_MAIN_PENDING.put(player,target);
+            target.invulnerableTime = 0;
+        }
         if (!player.level().isClientSide && (weapon.kind() == WeaponKind.MORNING_STAR
             || weapon.kind() == WeaponKind.CLAWS)) {
             PENDING_MELEE.put(player.getUUID(), new PendingMeleeAttack(event.getTarget().getId(),
@@ -266,10 +285,13 @@ public final class CombatEvents {
     }
 
     public static boolean onLeftClickBlock(PlayerInteractEvent.LeftClickBlock event) {
+        if(!com.nanonaitor.arsenal.compat.LevelRequirements.canUse(event.getEntity(),event.getEntity().getMainHandItem(),true))return true;
+        if (hasDualScimitars(event.getEntity())) return true;
         if (shieldOwnsInput(event.getEntity())) return true;
         return event.getEntity().getMainHandItem().getItem() instanceof ArsenalWeaponItem weapon
             && (weapon.kind() == WeaponKind.FLAIL || weapon.kind() == WeaponKind.BALL_AND_CHAIN
-                || weapon.kind() == WeaponKind.MORNING_STAR);
+                || weapon.kind() == WeaponKind.MORNING_STAR || weapon.kind() == WeaponKind.CLAWS
+                || weapon.kind() == WeaponKind.LINKED_CLAWS);
     }
 
     public static boolean onEntityJoin(EntityJoinLevelEvent event) {
@@ -293,8 +315,59 @@ public final class CombatEvents {
             && !source.is(DamageTypes.SONIC_BOOM);
     }
 
+    private static boolean combatSource(Player defender, DamageSource source) {
+        return source.getEntity() != defender && (source.getEntity() instanceof LivingEntity
+            || source.getDirectEntity() instanceof net.minecraft.world.entity.projectile.Projectile);
+    }
+
+    public static void prepareBulwarkDamage(LivingHurtEvent event) {
+        if (BULWARK_BASH_DAMAGE.get() || !(event.getSource().getEntity() instanceof Player attacker)
+            || !isDirectMelee(event.getSource())) return;
+        if (TierEffects.attackingStack(attacker).getItem() instanceof ArsenalShieldItem shield
+            && shield.shieldType()==ArsenalShieldItem.Type.SUN_WAR) {
+            PendingBulwarkAttack pending=PENDING_BULWARK.remove(attacker.getUUID());
+            float charge=pending!=null && pending.targetId==event.getEntity().getId()
+                && attacker.level().getGameTime()-pending.gameTime<=1L ? pending.chargeMultiplier : attackChargeMultiplier(attacker);
+            event.setAmount(bulwarkDamage(attacker)*charge);
+        }
+    }
+
+    public static void protectStaffAtHurt(LivingHurtEvent event) {
+        if (event.getEntity() instanceof Player player
+            && player.getMainHandItem().getItem() instanceof ArsenalWeaponItem w
+            && w.kind() == WeaponKind.BLADE_STAFF && player.getOffhandItem().isEmpty()
+            && BLADE_STAFF_REFLECT_UNTIL.getOrDefault(player.getUUID(),Long.MIN_VALUE) >= player.level().getGameTime()
+            && combatSource(player,event.getSource())) { event.setAmount(0); event.setCanceled(true); }
+    }
+
+    private static void scimitarBash(ServerPlayer player) {
+        if (!ParityRules.guarding(player)) return;
+        ItemStack main=player.getMainHandItem(), off=player.getOffhandItem();
+        net.minecraft.world.entity.Entity hit=scimitarTarget(player,main);
+        LivingEntity target=hit==null?null:damageOwner(hit);
+        ParityRules.disable(player,30);
+        player.swinging=false;
+        player.swing(InteractionHand.MAIN_HAND,true);
+        ServerLevel level=player.serverLevel();
+        level.playSound(null,player.blockPosition(),SoundEvents.PLAYER_ATTACK_SWEEP,SoundSource.PLAYERS,1,1);
+        if (target == null) return;
+        DamageSource source=player.damageSources().playerAttack(player);
+        float amount=0;
+        for(ItemStack stack:List.of(main,off)) amount+=EnchantmentBridge.modifyDamage(level,stack,target,source,
+            (float)ParityRules.attribute(player,stack,Attributes.ATTACK_DAMAGE));
+        if (TierEffects.hurtEntityWithStack(main,hit,source,amount)) {
+            for(ItemStack stack:List.of(main,off)) {
+                EnchantmentBridge.doPostAttackEffectsWithItemSource(level,target,source,stack);
+                damage(stack,player,1);
+            }
+            target.knockback(1,player.getX()-target.getX(),player.getZ()-target.getZ());
+        }
+    }
+
     public static void handleControl(ServerPlayer player, byte action, boolean active) {
+        if (player.isSpectator()) return;
         if (action == ModNetwork.CANCEL_WEAPON_INPUTS) { cancelWeaponInputs(player); return; }
+        if(!levelAllowsControl(player,action,active))return;
         if (shieldOwnsInput(player)) {
             cancelWeaponInputs(player);
             if (action != ModNetwork.TARTSY_BASH && action != ModNetwork.BULWARK_BASH
@@ -312,8 +385,9 @@ public final class CombatEvents {
         else if (action == ModNetwork.SCIMITAR_ATTACK) scimitarAttack(player, active);
         else if (action == ModNetwork.BALL_WIND_BOOST) ballWindBoost(player, active);
         else if (action == ModNetwork.TARTSY_BASH) tartsyBash(player);
-        else if (action == ModNetwork.BLADE_STAFF_ATTACK) bladeStaffAttack(player);
+        // Obsolete staff auto-strike packets no longer perform attacks.
         else if (action == ModNetwork.BLADE_STAFF_REFLECT) beginBladeStaffReflection(player);
+        else if (action == ModNetwork.SCIMITAR_BASH) scimitarBash(player);
     }
 
     private static void beginBladeStaffReflection(ServerPlayer player) {
@@ -327,15 +401,35 @@ public final class CombatEvents {
         player.startUsingItem(InteractionHand.MAIN_HAND);
     }
 
+    private static boolean levelAllowsControl(ServerPlayer player,byte action,boolean active) {
+        if(action==ModNetwork.SCIMITAR_ATTACK && ParityRules.pair(player)
+            && (!com.nanonaitor.arsenal.compat.LevelRequirements.canUse(player,player.getMainHandItem(),true)
+                || !com.nanonaitor.arsenal.compat.LevelRequirements.canUse(player,player.getOffhandItem(),true)))return false;
+        if(action==ModNetwork.BULWARK_BASH || action==ModNetwork.TARTSY_BASH
+            || action==ModNetwork.BULWARK_ATTACK || action==ModNetwork.BULWARK_MENU_GUARD)return true;
+        boolean offhand=action==ModNetwork.CLAW || action==ModNetwork.SCIMITAR_ATTACK && active;
+        ItemStack stack=offhand?player.getOffhandItem():player.getMainHandItem();
+        if(action==ModNetwork.SCIMITAR_BASH && !com.nanonaitor.arsenal.compat.LevelRequirements.canUse(player,player.getOffhandItem(),true))return false;
+        if(com.nanonaitor.arsenal.compat.LevelRequirements.canUse(player,stack,true))return true;
+        if(!offhand) {
+            cancelWeaponInputs(player);
+            BLADE_STAFF_REFLECT_UNTIL.remove(player.getUUID());
+            BLADE_STAFF_EFFECT_BASELINE.remove(player.getUUID());
+            if(player.isUsingItem() && player.getUseItem()==stack)player.stopUsingItem();
+        }
+        return false;
+    }
+
     public static boolean shieldOwnsInput(Player player) {
-        return (player.isUsingItem() && player.getUseItem().getItem() instanceof ArsenalShieldItem)
+        return (player.isUsingItem() && (player.getUseItem().getItem() instanceof net.minecraft.world.item.ShieldItem
+            || player.getUseItem().canPerformAction(net.minecraftforge.common.ToolActions.SHIELD_BLOCK)))
             || TARTSY_DASH_UNTIL.getOrDefault(player.getUUID(), Long.MIN_VALUE)
                 >= player.level().getGameTime();
     }
 
     private static void cancelWeaponInputs(ServerPlayer player) {
         BallState ball = BALLS.get(player.getUUID());
-        if (ball != null && !ball.releasing) cancelBall(player);
+        if (ball != null) cancelBall(player);
         cancelMorningStar(player);
         ramControl(player, false);
         flailControl(player, false);
@@ -379,6 +473,9 @@ public final class CombatEvents {
     }
 
     private static void clawAttack(ServerPlayer player) {
+        clawAttack(player,true);
+    }
+    private static void clawAttack(ServerPlayer player,boolean mayDefer) {
         if (!(player.getMainHandItem().getItem() instanceof ArsenalWeaponItem claws) || claws.kind() != WeaponKind.CLAWS
             || !(player.getOffhandItem().getItem() instanceof ArsenalWeaponItem linked) || linked.kind() != WeaponKind.LINKED_CLAWS) return;
         LivingEntity target = clawTarget(player);
@@ -389,9 +486,15 @@ public final class CombatEvents {
         double cooldownTicks = 20.0D / attackSpeed;
         float strength = previous == Long.MIN_VALUE ? 1.0F
             : (float)Math.max(0.0D, Math.min(1.0D, (now - previous + 0.5D) / cooldownTicks));
-        LAST_CLAW_OFFHAND.put(player.getUUID(), now);
         if (target == null) return;
         boolean pierceFrames = strength >= 1.0F;
+        if(pierceFrames && !CLAW_HITS.ready(player,target,now)) {
+            if(mayDefer)CLAW_DEFERRED.putIfAbsent(player,new DeferredClaw(target,player.getMainHandItem(),now+4));
+            return;
+        }
+        CLAW_DEFERRED.remove(player);
+        LAST_CLAW_OFFHAND.put(player.getUUID(), now);
+        int oldInvulnerability=target.invulnerableTime;
         if (pierceFrames) {
             target.invulnerableTime = 0;
         }
@@ -405,6 +508,7 @@ public final class CombatEvents {
         PENDING_MELEE.put(player.getUUID(), new PendingMeleeAttack(target.getId(), now,
             WeaponKind.CLAWS, strength >= 0.9F, 1, pierceFrames));
         if (target.hurt(source, damage)) {
+            if(pierceFrames)CLAW_HITS.confirmed(player,target,now);
             if (enchantedKnockback > 0.0F) {
                 double yaw = Math.toRadians(player.getYRot());
                 target.knockback(enchantedKnockback, Math.sin(yaw), -Math.cos(yaw));
@@ -413,7 +517,7 @@ public final class CombatEvents {
             player.getMainHandItem().hurtAndBreak(1, player, e -> e.broadcastBreakEvent(EquipmentSlot.MAINHAND));
             syncClawPair(player);
             level.playSound(null, player.blockPosition(), SoundEvents.PLAYER_ATTACK_STRONG, SoundSource.PLAYERS, 1.0F, 1.15F);
-        }
+        } else target.invulnerableTime=oldInvulnerability;
     }
 
     private static void bulwarkAttack(ServerPlayer player, boolean offhand) {
@@ -444,7 +548,8 @@ public final class CombatEvents {
             return;
         }
         ItemStack bulwark = equippedShield(player, ArsenalShieldItem.Type.SUN_WAR);
-        if (bulwark.isEmpty() || !otherHandEmpty(player, bulwark)) return;
+        if (bulwark.isEmpty() || !otherHandEmpty(player, bulwark)
+            || player.getCooldowns().isOnCooldown(bulwark.getItem())) return;
         player.startUsingItem(player.getMainHandItem() == bulwark
             ? InteractionHand.MAIN_HAND : InteractionHand.OFF_HAND);
     }
@@ -455,29 +560,32 @@ public final class CombatEvents {
         if (!(stack.getItem() instanceof ArsenalWeaponItem weapon)
             || weapon.kind() != WeaponKind.SCIMITAR) return;
         boolean dual = hasDualScimitars(player);
+        if (dual && (player.isUsingItem() || ParityRules.disabled(player))) return;
+        if (player.isUsingItem() && !(offhand && player.getUseItem() == player.getMainHandItem()
+            && player.getMainHandItem().getItem() instanceof ArsenalWeaponItem main
+            && (main.kind() == WeaponKind.MORNING_STAR || main.kind() == WeaponKind.FLAIL
+                || main.kind() == WeaponKind.BALL_AND_CHAIN))) return;
         if (!offhand && !dual) return; // ordinary main-hand scimitars use vanilla attacks
         long now = player.level().getGameTime();
         long previous = LAST_SCIMITAR_ATTACK.getOrDefault(player.getUUID(), Long.MIN_VALUE);
-        double attackSpeed = offhand && !dual ? offhandScimitarAttackSpeed(player)
-            : player.getAttributeValue(Attributes.ATTACK_SPEED);
-        double cooldown = 20.0D / Math.max(0.1D, attackSpeed);
+        double cooldown = ParityRules.interval(player, offhand);
         if (previous != Long.MIN_VALUE && now >= previous && now - previous + 0.5D < cooldown) return;
         LAST_SCIMITAR_ATTACK.put(player.getUUID(), now);
-        LivingEntity target = clawTarget(player);
+        net.minecraft.world.entity.Entity hitbox = scimitarTarget(player,stack);
+        LivingEntity target = damageOwner(hitbox);
+        player.swinging = false;
         player.swing(hand, true);
         if (target != null) {
             ServerLevel level = (ServerLevel)player.level();
             DamageSource source = player.damageSources().playerAttack(player);
-            float attributeDamage = (float)player.getAttributeValue(Attributes.ATTACK_DAMAGE);
-            if (offhand) {
-                // Preserve Strength and other external attack modifiers while
-                // replacing the main weapon's contribution with this offhand blade.
-                attributeDamage -= mainHandWeaponAddedDamage(player);
-                attributeDamage += ModItems.roundedScimitarDamage(weapon.tier()) - 1.0F;
-            }
+            float attributeDamage = (float)ParityRules.attribute(player,stack,Attributes.ATTACK_DAMAGE);
             float amount = EnchantmentBridge.modifyDamage(level, stack, target, source, attributeDamage);
-            if (TierEffects.hurtWithStack(stack, target, source, amount)) {
+            if (offhand ? OffhandDamage.hurt(stack,hitbox,target,source,amount)
+                : TierEffects.hurtEntityWithStack(stack,hitbox,source,amount)) {
                 EnchantmentBridge.doPostAttackEffectsWithItemSource(level, target, source, stack);
+                float knockback=EnchantmentBridge.modifyKnockback(level,stack,target,source,0);
+                if(knockback>0) target.knockback(knockback*.5D,Math.sin(Math.toRadians(player.getYRot())),
+                    -Math.cos(Math.toRadians(player.getYRot())));
                 damage(stack, player, 1);
                 level.playSound(null, target.blockPosition(), SoundEvents.PLAYER_ATTACK_STRONG,
                     SoundSource.PLAYERS, 0.85F, offhand ? 1.08F : 0.98F);
@@ -513,10 +621,30 @@ public final class CombatEvents {
     private static LivingEntity clawTarget(ServerPlayer player) {
         double reach = player.getAttributeValue(net.minecraftforge.common.ForgeMod.ENTITY_REACH.get());
         Vec3 from = player.getEyePosition(), to = from.add(player.getLookAngle().scale(reach));
+        BlockHitResult wall=player.level().clip(new net.minecraft.world.level.ClipContext(from,to,
+            net.minecraft.world.level.ClipContext.Block.COLLIDER,net.minecraft.world.level.ClipContext.Fluid.NONE,player));
+        if(wall.getType()==HitResult.Type.BLOCK) {to=wall.getLocation();reach=from.distanceTo(to);}
         EntityHitResult hit = ProjectileUtil.getEntityHitResult(player, from, to,
             player.getBoundingBox().expandTowards(player.getLookAngle().scale(reach)).inflate(1.0D),
             entity -> entity instanceof LivingEntity living && validTarget(player, living), reach * reach);
         return hit != null && hit.getEntity() instanceof LivingEntity living ? living : null;
+    }
+
+    private static LivingEntity damageOwner(net.minecraft.world.entity.Entity entity) {
+        if(entity instanceof LivingEntity living)return living;
+        if(entity instanceof net.minecraftforge.entity.PartEntity<?> part && part.getParent() instanceof LivingEntity living)return living;
+        return null;
+    }
+    private static net.minecraft.world.entity.Entity scimitarTarget(ServerPlayer player,ItemStack stack) {
+        double reach=ParityRules.attribute(player,stack,net.minecraftforge.common.ForgeMod.ENTITY_REACH.get());
+        Vec3 from=player.getEyePosition(),to=from.add(player.getLookAngle().scale(reach));
+        BlockHitResult wall=player.level().clip(new net.minecraft.world.level.ClipContext(from,to,
+            net.minecraft.world.level.ClipContext.Block.COLLIDER,net.minecraft.world.level.ClipContext.Fluid.NONE,player));
+        if(wall.getType()==HitResult.Type.BLOCK){to=wall.getLocation();reach=from.distanceTo(to);}
+        EntityHitResult hit=ProjectileUtil.getEntityHitResult(player,from,to,
+            player.getBoundingBox().expandTowards(to.subtract(from)).inflate(1),
+            entity -> damageOwner(entity)!=null && validTarget(player,damageOwner(entity)),reach*reach);
+        return hit==null?null:hit.getEntity();
     }
 
     private static boolean hasMatchingClaws(Player player) {
@@ -566,10 +694,27 @@ public final class CombatEvents {
         Player player = event.player;
         if (player.level().isClientSide || !(player instanceof ServerPlayer server)) return;
         pairClaws(player);
+        tickClawState(server);
         updateBulwarkMovement(player);
         updateOccupiedHandAttackPenalty(player);
         updateDualScimitarAttackSpeed(player);
         updateScimitarGuardModels(player);
+        if(!com.nanonaitor.arsenal.compat.LevelRequirements.canUse(player,player.getMainHandItem(),false)) {
+            cancelWeaponInputs(server);
+            BLADE_STAFF_REFLECT_UNTIL.remove(player.getUUID());
+            BLADE_STAFF_EFFECT_BASELINE.remove(player.getUUID());
+        }
+        if(player.isUsingItem() && (!com.nanonaitor.arsenal.compat.LevelRequirements.canUse(player,player.getUseItem(),false)
+            || ParityRules.guarding(player) && !com.nanonaitor.arsenal.compat.LevelRequirements.canUse(player,player.getOffhandItem(),false)))player.stopUsingItem();
+        if ((!ParityRules.pair(player) || ParityRules.disabled(player)) && player.isUsingItem()
+            && ParityRules.scimitar(player.getUseItem())) player.stopUsingItem();
+        if (player.tickCount % 20 == 0) {
+            for (int i=0;i<player.getInventory().getContainerSize();i++) {
+                ItemStack stack=player.getInventory().getItem(i);
+                if (stack.getItem() instanceof ArsenalShieldItem s && s.shieldType()==ArsenalShieldItem.Type.SUN_WAR)
+                    stack.getOrCreateTag().putInt("ArsenalGuardStrain",Math.max(0,stack.getOrCreateTag().getInt("ArsenalGuardStrain")-1));
+            }
+        }
         if (shieldOwnsInput(player)) cancelWeaponInputs(server);
         updateBall(server);
         updateRam(server);
@@ -609,7 +754,8 @@ public final class CombatEvents {
         boolean valid = stack.getItem() instanceof ArsenalWeaponItem weapon
             && weapon.kind() == WeaponKind.BLADE_STAFF && player.getOffhandItem().isEmpty();
         if (!valid) {
-            player.stopUsingItem();
+            if(player.isUsingItem() && player.getUseItem().getItem() instanceof ArsenalWeaponItem active
+                && active.kind()==WeaponKind.BLADE_STAFF)player.stopUsingItem();
             BLADE_STAFF_REFLECT_UNTIL.remove(player.getUUID());
             BLADE_STAFF_EFFECT_BASELINE.remove(player.getUUID());
             return;
@@ -1216,12 +1362,16 @@ public final class CombatEvents {
         InteractionHand hand = player.getMainHandItem() == active
             ? InteractionHand.MAIN_HAND : InteractionHand.OFF_HAND;
         player.swing(hand, true);
-        float damage = bulwarkDamage(player) * attackChargeMultiplier(player);
+        float damage = bulwarkDamage(player);
         ServerLevel level = (ServerLevel)player.level();
         ItemStack bulwark = active;
         for (LivingEntity target : level.getEntitiesOfClass(LivingEntity.class, player.getBoundingBox().inflate(4.0D),
                 target -> validTarget(player, target) && player.distanceToSqr(target) <= 16.0D)) {
-            if (target.hurt(player.damageSources().playerAttack(player), damage)) {
+            boolean hit;
+            BULWARK_BASH_DAMAGE.set(true);
+            try { hit = target.hurt(player.damageSources().playerAttack(player), damage); }
+            finally { BULWARK_BASH_DAMAGE.remove(); }
+            if (hit) {
                 target.knockback(1.4D, player.getX() - target.getX(), player.getZ() - target.getZ());
                 damage(bulwark, player, 1);
                 if (bulwark.isEmpty()) break;
@@ -1263,24 +1413,16 @@ public final class CombatEvents {
     private static void updateDualScimitarAttackSpeed(Player player) {
         var speed = player.getAttribute(Attributes.ATTACK_SPEED);
         if (speed == null) return;
-        if (!hasDualScimitars(player)) {
-            speed.removeModifier(DUAL_SCIMITAR_ATTACK_SPEED);
-            return;
-        }
-        // Add the second blade's full speed. External speed bonuses and penalties
-        // remain effective instead of being clamped to two attacks per second.
-        double secondBladeSpeed = Math.max(0.0D,
-            4.0D + WeaponKind.SCIMITAR.speedModifier);
-        replaceTransient(speed, new AttributeModifier(DUAL_SCIMITAR_ATTACK_SPEED, "Arsenal modifier",
-            secondBladeSpeed, AttributeModifier.Operation.ADDITION));
+        // Remove the old global bonus; only the scheduler combines per-hand speeds.
+        speed.removeModifier(DUAL_SCIMITAR_ATTACK_SPEED);
     }
 
     private static void updateScimitarGuardModels(Player player) {
-        boolean guard = player.isUsingItem() && hasDualScimitars(player)
-            && player.getUseItem().getItem() instanceof ArsenalWeaponItem used
-            && used.kind() == WeaponKind.SCIMITAR;
+        boolean guard = ParityRules.guarding(player);
         for (int slot = 0; slot < player.getInventory().getContainerSize(); slot++) {
             ItemStack stack = player.getInventory().getItem(slot);
+            if (ParityRules.scimitar(stack)) stack.getOrCreateTag().putBoolean("ArsenalPaired",
+                hasDualScimitars(player) && (stack==player.getMainHandItem() || stack==player.getOffhandItem()));
             if (stack.getItem() instanceof ArsenalWeaponItem weapon
                 && weapon.kind() == WeaponKind.SCIMITAR) setFlailFlag(stack,
                     guard && stack == player.getOffhandItem());
@@ -1304,7 +1446,7 @@ public final class CombatEvents {
     }
 
     private static float ballDamageMultiplier(Player player, WeaponTier tier, int charge) {
-        return new float[]{0, 1.25F, 1.75F, 2.25F}[TierEffects.effectiveCharge(player, tier, charge)];
+        return ParityRules.ballMultiplier(TierEffects.effectiveCharge(player, tier, charge));
     }
     private static float ballKnockback(WeaponTier tier, int charge) {
         return tier == WeaponTier.GOLD ? 2.40F * charge / 2.0F : 0.75F + charge * 0.55F;
@@ -1355,7 +1497,9 @@ public final class CombatEvents {
         return ItemStack.EMPTY;
     }
     private static boolean validTarget(Player player, LivingEntity target) {
-        return target != player && target.isAlive() && !player.isAlliedTo(target);
+        return !player.isSpectator() && target != player && target.isAlive() && !target.isSpectator()
+            && !player.isAlliedTo(target) && (!(target instanceof Player other)
+                || player.canHarmPlayer(other) && (player.getServer()==null || player.getServer().isPvpAllowed()));
     }
     private static double stopDistance(ServerLevel level, Vec3 start, Vec3 direction, double distance) {
         Vec3 normalized = direction.normalize();
@@ -1438,36 +1582,33 @@ public final class CombatEvents {
             this.tier = tier;
         }
     }
-    private static void updateClawChain(LivingHurtEvent event, Player attacker, LivingEntity target,
-            PendingMeleeAttack pending) {
-        int previousHand = attacker.getPersistentData().getInt(CLAW_LAST_HAND);
-        int previousTarget = attacker.getPersistentData().getInt(CLAW_LAST_TARGET);
-        int chain = attacker.getPersistentData().getInt(CLAW_CRIT_CHAIN);
-        boolean valid = pending != null && pending.kind == WeaponKind.CLAWS && pending.fullyCharged
-            && hasMatchingClaws(attacker)
-            && pending.targetId == target.getId() && attacker.level().getGameTime() - pending.gameTime <= 1L;
-        if (!valid) chain = 0;
-        else chain++;
-        if (chain >= 4) {
-            event.setAmount(event.getAmount() * 1.5F);
-            chain = 0;
-            if (attacker.level() instanceof ServerLevel level) {
-                level.sendParticles(ParticleTypes.CRIT, target.getX(), target.getY(0.6D), target.getZ(),
-                    14, target.getBbWidth() * 0.35D, target.getBbHeight() * 0.25D, target.getBbWidth() * 0.35D, 0.18D);
-                level.playSound(null, target.blockPosition(), SoundEvents.PLAYER_ATTACK_CRIT,
-                    SoundSource.PLAYERS, 1.0F, 1.15F);
-            }
+    private static final PairedClawHitLimiter<Player,LivingEntity> CLAW_HITS=new PairedClawHitLimiter<>();
+    private static final Map<Player,LivingEntity> CLAW_MAIN_PENDING=new java.util.WeakHashMap<>();
+    private static final Map<Player,DeferredClaw> CLAW_DEFERRED=new java.util.WeakHashMap<>();
+    private record DeferredClaw(LivingEntity target,ItemStack stack,long expires) {}
+    public static void confirmClawHit(Player player,LivingEntity target) {
+        if(CLAW_MAIN_PENDING.remove(player)==target)CLAW_HITS.confirmed(player,target,player.level().getGameTime());
+    }
+    private static void tickClawState(ServerPlayer player) {
+        CLAW_MAIN_PENDING.remove(player);
+        for(String key:List.of(CLAW_CRIT_CHAIN,CLAW_LAST_HAND,CLAW_LAST_TARGET))player.getPersistentData().remove(key);
+        for(int slot=0;slot<player.getInventory().getContainerSize();slot++) {
+            ItemStack stack=player.getInventory().getItem(slot);
+            if(stack.hasTag() && stack.getItem() instanceof ArsenalWeaponItem weapon
+                && (weapon.kind()==WeaponKind.CLAWS || weapon.kind()==WeaponKind.LINKED_CLAWS))
+                for(String key:List.of(CLAW_CRIT_CHAIN,CLAW_LAST_HAND,CLAW_LAST_TARGET,"ClawCriticalChain"))stack.getTag().remove(key);
         }
-        if (pending != null && pending.piercedFrames && attacker.level() instanceof ServerLevel level) {
-            level.sendParticles(ParticleTypes.CRIT, target.getX(), target.getY(0.6D), target.getZ(),
-                8, target.getBbWidth() * 0.25D, target.getBbHeight() * 0.20D,
-                target.getBbWidth() * 0.25D, 0.12D);
-            level.playSound(null, target.blockPosition(), SoundEvents.PLAYER_ATTACK_CRIT,
-                SoundSource.PLAYERS, 0.9F, 1.35F);
+        DeferredClaw pending=CLAW_DEFERRED.get(player);
+        if(pending==null)return;
+        long now=player.level().getGameTime();
+        if(now>pending.expires || player.getMainHandItem()!=pending.stack || !hasMatchingClaws(player)
+            || shieldOwnsInput(player) || !validTarget(player,pending.target) || clawTarget(player)!=pending.target
+            || !com.nanonaitor.arsenal.compat.LevelRequirements.canUse(player,pending.stack,false)) {
+            CLAW_DEFERRED.remove(player);return;
         }
-        attacker.getPersistentData().putInt(CLAW_CRIT_CHAIN, chain);
-        attacker.getPersistentData().putInt(CLAW_LAST_HAND, pending == null ? 0 : pending.hand);
-        attacker.getPersistentData().putInt(CLAW_LAST_TARGET, target.getId());
+        if(CLAW_HITS.ready(player,pending.target,now)) {
+            CLAW_DEFERRED.remove(player);clawAttack(player,false);
+        }
     }
 
     private record PendingMeleeAttack(int targetId, long gameTime, WeaponKind kind, boolean fullyCharged,

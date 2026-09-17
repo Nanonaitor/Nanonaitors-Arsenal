@@ -24,6 +24,7 @@ import net.minecraft.world.phys.Vec3;
 
 public final class ClientControls {
     private static boolean shieldAttackLatched;
+    private static boolean scimitarBashLatched;
     private static boolean ballWasDown, ballWindBoostWasDown, flailWasDown, morningStarCharging;
     private static long lastFlailHeartbeat = Long.MIN_VALUE, lastHeartbeat = Long.MIN_VALUE;
     private static boolean ramLocked;
@@ -46,6 +47,17 @@ public final class ClientControls {
     private static ItemStack activeFlailSprite = ItemStack.EMPTY, activeBallSprite = ItemStack.EMPTY;
 
     public static void register() {
+        net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(ClientTooltip::requirements);
+        net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext.get().getModEventBus().addListener(
+            (net.minecraftforge.client.event.RegisterItemDecorationsEvent event) -> event.register(
+                com.nanonaitor.arsenal.registry.ModItems.SUN_WAR.get(), (graphics,font,stack,x,y) -> {
+                    int strain=stack.hasTag()?stack.getTag().getInt("ArsenalGuardStrain"):0;
+                    if(strain>0) {
+                        graphics.fill(x+2,y+10,x+15,y+12,0xFF000000);
+                        graphics.fill(x+2,y+10,x+2+Math.max(1,Math.round(13F*strain/25F)),y+11,0xFFFFD23F);
+                    }
+                    return false;
+                }));
         // Register every extensible enum before any humanoid switch table is built.
         WeaponClientExtensions.bootstrap();
         ShieldClientExtensions.bootstrap();
@@ -66,6 +78,7 @@ public final class ClientControls {
         Minecraft minecraft = Minecraft.getInstance();
         LocalPlayer player = minecraft.player;
         if (player == null) { clearFlailSprite(); clearBallSprite(); ballWasDown = false; flailWasDown = false;
+            scimitarBashLatched = false;
             shieldAttackLatched = false;
             if (morningStarCharging) ModNetwork.send(ModNetwork.MORNING_STAR, false);
             ramLocked = false; mainClawWasDown = false; offhandClawWasDown = false;
@@ -74,12 +87,24 @@ public final class ClientControls {
             offhandScimitarWasDown = false; bladeStaffReflectUntil = Long.MIN_VALUE; return; }
         boolean attack = minecraft.screen == null && minecraft.options.keyAttack.isDown();
         updateScimitarGuardModels(player);
+        if (!attack) scimitarBashLatched = false;
+        // Minecraft can consume attack clicks while using an item before firing
+        // InteractionKeyMappingTriggered. Poll the bound key too, once per press.
+        if (attack && (scimitarBashLatched
+            || com.nanonaitor.arsenal.combat.ParityRules.guarding(player))) {
+            requestScimitarBash(player);
+            if (minecraft.gameMode != null) minecraft.gameMode.stopDestroyBlock();
+            return;
+        }
+        if (com.nanonaitor.arsenal.combat.ParityRules.pair(player) && minecraft.gameMode != null)
+            minecraft.gameMode.stopDestroyBlock();
         tickMenuBulwarkGuard(minecraft, player);
         long now = player.level().getGameTime();
         tickBladeStaffReflection(player, now);
         if (!attack) shieldAttackLatched = false;
         boolean shieldUsing = player.isUsingItem()
-            && player.getUseItem().getItem() instanceof ArsenalShieldItem;
+            && (player.getUseItem().getItem() instanceof net.minecraft.world.item.ShieldItem
+                || player.getUseItem().canPerformAction(net.minecraftforge.common.ToolActions.SHIELD_BLOCK));
         if (shieldUsing || shieldAttackLatched) {
             if (ballWasDown || morningStarCharging || ramLocked || flailWasDown)
                 ModNetwork.send(ModNetwork.CANCEL_WEAPON_INPUTS, true);
@@ -87,8 +112,9 @@ public final class ClientControls {
             morningStarCharging = false; ramLocked = false; flailWasDown = false;
             mainClawWasDown = false; offhandClawWasDown = false;
             clearFlailSprite();
-            if (!ballRelease(now)) clearBallSprite();
-            if (attack && shieldUsing) {
+            ballReleaseStarted=Long.MIN_VALUE;
+            clearBallSprite();
+            if (attack && shieldUsing && player.getUseItem().getItem() instanceof ArsenalShieldItem) {
                 ArsenalShieldItem shield = (ArsenalShieldItem) player.getUseItem().getItem();
                 ModNetwork.send(shield.shieldType() == ArsenalShieldItem.Type.TARTSY
                     ? ModNetwork.TARTSY_BASH : ModNetwork.BULWARK_BASH, true);
@@ -97,6 +123,13 @@ public final class ClientControls {
             return;
         }
         tickOffhandWeapons(minecraft, player, attack);
+        if(!com.nanonaitor.arsenal.compat.LevelRequirements.canUse(player,player.getMainHandItem(),
+            attack || minecraft.options.keyUse.isDown())) {
+            if(ballWasDown || flailWasDown || morningStarCharging || ramLocked)ModNetwork.send(ModNetwork.CANCEL_WEAPON_INPUTS,true);
+            ballWasDown=ballWindBoostWasDown=flailWasDown=morningStarCharging=ramLocked=false;
+            ballReleaseStarted=bladeStaffReflectUntil=Long.MIN_VALUE;
+            clearBallSprite();clearFlailSprite();return;
+        }
         if (!(player.getMainHandItem().getItem() instanceof ArsenalWeaponItem weapon)) {
             if (ballWasDown) ModNetwork.send(ModNetwork.BALL_CHAIN, false);
             if (ballWindBoostWasDown) ModNetwork.send(ModNetwork.BALL_WIND_BOOST, false);
@@ -107,20 +140,7 @@ public final class ClientControls {
             ballWasDown = false; ballWindBoostWasDown = false; flailWasDown = false; ramLocked = false;
             mainClawWasDown = false; offhandClawWasDown = false; morningStarCharging = false; return;
         }
-        if (weapon.kind() == WeaponKind.BLADE_STAFF) {
-            boolean auto = attack && player.getOffhandItem().isEmpty() && !bladeStaffReflecting(now);
-            double cooldown = 20.0D / Math.max(0.1D,
-                player.getAttributeValue(Attributes.ATTACK_SPEED));
-            if (auto && player.getAttackStrengthScale(0.5F) >= 0.95F
-                && elapsed(now, lastBladeStaffAutoAttack, cooldown)) {
-                player.swing(InteractionHand.MAIN_HAND, true);
-                ModNetwork.send(ModNetwork.BLADE_STAFF_ATTACK, true);
-                // The server-side attack resets attack strength. Resetting it here
-                // first made the packet intermittently fail server validation.
-                lastBladeStaffAutoAttack = now;
-            }
-            bladeStaffWasDown = attack;
-        } else bladeStaffWasDown = false;
+        // Blade Staff uses ordinary attack input, not Arsenal auto-swing.
         if (weapon.kind() == WeaponKind.CLAWS) {
             tickClawAutoAttacks(minecraft, player, weapon, now);
         } else {
@@ -222,7 +242,8 @@ public final class ClientControls {
             ballWindBoostWasDown = false; clearBallSprite();
         }
         if (weapon.kind() == WeaponKind.BATTERING_RAM) {
-            boolean charging = attack && emptyOffhand && (player.isCreative() || player.getFoodData().getFoodLevel() > 6);
+            boolean charging = minecraft.screen == null && minecraft.options.keyUse.isDown()
+                && emptyOffhand && (player.isCreative() || player.getFoodData().getFoodLevel() > 6);
             if (charging) {
                 if (!ramLocked) {
                     ramLocked = true;
@@ -252,6 +273,27 @@ public final class ClientControls {
     }
     private static boolean interaction(InputEvent.InteractionKeyMappingTriggered event) {
         var current = Minecraft.getInstance().player;
+        if(current != null && event.isUseItem()
+            && current.getMainHandItem().getItem() instanceof ArsenalWeaponItem
+            && (current.getOffhandItem().getItem() instanceof net.minecraft.world.item.ShieldItem
+                || current.getOffhandItem().canPerformAction(net.minecraftforge.common.ToolActions.SHIELD_BLOCK))) {
+            if (!current.isUsingItem() || current.getUsedItemHand()!=InteractionHand.OFF_HAND) {
+                ModNetwork.send(ModNetwork.CANCEL_WEAPON_INPUTS,true);
+                var mode=Minecraft.getInstance().gameMode;
+                if(mode!=null) mode.useItem(current,InteractionHand.OFF_HAND);
+            }
+            event.setSwingHand(false); return true;
+        }
+        if(current!=null && event.isUseItem() && isScimitar(current.getOffhandItem())
+            && !isScimitar(current.getMainHandItem())
+            && current.getMainHandItem().getItem() instanceof ArsenalWeaponItem) {
+            event.setSwingHand(false); return true;
+        }
+        if (current != null && event.isAttack()
+            && (scimitarBashLatched || com.nanonaitor.arsenal.combat.ParityRules.guarding(current))) {
+            requestScimitarBash(current);
+            event.setSwingHand(false); return true;
+        }
         if (event.isAttack() && current != null && (shieldAttackLatched
             || (current.isUsingItem() && current.getUseItem().getItem() instanceof ArsenalShieldItem))) {
             event.setSwingHand(false);
@@ -261,6 +303,7 @@ public final class ClientControls {
         LocalPlayer player = minecraft.player;
         if (player != null && minecraft.screen == null && event.isUseItem()
             && player.getMainHandItem().getItem() instanceof ArsenalWeaponItem staff
+            && com.nanonaitor.arsenal.compat.LevelRequirements.canUse(player,player.getMainHandItem(),false)
             && staff.kind() == WeaponKind.BLADE_STAFF && player.getOffhandItem().isEmpty()
             && !player.getCooldowns().isOnCooldown(player.getMainHandItem().getItem())
             && !bladeStaffReflecting(player.level().getGameTime())) {
@@ -295,7 +338,7 @@ public final class ClientControls {
         }
         if (event.isAttack() && player != null && minecraft.screen == null
             && player.getMainHandItem().getItem() instanceof ArsenalWeaponItem held
-            && (held.kind() == WeaponKind.FLAIL || held.kind() == WeaponKind.BATTERING_RAM
+            && (held.kind() == WeaponKind.FLAIL || (held.kind() == WeaponKind.BATTERING_RAM && ramLocked)
                 || held.kind() == WeaponKind.MORNING_STAR || held.kind() == WeaponKind.BALL_AND_CHAIN)) {
             // These held attacks are driven continuously from tick(). Suppress vanilla's
             // competing hand swing and block-mining animation; the Ram crushes blocks
@@ -338,7 +381,8 @@ public final class ClientControls {
     private static void tickMenuBulwarkGuard(Minecraft minecraft, LocalPlayer player) {
         boolean menuOpen = minecraft.screen instanceof AbstractContainerScreen<?>;
         InteractionHand hand = bulwarkHandWithFreeOpposite(player);
-        boolean shouldGuard = menuOpen && hand != null;
+        boolean shouldGuard = menuOpen && hand != null
+            && !player.getCooldowns().isOnCooldown(player.getItemInHand(hand).getItem());
         if (shouldGuard == menuBulwarkGuard) return;
         menuBulwarkGuard = shouldGuard;
         if (shouldGuard) {
@@ -351,11 +395,18 @@ public final class ClientControls {
         }
     }
 
+    private static void requestScimitarBash(LocalPlayer player) {
+        if (!scimitarBashLatched && com.nanonaitor.arsenal.combat.ParityRules.guarding(player)) {
+            scimitarBashLatched = true;
+            ModNetwork.send(ModNetwork.SCIMITAR_BASH,true);
+        }
+    }
+
     private static void tickOffhandWeapons(Minecraft minecraft, LocalPlayer player, boolean attack) {
         ItemStack main = player.getMainHandItem(), off = player.getOffhandItem();
         boolean ballWithOffhandScimitar = main.getItem() instanceof ArsenalWeaponItem ball
-            && ball.kind() == WeaponKind.BALL_AND_CHAIN && isScimitar(off)
-            && (ballWasDown || ballRelease(player.level().getGameTime()));
+            && (ball.kind() == WeaponKind.BALL_AND_CHAIN || ball.kind() == WeaponKind.MORNING_STAR
+                || ball.kind() == WeaponKind.FLAIL) && isScimitar(off);
         if (minecraft.screen != null || player.isUsingItem() && !ballWithOffhandScimitar) {
             offhandScimitarWasDown = minecraft.options.keyUse.isDown();
             return;
@@ -372,6 +423,10 @@ public final class ClientControls {
         }
 
         boolean dual = isScimitar(main) && isScimitar(off);
+        if(dual && attack && (!com.nanonaitor.arsenal.compat.LevelRequirements.canUse(player,main,true)
+            || !com.nanonaitor.arsenal.compat.LevelRequirements.canUse(player,off,true)))return;
+        if (dual && (minecraft.options.keyUse.isDown()
+            || com.nanonaitor.arsenal.combat.ParityRules.disabled(player))) return;
         // A lone off-hand Scimitar is a complete weapon regardless of what the
         // main hand contains. Dual Scimitars retain their shared guard/alternation.
         boolean offhandOnly = !dual && isScimitar(off);
@@ -383,11 +438,12 @@ public final class ClientControls {
         if (request && ready) {
             // The server adds the second Scimitar's speed to the shared attack
             // speed attribute. Alternate once per resulting combined cooldown.
-            double attackSpeed = offhandOnly ? offhandScimitarAttackSpeed(player)
-                : player.getAttributeValue(Attributes.ATTACK_SPEED);
-            double cooldown = 20.0D / Math.max(0.1D, attackSpeed);
+            double cooldown = com.nanonaitor.arsenal.combat.ParityRules.interval(player,offhandOnly);
             if (elapsed(now, lastScimitarAttack, cooldown)) {
                 boolean offhandAttack = offhandOnly || scimitarNextOffhand;
+                if(!com.nanonaitor.arsenal.compat.LevelRequirements.canUse(player,
+                    offhandAttack?off:main,true)) { if(dual)scimitarNextOffhand=!scimitarNextOffhand; return; }
+                player.swinging=false;
                 player.swing(offhandAttack ? InteractionHand.OFF_HAND : InteractionHand.MAIN_HAND, true);
                 ModNetwork.send(ModNetwork.SCIMITAR_ATTACK, offhandAttack);
                 lastScimitarAttack = now;
@@ -408,7 +464,8 @@ public final class ClientControls {
         }
         if (!(player.getMainHandItem().getItem() instanceof ArsenalWeaponItem weapon)
             || weapon.kind() != WeaponKind.BLADE_STAFF || !player.getOffhandItem().isEmpty()) {
-            player.stopUsingItem();
+            if(player.isUsingItem() && player.getUseItem().getItem() instanceof ArsenalWeaponItem active
+                && active.kind()==WeaponKind.BLADE_STAFF)player.stopUsingItem();
             bladeStaffReflectUntil = Long.MIN_VALUE;
             return;
         }
@@ -438,10 +495,13 @@ public final class ClientControls {
     }
 
     private static void updateScimitarGuardModels(LocalPlayer player) {
-        boolean guard = player.isUsingItem() && isScimitar(player.getMainHandItem())
-            && isScimitar(player.getOffhandItem()) && isScimitar(player.getUseItem());
+        boolean guard = com.nanonaitor.arsenal.combat.ParityRules.guarding(player);
+        if (com.nanonaitor.arsenal.combat.ParityRules.disabled(player) && isScimitar(player.getUseItem())) player.stopUsingItem();
         for (int slot = 0; slot < player.getInventory().getContainerSize(); slot++) {
             ItemStack stack = player.getInventory().getItem(slot);
+            if (isScimitar(stack)) stack.getOrCreateTag().putBoolean("ArsenalPaired",
+                isScimitar(player.getMainHandItem()) && isScimitar(player.getOffhandItem())
+                    && (stack==player.getMainHandItem() || stack==player.getOffhandItem()));
             if (isScimitar(stack)) setFlailFlag(stack,
                 guard && stack == player.getOffhandItem());
         }

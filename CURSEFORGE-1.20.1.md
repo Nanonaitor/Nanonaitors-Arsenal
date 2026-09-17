@@ -7,9 +7,9 @@ for this Minecraft version; do not replace or remove the 1.12.2 files.
 
 | Field | Value |
 | --- | --- |
-| File | nanonaitors-arsenal-1.20.1-0.1.0-beta.7.jar, from build/libs |
-| Display name | Nanonaitor's Arsenal - 1.20.1 - 0.1.0-beta.7 |
-| Release type | Beta |
+| File | nanonaitors-arsenal-1.20.1-0.1.5.jar, from build/libs |
+| Display name | Nanonaitor's Arsenal - 1.20.1 - 0.1.5 |
+| Release type | Release |
 | Minecraft version | 1.20.1 only |
 | Mod loader | Forge only |
 | Java version, if offered | Java 17 |
@@ -26,14 +26,14 @@ for this Minecraft version; do not replace or remove the 1.12.2 files.
 6. Keep the project license consistent with LICENSE.md (All Rights Reserved).
 7. Submit the file for moderation. Wait for approval before announcing availability.
 
-Beta files require users to allow beta updates in the CurseForge app. Do not
-mark this as Release solely to make it the automatic download.
+The owner has selected Release status. This does not imply that every modpack
+or multiplayer configuration has been tested.
 
 Source branch: https://github.com/Nanonaitor/Nanonaitors-Arsenal/tree/mc-1.20.1
 
 ## Ready-to-paste changelog
 
-### First public Forge 1.20.1 beta — 0.1.0-beta.7
+### First public Forge 1.20.1 release — 0.1.0
 
 Requires Minecraft Java 1.20.1, Forge 47.4.18 or newer 47.x, and Java 17.
 Install Arsenal on both client and server for multiplayer.
@@ -57,7 +57,7 @@ Install Arsenal on both client and server for multiplayer.
 - Build and nine automated gameplay tests passed. Client model checks passed
   for all 255 registered item models before the final input/audio-only patch.
 
-This is a beta: multiplayer, balance, and full modpack compatibility testing
+Multiplayer, balance, and full modpack compatibility testing
 are ongoing. Back up existing worlds before adding or updating mods.
 
 Known differences: Dragonbone/venom upgrades use data-preserving crafting rather
