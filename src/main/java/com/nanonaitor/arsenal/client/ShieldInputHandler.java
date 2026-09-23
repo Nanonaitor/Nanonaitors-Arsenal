@@ -18,14 +18,56 @@ import net.minecraftforge.fml.relauncher.Side;
 
 @Mod.EventBusSubscriber(modid = NanonaitorsArsenal.MOD_ID, value = Side.CLIENT)
 public final class ShieldInputHandler {
+    private static MouseEvent handledAttack;
+    private static boolean bashOwnsAttack;
+    public static boolean suppressWeaponAttack() {
+        if (!BallAndChainInputHandler.isAttackPhysicallyDown()) bashOwnsAttack = false;
+        return bashOwnsAttack;
+    }
     private ShieldInputHandler() {}
 
-    @SubscribeEvent
+    @SubscribeEvent(priority = net.minecraftforge.fml.common.eventhandler.EventPriority.HIGHEST, receiveCanceled = true)
     public static void onMouse(MouseEvent event) {
-        if (event.getButton() != 0 || !event.isButtonstate()) return;
-        EntityPlayerSP player = Minecraft.getMinecraft().player;
-        if (player == null) return;
-        if (ShieldCombat.isGuarding(player, ItemTartsyShield.class)) {
+        Minecraft mc = Minecraft.getMinecraft();
+        int use = mc.gameSettings.keyBindUseItem.getKeyCode();
+        if (mc.player != null && mc.currentScreen == null && use < 0
+            && event.getButton() == use + 100 && event.isButtonstate()
+            && com.nanonaitor.arsenal.combat.AbilityUseRules.shield(mc.player, mc.player.getHeldItemOffhand())) {
+            // Stop the weapon before vanilla checks isHandActive, without starting
+            // a shield ourselves or bypassing block/entity interactions.
+            BallAndChainInputHandler.cancelForShield(mc.player);
+            ModernWeaponInputHandler.cancelMorningCharge(mc.player);
+            ModNetwork.CHANNEL.sendToServer(new com.nanonaitor.arsenal.network.ModernWeaponControlMessage(
+                com.nanonaitor.arsenal.network.ModernWeaponControlMessage.SHIELD_TAKEOVER, true));
+        }
+        handleShieldAttack(event);
+    }
+
+    /** Called before weapon input as well, making dispatch independent of subscriber order. */
+    public static boolean handleShieldAttack(MouseEvent event) {
+        if (event == handledAttack) return true;
+        Minecraft mc = Minecraft.getMinecraft();
+        int attackKey = mc.gameSettings.keyBindAttack.getKeyCode();
+        if (mc.currentScreen != null || attackKey >= 0
+            || event.getButton() != attackKey + 100) return false;
+        EntityPlayerSP player = mc.player;
+        if (player == null) return false;
+        if (bashOwnsAttack) {
+            event.setCanceled(true);
+            if (!event.isButtonstate()) bashOwnsAttack = false;
+            handledAttack = event;
+            return true;
+        }
+        boolean tartsy = ShieldCombat.isGuarding(player, ItemTartsyShield.class);
+        boolean bulwark = ShieldCombat.isGuarding(player, ItemSunWarBulwark.class);
+        if (!tartsy && !bulwark) return false;
+        handledAttack = event;
+        event.setCanceled(true);
+        net.minecraft.client.settings.KeyBinding.setKeyBindState(attackKey, false);
+        while (mc.gameSettings.keyBindAttack.isPressed()) { /* discard weapon/mining clicks */ }
+        if (!event.isButtonstate()) return true;
+        bashOwnsAttack = true;
+        if (tartsy) {
             event.setCanceled(true);
             net.minecraft.util.math.Vec3d look = player.getLookVec();
             double horizontal = Math.sqrt(look.x * look.x + look.z * look.z);
@@ -36,12 +78,12 @@ public final class ShieldInputHandler {
             }
             player.swingArm(player.getActiveHand());
             ModNetwork.CHANNEL.sendToServer(new TartsyBashMessage());
-            return;
+            return true;
         }
-        if (!ShieldCombat.isGuarding(player, ItemSunWarBulwark.class)) return;
         event.setCanceled(true);
         player.swingArm(player.getActiveHand());
         ModNetwork.CHANNEL.sendToServer(new BulwarkBashMessage());
+        return true;
     }
 
     @SubscribeEvent

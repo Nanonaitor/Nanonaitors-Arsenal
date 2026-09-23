@@ -84,6 +84,7 @@ public final class ReskillableCompat {
 
     /** Enforces locks for Arsenal attacks that bypass vanilla interaction events. */
     public static boolean canUse(EntityPlayer player, ItemStack stack) {
+        if(com.nanonaitor.arsenal.combat.AbilityUseRules.cooling(player,stack))return false;
         if (!Loader.isModLoaded("reskillable")) return true;
         resolveUseCheck();
         if (canPlayerUseItem == null) return true;

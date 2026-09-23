@@ -52,7 +52,7 @@ public final class ItemScimitar extends ItemArsenalWeapon {
             && player.getHeldItemOffhand().getItem() instanceof ItemScimitar;
         if (!dual) {
             EnumHand other=hand==EnumHand.MAIN_HAND?EnumHand.OFF_HAND:EnumHand.MAIN_HAND;
-            if (player.getHeldItem(other).getItem() instanceof net.minecraft.item.ItemShield)
+            if (com.nanonaitor.arsenal.combat.AbilityUseRules.shield(player, player.getHeldItem(other)))
                 return new ActionResult<>(EnumActionResult.PASS,held);
             return new ActionResult<>(EnumActionResult.FAIL,held);
         }

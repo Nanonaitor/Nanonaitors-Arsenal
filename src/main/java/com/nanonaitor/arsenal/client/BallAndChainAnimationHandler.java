@@ -57,6 +57,11 @@ public final class BallAndChainAnimationHandler {
             return;
         }
         EntityPlayer player = (EntityPlayer) entity;
+        if (com.nanonaitor.arsenal.combat.AbilityUseRules.activeShield(player)
+            || player == minecraft.player && ShieldUsePriority.requested(player)) {
+            cancelForShield(player);
+            return;
+        }
         WINDUPS.remove(player);
         player.getEntityData().setBoolean("ArsenalBallAndChainActive", true);
         RELEASES.put(player, new ReleaseState(minecraft.world.getTotalWorldTime(),
@@ -96,7 +101,7 @@ public final class BallAndChainAnimationHandler {
         }
         long now = minecraft.world.getTotalWorldTime();
         for (EntityPlayer player : minecraft.world.playerEntities) {
-            if (player.isHandActive() && player.getActiveItemStack().getItem() instanceof net.minecraft.item.ItemShield) {
+            if (com.nanonaitor.arsenal.combat.AbilityUseRules.activeShield(player)) {
                 cancelForShield(player);
                 continue;
             }

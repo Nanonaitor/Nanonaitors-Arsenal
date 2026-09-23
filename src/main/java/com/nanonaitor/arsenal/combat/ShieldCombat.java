@@ -57,6 +57,7 @@ public final class ShieldCombat {
     private ShieldCombat() {}
 
     public static boolean isGuarding(EntityPlayer player, Class<? extends ItemArsenalShield> type) {
+        if(AbilityUseRules.cooling(player,findEquipped(player,type)))return false;
         return player.isHandActive() && type.isInstance(player.getActiveItemStack().getItem())
             || type == ItemSunWarBulwark.class && isBulwarkReady(player)
                 && isBulwarkOffCooldown(player)
@@ -219,6 +220,9 @@ public final class ShieldCombat {
         if (player.world.isRemote || !isGuarding(player, ItemTartsyShield.class)) return;
         ItemStack shield = findEquipped(player, ItemTartsyShield.class);
         if (shield.isEmpty() || player.getCooldownTracker().hasCooldown(shield.getItem())) return;
+        BallAndChainCombat.cancelAbility(player);
+        ModernBackportCombat.cancelMorning(player);
+        player.getEntityData().setLong("ArsenalShieldAttackLock", player.world.getTotalWorldTime() + 20L);
         net.minecraft.util.math.Vec3d look = player.getLookVec();
         double horizontal = Math.sqrt(look.x * look.x + look.z * look.z);
         if (horizontal < 0.001D) return;
@@ -274,6 +278,7 @@ public final class ShieldCombat {
         NBTTagCompound data = player.getEntityData();
         if (now < data.getLong(BASH_READY)) return;
         ItemStack bulwark = findEquipped(player, ItemSunWarBulwark.class);
+        if(AbilityUseRules.cooling(player,bulwark))return;
         int cooldown = shieldCooldown(bulwark, BASH_COOLDOWN_TICKS);
         data.setLong(BASH_READY, now + cooldown);
 

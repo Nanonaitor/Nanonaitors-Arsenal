@@ -48,6 +48,14 @@ public final class ModernBackportCombat {
     private ModernBackportCombat() {}
 
     public static void handleControl(EntityPlayerMP player, byte action, boolean active) {
+        if (action == ModernWeaponControlMessage.SHIELD_TAKEOVER) {
+            if (AbilityUseRules.shield(player, player.getHeldItemOffhand())) {
+                cancelMorning(player);
+                BallAndChainCombat.cancelAbility(player);
+                player.getEntityData().setLong("ArsenalShieldAttackLock", player.world.getTotalWorldTime() + 4);
+            }
+            return;
+        }
         if (action == ModernWeaponControlMessage.MORNING_STAR) morningStar(player, active);
         else if (action == ModernWeaponControlMessage.SCIMITAR_BASH) scimitarBash(player);
         else if (action == ModernWeaponControlMessage.MORNING_CANCEL) cancelMorning(player);
@@ -86,7 +94,7 @@ public final class ModernBackportCombat {
         if (state == null) return;
         ItemStack stack = player.getHeldItemMainhand();
         long now = player.world.getTotalWorldTime();
-        if (!(stack.getItem() instanceof ItemMorningStar) || isUsingShield(player)
+        if (!(stack.getItem() instanceof ItemMorningStar) || AbilityUseRules.cooling(player,stack) || isUsingShield(player)
             || now - state.heartbeat > 4L) {
             cancelMorning(player);
             return;
@@ -104,14 +112,12 @@ public final class ModernBackportCombat {
     }
 
     private static void morningStar(EntityPlayerMP player, boolean active) {
+        if (AbilityUseRules.weaponSuppressed(player)) { cancelMorning(player); return; }
         if (player.isSpectator() || !com.nanonaitor.arsenal.compat.ReskillableCompat.canUse(player, player.getHeldItemMainhand())) {
             cancelMorning(player);
             return;
         }
         if (!active) {
-            if (!MORNING.containsKey(player)
-                && player.getHeldItemMainhand().getItem() instanceof ItemMorningStar)
-                MORNING.put(player, new MorningState(player.world.getTotalWorldTime()));
             releaseMorning(player);
             return;
         }
@@ -131,7 +137,7 @@ public final class ModernBackportCombat {
         state.heartbeat = now;
     }
 
-    private static void cancelMorning(EntityPlayer player) {
+    public static void cancelMorning(EntityPlayer player) {
         MORNING.remove(player);
         if (player.isHandActive() && player.getActiveItemStack().getItem() instanceof ItemMorningStar)
             player.resetActiveHand();
@@ -384,6 +390,7 @@ public final class ModernBackportCombat {
 
     private static void bulwarkAttack(EntityPlayerMP player) {
         ItemStack stack = player.getHeldItemOffhand();
+        if(AbilityUseRules.cooling(player,stack))return;
         if (!(stack.getItem() instanceof ItemSunWarBulwark) || !player.getHeldItemMainhand().isEmpty()
             || player.getCooledAttackStrength(0.5F) < 0.95F) return;
         EntityLivingBase target = aimedTarget(player, reach(player));

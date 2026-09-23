@@ -50,6 +50,8 @@ public final class BatteringRamInputHandler {
         boolean hasChargeEnergy = player.capabilities.isCreativeMode
             || player.getFoodStats().getFoodLevel() > 6;
         boolean canCharge = holdingRam && ArsenalCompatManager.canUseTwoHanded(player)
+            && !ShieldUsePriority.requested(player)
+            && !com.nanonaitor.arsenal.combat.AbilityUseRules.cooling(player,player.getHeldItemMainhand())
             && hasChargeEnergy
             && minecraft.currentScreen == null
             && minecraft.gameSettings.keyBindUseItem.isKeyDown();

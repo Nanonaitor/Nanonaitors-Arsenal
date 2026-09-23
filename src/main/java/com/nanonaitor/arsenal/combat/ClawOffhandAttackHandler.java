@@ -38,6 +38,7 @@ public final class ClawOffhandAttackHandler {
             return;
         }
         if (!ReskillableCompat.canUse(player, main)) return;
+        if(AbilityUseRules.cooling(player,player.getHeldItemOffhand()))return;
         ItemClaws claws = (ItemClaws) main.getItem();
         if (!ClawPairHandler.hasMatchingLinkedClaw(player, claws)) {
             return;

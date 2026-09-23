@@ -39,6 +39,7 @@ public final class ModernWeaponInputHandler {
 
     @SubscribeEvent(priority = EventPriority.HIGHEST, receiveCanceled = true)
     public static void mouse(MouseEvent event) {
+        if (ShieldInputHandler.handleShieldAttack(event)) return;
         EntityPlayerSP player = Minecraft.getMinecraft().player;
         if (player == null) return;
         if (event.getButton() == 0 && player.getHeldItemMainhand().getItem() instanceof ItemScimitar
@@ -66,6 +67,7 @@ public final class ModernWeaponInputHandler {
         }
         if (event.getButton() == 1) {
             boolean ballWinding = player.getHeldItemMainhand().getItem() instanceof ItemBallAndChain
+                && !ShieldUsePriority.requested(player)
                 && BallAndChainInputHandler.isSwinging()
                 && !BallAndChainInputHandler.isGuardingInput();
             boolean offhandScimitar = player.getHeldItemOffhand().getItem() instanceof ItemScimitar
@@ -240,7 +242,7 @@ public final class ModernWeaponInputHandler {
         player.resetCooldown();
     }
 
-    private static void cancelMorningCharge(EntityPlayerSP player) {
+    public static void cancelMorningCharge(EntityPlayerSP player) {
         if (!morning) return;
         morning = false;
         morningStarted = heartbeat = Long.MIN_VALUE;
@@ -254,8 +256,8 @@ public final class ModernWeaponInputHandler {
     }
 
     private static boolean isUsingShield(EntityPlayerSP player) {
-        return player.isHandActive()
-            && player.getActiveItemStack().getItem() instanceof ItemShield;
+        return ShieldUsePriority.requested(player)
+            || com.nanonaitor.arsenal.combat.AbilityUseRules.cooling(player,player.getHeldItemMainhand());
     }
 
     private static boolean mainHandUseHasPriority(Minecraft minecraft,

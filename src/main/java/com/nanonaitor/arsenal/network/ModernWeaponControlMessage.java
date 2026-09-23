@@ -16,6 +16,7 @@ public final class ModernWeaponControlMessage implements IMessage {
     public static final byte BULWARK_ATTACK = 4;
     public static final byte MORNING_CANCEL = 5;
     public static final byte SCIMITAR_BASH = 6;
+    public static final byte SHIELD_TAKEOVER = 7;
     private byte action;
     private boolean active;
 

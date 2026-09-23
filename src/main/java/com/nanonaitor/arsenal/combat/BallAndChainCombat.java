@@ -52,6 +52,12 @@ public final class BallAndChainCombat {
     private static final Map<EntityPlayer, ThrowState> THROWS = new WeakHashMap<>();
 
     private BallAndChainCombat() {}
+    public static void cancelAbility(EntityPlayer player){
+        SWINGS.remove(player);THROWS.remove(player);
+        player.getEntityData().setBoolean("ArsenalBallAndChainActive",false);
+        player.getEntityData().setBoolean("ArsenalBallWindBoost",false);
+        if(player.isHandActive()&&player.getActiveItemStack().getItem() instanceof ItemBallAndChain)player.resetActiveHand();
+    }
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void cancelVanillaAttack(AttackEntityEvent event) {
@@ -72,6 +78,8 @@ public final class BallAndChainCombat {
     }
 
     public static void updateSwinging(EntityPlayerMP player, boolean swinging) {
+        if (AbilityUseRules.weaponSuppressed(player)) { cancelAbility(player); return; }
+        if(AbilityUseRules.cooling(player,player.getHeldItemMainhand())){cancelAbility(player);return;}
         if (usingRealShield(player)) {SWINGS.remove(player);return;}
         if (!swinging) {
             release(player);
@@ -101,6 +109,7 @@ public final class BallAndChainCombat {
             return;
         }
         EntityPlayerMP player = (EntityPlayerMP) event.player;
+        if(AbilityUseRules.cooling(player,player.getHeldItemMainhand())){cancelAbility(player);return;}
         if (usingRealShield(player)) {SWINGS.remove(player);THROWS.remove(player);return;}
         if (updateThrow(player)) {
             return;
@@ -176,7 +185,7 @@ public final class BallAndChainCombat {
     }
 
     private static boolean usingRealShield(EntityPlayer player) {
-        return player.isHandActive() && player.getActiveItemStack().getItem() instanceof net.minecraft.item.ItemShield;
+        return AbilityUseRules.activeShield(player);
     }
 
     private static boolean isValidWielder(EntityPlayerMP player, ItemStack stack) {

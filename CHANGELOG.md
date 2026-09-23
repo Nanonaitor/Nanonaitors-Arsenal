@@ -1,5 +1,34 @@
 # Changelog
 
+## 2.0.13 - 2026-09-23
+
+- Improved interaction priority: chests and trading are handled before shield use;
+  offhand shields take priority over Arsenal weapon abilities.
+- Fixed Battering Ram cleanup interrupting offhand shields and stopped charges
+  from continuing after a shield takes over.
+- Added an explicit Ball & Chain-to-shield handoff and prevented late weapon
+  animation packets from replacing an active shield.
+- Prioritized Tartsy bash input over weapon attacks. A bash consumes its held
+  attack input until release and clears pending Ball & Chain/Morning Star attacks.
+- Removed Morning Star's fallback attack from release messages without an active charge.
+- Extended item-cooldown checks across weapon abilities, paired Claws and shields,
+  while preserving Blade Staff's own reflection cooldown behavior.
+- Includes the legacy RLCombat compatibility and Blade Staff shield-priority
+  fixes listed in 2.0.9.
+
+## 2.0.9 - 2026-09-16
+
+- Fixed dual-scimitar auto-attack crashing with RLCombat 2.0.8 (RLCraft 2.9.3).
+  The compatibility bridge now supports both the legacy two-argument and modern
+  five-argument modifier helpers, retaining RLCombat's actual attack handling.
+- Resolved related legacy scimitar-bash enchantment compatibility without requiring
+  the newer EnchantCompatHandler class on older RLCombat installations.
+- Blade Staff now explicitly yields use input to an offhand shield, including
+  remapped keyboard use controls. Any active reflection is cleared before shield
+  activation; the shield's normal restrictions and cooldowns remain in effect.
+- Corrected the outdated Blade Staff tooltip that claimed continuous attacks.
+- Includes 2.0.8 claw balance and 2.0.7 enchantment compatibility fixes.
+
 ## 2.0.8 - 2026-09-15
 
 - Removed paired Claws' guaranteed fourth-hit critical and all critical banking.

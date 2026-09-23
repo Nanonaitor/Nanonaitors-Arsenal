@@ -31,6 +31,7 @@ public final class ClawCombat {
     public static boolean prepareMainHandAttack(EntityPlayer player, EntityLivingBase target,
                                              ItemClaws item, ItemStack stack,
                                              boolean fullyCharged) {
+        if(AbilityUseRules.cooling(player,stack))return false;
         boolean paired = ClawPairHandler.hasMatchingLinkedClaw(player, item);
         boolean canPierce = paired && fullyCharged;
         if(canPierce && !canPierceNow(player,target)) {

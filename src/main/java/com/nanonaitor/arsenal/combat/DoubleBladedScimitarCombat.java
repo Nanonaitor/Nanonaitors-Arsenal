@@ -43,6 +43,10 @@ public final class DoubleBladedScimitarCombat {
         OCCUPIED_OFFHAND_SPEED, "Double blade occupied offhand penalty", -0.5D, 2)
         .setSaved(false);
     private static final Map<EntityPlayer, Long> REFLECTION_END = new WeakHashMap<>();
+    private static final Map<EntityPlayer,Object> OWN_COOLDOWN = new WeakHashMap<>();
+    private static final java.lang.reflect.Field COOLDOWNS = net.minecraftforge.fml.relauncher.ReflectionHelper.findField(net.minecraft.util.CooldownTracker.class,"cooldowns","field_185147_a");
+    private static Object cooldownEntry(EntityPlayer p){try{return ((Map<?,?>)COOLDOWNS.get(p.getCooldownTracker())).get(p.getHeldItemMainhand().getItem());}catch(IllegalAccessException ex){throw new IllegalStateException(ex);}}
+    private static boolean externalCooldown(EntityPlayer p){return p.getCooldownTracker().hasCooldown(p.getHeldItemMainhand().getItem())&&cooldownEntry(p)!=OWN_COOLDOWN.get(p);}
     private static final Map<EntityPlayer, Map<Potion, PotionEffect>> REFLECTION_EFFECT_BASELINE =
         new WeakHashMap<>();
     private static final Map<EntityPlayer, PendingEffectReflection> PENDING_EFFECT_REFLECTION =
@@ -67,10 +71,20 @@ public final class DoubleBladedScimitarCombat {
         player.getEntityData().setBoolean(ACTIVE, true);
         player.setActiveHand(EnumHand.MAIN_HAND);
         player.getCooldownTracker().setCooldown(stack.getItem(), NORMAL_COOLDOWN_TICKS);
+        OWN_COOLDOWN.put(player,cooldownEntry(player));
         player.world.playSound(player.world.isRemote ? player : null,
             player.posX, player.posY, player.posZ, SoundEvents.ITEM_ARMOR_EQUIP_IRON,
             SoundCategory.PLAYERS, 0.65F, 1.35F);
         return true;
+    }
+
+    public static void cancelReflection(EntityPlayer player) {
+        OWN_COOLDOWN.remove(player);
+        REFLECTION_END.remove(player);
+        REFLECTION_EFFECT_BASELINE.remove(player);
+        player.getEntityData().removeTag(ACTIVE);
+        if(player.isHandActive() && player.getActiveItemStack().getItem() instanceof ItemDoubleBladedScimitar)
+            player.resetActiveHand();
     }
 
     public static boolean isReflecting(EntityPlayer player) {
@@ -79,7 +93,7 @@ public final class DoubleBladedScimitarCombat {
             return false;
         }
         Long end = REFLECTION_END.get(player);
-        if (end != null) return player.world.getTotalWorldTime() < end;
+        if (end != null) return !externalCooldown(player)&&player.world.getTotalWorldTime() < end;
         // Active-hand state is synchronized by vanilla and covers remote clients.
         return player.isHandActive() && player.getActiveHand() == EnumHand.MAIN_HAND
             && player.getActiveItemStack().getItem() instanceof ItemDoubleBladedScimitar;
@@ -95,9 +109,10 @@ public final class DoubleBladedScimitarCombat {
         updateOffhandPenalty(player, doubleBlade && !player.getHeldItemOffhand().isEmpty());
         Long end = REFLECTION_END.get(player);
         if (end == null) return;
-        boolean expired = player.world.getTotalWorldTime() >= end || player.isDead
+        boolean expired = externalCooldown(player)||player.world.getTotalWorldTime() >= end || player.isDead
             || !doubleBlade || !player.getHeldItemOffhand().isEmpty();
         if (expired) {
+            OWN_COOLDOWN.remove(player);
             REFLECTION_END.remove(player);
             REFLECTION_EFFECT_BASELINE.remove(player);
             player.getEntityData().removeTag(ACTIVE);
@@ -157,6 +172,7 @@ public final class DoubleBladedScimitarCombat {
             ItemStack weapon = defender.getHeldItemMainhand();
             defender.getCooldownTracker().removeCooldown(weapon.getItem());
             defender.getCooldownTracker().setCooldown(weapon.getItem(), SUCCESS_COOLDOWN_TICKS);
+            OWN_COOLDOWN.put(defender,cooldownEntry(defender));
             REFLECTION_EFFECT_BASELINE.remove(defender);
             defender.world.playSound(null, defender.posX, defender.posY, defender.posZ,
                 SoundEvents.ENTITY_PLAYER_ATTACK_SWEEP, SoundCategory.PLAYERS,
@@ -278,6 +294,17 @@ public final class DoubleBladedScimitarCombat {
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void stopEntityAttack(AttackEntityEvent event) {
         if (isReflecting(event.getEntityPlayer())) event.setCanceled(true);
+    }
+
+    @SubscribeEvent(priority = EventPriority.HIGHEST)
+    public static void preferOffhandShield(PlayerInteractEvent.RightClickItem event) {
+        EntityPlayer player=event.getEntityPlayer();
+        if(event.getHand()==EnumHand.OFF_HAND
+            && player.getHeldItemMainhand().getItem() instanceof ItemDoubleBladedScimitar
+            && player.getHeldItemOffhand().getItem() instanceof net.minecraft.item.ItemShield) {
+            // Leave shield activation, cooldowns and permission checks to its own item.
+            cancelReflection(player);
+        }
     }
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)

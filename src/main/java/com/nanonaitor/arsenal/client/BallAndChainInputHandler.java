@@ -29,6 +29,14 @@ public final class BallAndChainInputHandler {
     private static boolean guarding;
 
     private BallAndChainInputHandler() {}
+    public static void cancelForShield(EntityPlayer player) {
+        wasSwinging = false;
+        guarding = false;
+        lastHeartbeatTick = Long.MIN_VALUE;
+        BallAndChainAnimationHandler.cancelForShield(player);
+        if (player.isHandActive() && player.getActiveItemStack().getItem() instanceof ItemBallAndChain)
+            player.resetActiveHand();
+    }
 
     /**
      * Send the release on the physical mouse-up event as well as the client-tick
@@ -37,6 +45,7 @@ public final class BallAndChainInputHandler {
      */
     @SubscribeEvent(priority = EventPriority.HIGHEST, receiveCanceled = true)
     public static void onMouseRelease(MouseEvent event) {
+        if (ShieldInputHandler.handleShieldAttack(event)) return;
         Minecraft mc = Minecraft.getMinecraft();
         int key = mc.gameSettings.keyBindAttack.getKeyCode();
         if (key >= 0 || event.getButton() != key + 100 || mc.currentScreen != null) {
@@ -103,6 +112,7 @@ public final class BallAndChainInputHandler {
         if (holdingWeapon && ShieldUsePriority.requested(player)) BallAndChainAnimationHandler.cancelForShield(player);
         boolean retrieving = BallAndChainAnimationHandler.isReleaseAnimationActive(player);
         boolean canGuard = holdingWeapon
+            && !com.nanonaitor.arsenal.combat.AbilityUseRules.cooling(player,player.getHeldItemMainhand())
             && !retrieving
             && player.getHeldItemOffhand().isEmpty()
             && minecraft.currentScreen == null
@@ -119,6 +129,7 @@ public final class BallAndChainInputHandler {
             guarding = true;
         }
         boolean canSwing = holdingWeapon
+            && !com.nanonaitor.arsenal.combat.AbilityUseRules.cooling(player,player.getHeldItemMainhand())
             && !ShieldUsePriority.requested(player)
             && !retrieving
             && !guarding

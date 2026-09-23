@@ -28,7 +28,7 @@ public final class ItemMorningStar extends ItemArsenalWeapon {
     @Override
     public ActionResult<ItemStack> onItemRightClick(World world, EntityPlayer player,
                                                      EnumHand hand) {
-        return new ActionResult<>(EnumActionResult.FAIL, player.getHeldItem(hand));
+        return new ActionResult<>(EnumActionResult.PASS, player.getHeldItem(hand));
     }
 
     @Override

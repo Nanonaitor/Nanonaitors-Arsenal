@@ -40,6 +40,7 @@ public final class ClawInputHandler {
         EntityPlayerSP player = minecraft.player;
         if (player == null || minecraft.currentScreen != null) return;
         ItemStack main = player.getHeldItemMainhand();
+        if(com.nanonaitor.arsenal.combat.AbilityUseRules.cooling(player,main)||com.nanonaitor.arsenal.combat.AbilityUseRules.cooling(player,player.getHeldItemOffhand()))return;
         if (!(main.getItem() instanceof ItemClaws)) return;
         ItemClaws claws = (ItemClaws)main.getItem();
         if (!ClawPairHandler.hasMatchingLinkedClaw(player, claws)) return;
@@ -114,6 +115,11 @@ public final class ClawInputHandler {
         EntityPlayerSP player = minecraft.player;
         if (player == null || minecraft.currentScreen != null) return;
         ItemStack main = player.getHeldItemMainhand();
+        if (com.nanonaitor.arsenal.combat.AbilityUseRules.cooling(player, main)
+            || com.nanonaitor.arsenal.combat.AbilityUseRules.cooling(player, player.getHeldItemOffhand())) {
+            pendingOffhandAnimationTick = Long.MIN_VALUE;
+            return;
+        }
         if (!(main.getItem() instanceof ItemClaws)) return;
         ItemClaws claws = (ItemClaws) main.getItem();
         if (!ClawPairHandler.hasMatchingLinkedClaw(player, claws)) return;

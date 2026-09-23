@@ -48,6 +48,7 @@ public final class BatteringRamCombat {
     public static void markCharging(EntityPlayerMP player) {
         ItemStack stack = player.getHeldItemMainhand();
         if (!(stack.getItem() instanceof ItemBatteringRam)
+            || AbilityUseRules.shield(player, player.getHeldItemOffhand())
             || !ArsenalCompatManager.canUseTwoHanded(player) || player.isSpectator()
             || !ReskillableCompat.canUse(player, stack)
             || !hasChargeEnergy(player)) {
@@ -76,6 +77,7 @@ public final class BatteringRamCombat {
         ItemStack stack = player.getHeldItemMainhand();
         long now = player.world.getTotalWorldTime();
         boolean active = state != null && now - state.lastHeartbeatTick <= 3L
+            && !AbilityUseRules.shield(player, player.getHeldItemOffhand())
             && stack.getItem() instanceof ItemBatteringRam
             && ArsenalCompatManager.canUseTwoHanded(player) && player.isEntityAlive()
             && ReskillableCompat.canUse(player, stack)
@@ -85,7 +87,8 @@ public final class BatteringRamCombat {
                 state.hitEntities.clear();
                 CHARGES.remove(player);
             }
-            if (player.isHandActive() && stack.getItem() instanceof ItemBatteringRam) {
+            if (player.isHandActive() && player.getActiveHand()==EnumHand.MAIN_HAND
+                && player.getActiveItemStack().getItem() instanceof ItemBatteringRam) {
                 player.resetActiveHand();
             }
             return;

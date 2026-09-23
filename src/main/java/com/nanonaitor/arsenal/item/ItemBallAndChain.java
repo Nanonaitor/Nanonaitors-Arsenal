@@ -47,6 +47,7 @@ public final class ItemBallAndChain extends ItemArsenalWeapon {
     @Override
     public ActionResult<ItemStack> onItemRightClick(World world, EntityPlayer player, EnumHand hand) {
         ItemStack held = player.getHeldItem(hand);
+        if(player.getCooldownTracker().hasCooldown(this))return new ActionResult<>(EnumActionResult.PASS,held);
         if (hand != EnumHand.MAIN_HAND || !player.getHeldItemOffhand().isEmpty()
             || player.getEntityData().getBoolean("ArsenalBallAndChainActive"))
             return new ActionResult<>(EnumActionResult.PASS, held);

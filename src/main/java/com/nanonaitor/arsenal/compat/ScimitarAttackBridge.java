@@ -20,16 +20,14 @@ public final class ScimitarAttackBridge {
 
     private static void init() {
         if (initialized) return;
-        initialized = true;
-        if (!Loader.isModLoaded("bettercombatmod")) return;
+        if (!Loader.isModLoaded("bettercombatmod")) { initialized=true; return; }
         try {
             Class<?> helper = Class.forName("bettercombat.mod.util.Helpers");
-            attack = helper.getMethod("attackTargetEntityItem", EntityPlayer.class, Entity.class,
+            Method resolvedAttack = helper.getMethod("attackTargetEntityItem", EntityPlayer.class, Entity.class,
                 boolean.class, double.class, double.class, double.class);
-            clear = helper.getMethod("clearOldModifiers", EntityLivingBase.class, ItemStack.class,
-                boolean.class, boolean.class, boolean.class);
-            add = helper.getMethod("addNewModifiers", EntityLivingBase.class, ItemStack.class,
-                boolean.class, boolean.class, boolean.class);
+            Method[] modifiers=CombatModifierMethods.resolve(helper);
+            attack=resolvedAttack;clear=modifiers[0];add=modifiers[1];
+            initialized=true;
         } catch (ReflectiveOperationException ex) {
             throw new IllegalStateException("Unsupported RLCombat API: cannot safely resolve scimitar attacks", ex);
         }
@@ -38,8 +36,8 @@ public final class ScimitarAttackBridge {
     private static void exchange(EntityPlayer player, ItemStack from, ItemStack to) {
         try {
             if (clear != null) {
-                clear.invoke(null, player, from, true, true, true);
-                add.invoke(null, player, to, true, true, true);
+                CombatModifierMethods.invoke(clear,player,from);
+                CombatModifierMethods.invoke(add,player,to);
             } else {
                 player.getAttributeMap().removeAttributeModifiers(from.getAttributeModifiers(EntityEquipmentSlot.MAINHAND));
                 player.getAttributeMap().applyAttributeModifiers(to.getAttributeModifiers(EntityEquipmentSlot.MAINHAND));
@@ -114,7 +112,7 @@ public final class ScimitarAttackBridge {
 
     public static void bashEnchantments(EntityPlayer player, EntityLivingBase target) {
         net.minecraft.enchantment.EnchantmentHelper.applyThornEnchantments(target, player);
-        if (Loader.isModLoaded("bettercombatmod")) {
+        if (Loader.isModLoaded("bettercombatmod") && hasModernEnchantContext()) {
             try {
                 Class<?> handler=Class.forName("bettercombat.mod.compat.EnchantCompatHandler");
                 java.lang.reflect.Field hand=handler.getField("arthropodFromOffhand");
@@ -136,6 +134,14 @@ public final class ScimitarAttackBridge {
             try {net.minecraft.enchantment.EnchantmentHelper.applyArthropodEnchantments(player,target);}
             finally {player.inventory.mainInventory.set(player.inventory.currentItem,main);}
         }
+    }
+
+    private static boolean hasModernEnchantContext() {
+        try {
+            Class<?> handler=Class.forName("bettercombat.mod.compat.EnchantCompatHandler");
+            handler.getField("arthropodFromOffhand");handler.getField("arthropodCooledStrength");
+            return true;
+        } catch(ClassNotFoundException | NoSuchFieldException legacyVersion) { return false; }
     }
 
     public static double reach(EntityPlayer player, boolean offhand) {

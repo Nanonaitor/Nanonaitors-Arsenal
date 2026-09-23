@@ -90,10 +90,11 @@ public final class ItemDoubleBladedScimitar extends ItemArsenalWeapon {
     public void addInformation(ItemStack stack, World world, List<String> tooltip,
                                ITooltipFlag flag) {
         if (!ArsenalTooltip.begin(tooltip, TextFormatting.GOLD,
-                "Blade Staff with continuous attacks.")) return;
+                "Blade Staff with sweeping hits and timed reflection.")) return;
         tooltip.add(TextFormatting.GOLD + "Melee hits damage other enemies within "
             + (getTier() == WeaponTier.SENTIENT ? "3" : "2") + " blocks of the target.");
         tooltip.add(TextFormatting.BLUE + "Right click: reflect attacks for 1 sec.");
+        tooltip.add(TextFormatting.GRAY + "An offhand shield takes priority over reflection.");
         tooltip.add(TextFormatting.DARK_PURPLE
             + "Reflection returns incoming damage before armor reduction.");
         tooltip.add(TextFormatting.DARK_PURPLE
