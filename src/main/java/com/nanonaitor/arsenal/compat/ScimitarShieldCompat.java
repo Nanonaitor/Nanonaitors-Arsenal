@@ -11,7 +11,7 @@ import net.minecraft.util.DamageSource;
 import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.fml.common.Loader;
 
-/** Uses ShieldBreak's live settings and the installed Spartan iron shield's protection. */
+/** Uses ShieldBreak's live settings and the stronger matching Spartan shield. */
 public final class ScimitarShieldCompat {
     private ScimitarShieldCompat() {}
     public static boolean isPair(EntityPlayer player) {
@@ -53,12 +53,32 @@ public final class ScimitarShieldCompat {
         catch (ReflectiveOperationException e) { throw new IllegalStateException(e); }
     }
     public static int raiseDelay() { return (int)number(settings(), "shieldRaiseTickDelay", 2); }
+    public static ItemStack referenceShield(com.nanonaitor.arsenal.item.WeaponTier tier) {
+        String material=shieldMaterial(tier.getId());
+        Item shield=Item.REGISTRY.getObject(new ResourceLocation("spartanshields","shield_basic_"+material));
+        if(shield==null || shield==net.minecraft.init.Items.AIR) {
+            String fallback=tier.getMaterial().getHarvestLevel()>=3?"diamond":
+                tier.getMaterial().getHarvestLevel()>=2?"iron":material;
+            shield=Item.REGISTRY.getObject(new ResourceLocation("spartanshields","shield_basic_"+fallback));
+        }
+        return new ItemStack(shield==null || shield==net.minecraft.init.Items.AIR?net.minecraft.init.Items.SHIELD:shield);
+    }
+    public static String shieldMaterial(String tier) {
+        switch(tier) {
+            case "wood":case "stone":case "gold":case "iron":case "diamond":
+            case "silver":case "bronze":case "steel":return tier;
+            case "umbrium":case "desert_myrmex":case "jungle_myrmex":
+            case "desert_venom":case "jungle_venom":return "iron";
+            default:return "diamond";
+        }
+    }
     public static void blocked(EntityPlayer player, DamageSource source, float amount) {
         if (player.world.isRemote) return;
         Object config = settings();
-        Item iron = Item.REGISTRY.getObject(new ResourceLocation("spartanshields", "shield_basic_iron"));
-        ItemStack reference = iron == null || iron == net.minecraft.init.Items.AIR
-            ? new ItemStack(net.minecraft.init.Items.SHIELD) : new ItemStack(iron);
+        if(!isPair(player))return;
+        ItemStack main=referenceShield(((com.nanonaitor.arsenal.item.ItemScimitar)player.getHeldItemMainhand().getItem()).getTier());
+        ItemStack off=referenceShield(((com.nanonaitor.arsenal.item.ItemScimitar)player.getHeldItemOffhand().getItem()).getTier());
+        ItemStack reference=main.getMaxDamage()>=off.getMaxDamage()?main:off;
         double protection = Math.max(number(config,"damageMinimumThreshold",1),
             Math.min(number(config,"damageMaximumThreshold",20),reference.getMaxDamage()/number(config,"damageDurabilityScaling",100)));
         EntityLivingBase attacker = source.getTrueSource() instanceof EntityLivingBase

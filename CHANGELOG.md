@@ -1,5 +1,20 @@
 # Changelog
 
+## 2.0.15 - 2026-09-23
+
+- Dual-scimitar shield-break protection now uses the stronger corresponding
+  Spartan shield instead of always using an iron shield. Configured shield
+  durability and ShieldBreak thresholds remain respected.
+- Offhand scimitar attacks now run after normal entity and block interactions,
+  allowing boats, villagers and usable blocks to handle right-click first.
+- Preserved offhand-shield priority while winding a Ball & Chain.
+
+## 2.0.14 - 2026-09-23
+
+- Restored the full Blade Staff spinning animation throughout its reflection
+  window by synchronizing ability start/stop with the server and distinguishing
+  its own reflection cooldown from externally imposed item cooldowns.
+
 ## 2.0.13 - 2026-09-23
 
 - Improved interaction priority: chests and trading are handled before shield use;

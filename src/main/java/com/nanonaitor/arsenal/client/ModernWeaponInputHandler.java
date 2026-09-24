@@ -67,14 +67,32 @@ public final class ModernWeaponInputHandler {
         }
         if (event.getButton() == 1) {
             boolean ballWinding = player.getHeldItemMainhand().getItem() instanceof ItemBallAndChain
+                && player.getHeldItemOffhand().isEmpty()
                 && !ShieldUsePriority.requested(player)
                 && BallAndChainInputHandler.isSwinging()
                 && !BallAndChainInputHandler.isGuardingInput();
-            boolean offhandScimitar = player.getHeldItemOffhand().getItem() instanceof ItemScimitar
-                && !(player.getHeldItemMainhand().getItem() instanceof ItemScimitar)
-                && !mainHandUseHasPriority(Minecraft.getMinecraft(), player);
-            if (ballWinding || offhandScimitar) event.setCanceled(true);
+            if (ballWinding) event.setCanceled(true);
         }
+    }
+
+    // Vanilla reaches item-use only after block/entity interaction has passed.
+    // Do not consume the raw mouse click: boats, villagers and other usable
+    // entities must get their normal interaction before the offhand attack.
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    public static void auxiliaryScimitarUse(net.minecraftforge.event.entity.player.PlayerInteractEvent.RightClickItem event) {
+        Minecraft mc=Minecraft.getMinecraft();
+        EntityPlayerSP player=mc.player;
+        if(player==null || event.getEntityPlayer()!=player || event.getHand()!=EnumHand.OFF_HAND
+            || !(player.getHeldItemOffhand().getItem() instanceof ItemScimitar)
+            || player.getHeldItemMainhand().getItem() instanceof ItemScimitar
+            || mainHandUseHasPriority(mc,player) || ShieldUsePriority.requested(player))return;
+        event.setCanceled(true);
+        event.setCancellationResult(net.minecraft.util.EnumActionResult.SUCCESS);
+        if(offhandWasDown)return;
+        offhandWasDown=true;
+        player.swingArm(EnumHand.OFF_HAND);
+        ModNetwork.CHANNEL.sendToServer(new ModernWeaponControlMessage(
+            ModernWeaponControlMessage.SCIMITAR_ATTACK,true));
     }
 
     @SubscribeEvent
@@ -140,17 +158,6 @@ public final class ModernWeaponInputHandler {
             && com.nanonaitor.arsenal.compat.ScimitarShieldCompat.isGuarding(player)) {
             ModNetwork.CHANNEL.sendToServer(new ModernWeaponControlMessage(
                 ModernWeaponControlMessage.SCIMITAR_BASH, true));
-        }
-        boolean auxiliaryAttack = auxiliaryScimitar && offhandButton && !offhandWasDown
-            && !ShieldUsePriority.requested(player)
-            && !mainHandUseHasPriority(mc, player);
-        if (mc.currentScreen == null && !guard && auxiliaryAttack) {
-            // A lone off-hand Scimitar behaves like a clicked weapon, not an
-            // automatic one. The server tracks and scales its independent
-            // attack-strength cooldown without resetting the main hand.
-            player.swingArm(EnumHand.OFF_HAND);
-            ModNetwork.CHANNEL.sendToServer(new ModernWeaponControlMessage(
-                ModernWeaponControlMessage.SCIMITAR_ATTACK, true));
         }
         if (mc.currentScreen == null && !guard && !offhandButton && !disabled && dualScimitars && attack) {
             double cooldown = com.nanonaitor.arsenal.compat.ScimitarAttackBridge.pairedInterval(player);

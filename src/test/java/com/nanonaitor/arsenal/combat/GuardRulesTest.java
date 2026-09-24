@@ -7,6 +7,19 @@ public final class GuardRulesTest {
         if (expected != actual) throw new AssertionError(expected + " != " + actual);
     }
     public static void main(String[] args) {
+        for (String material : new String[]{"wood", "stone", "gold", "iron", "diamond", "silver", "bronze", "steel"}) {
+            checks++;
+            if (!material.equals(com.nanonaitor.arsenal.compat.ScimitarShieldCompat.shieldMaterial(material)))
+                throw new AssertionError("Wrong shield mapping for " + material);
+        }
+        for (String material : new String[]{"umbrium", "desert_myrmex", "jungle_myrmex", "desert_venom", "jungle_venom"}) {
+            checks++;
+            if (!"iron".equals(com.nanonaitor.arsenal.compat.ScimitarShieldCompat.shieldMaterial(material)))
+                throw new AssertionError("Wrong iron fallback for " + material);
+        }
+        checks++;
+        if (!"diamond".equals(com.nanonaitor.arsenal.compat.ScimitarShieldCompat.shieldMaterial("sentient")))
+            throw new AssertionError("Wrong upper-tier fallback");
         near(5.0D,GuardRules.pairedInterval(10,10));
         near(4.0D,GuardRules.pairedInterval(5,20));
         near(1.0D,GuardRules.pairedInterval(1,1));
