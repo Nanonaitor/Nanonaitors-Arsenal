@@ -21,7 +21,7 @@ task enchantmentRegression(type: JavaExec, dependsOn: testClasses) {
 }
 check.dependsOn enchantmentRegression
 
-version = '2.0.13'
+version = '2.0.14'
 group = 'com.nanonaitor.arsenal'
 archivesBaseName = 'nanonaitors-arsenal-1.12.2'
 
@@ -106,3 +106,8 @@ task combatApiRegression(type: JavaExec, dependsOn: testClasses) {
     main = 'com.nanonaitor.arsenal.compat.CombatModifierMethodsTest'
 }
 check.dependsOn combatApiRegression
+task reflectionRegression(type: JavaExec, dependsOn: testClasses) {
+    classpath = sourceSets.test.runtimeClasspath
+    main = 'com.nanonaitor.arsenal.combat.ReflectionWindowTest'
+}
+check.dependsOn reflectionRegression

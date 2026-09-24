@@ -20,7 +20,8 @@ import net.minecraftforge.fml.relauncher.Side;
 public final class DoubleBladedScimitarAnimationHandler {
     private DoubleBladedScimitarAnimationHandler() {}
 
-    @SubscribeEvent
+    @SubscribeEvent(priority = net.minecraftforge.fml.common.eventhandler.EventPriority.HIGHEST,
+        receiveCanceled = true)
     public static void firstPerson(RenderSpecificHandEvent event) {
         EntityPlayer player = Minecraft.getMinecraft().player;
         if (player == null || event.getHand() != EnumHand.MAIN_HAND

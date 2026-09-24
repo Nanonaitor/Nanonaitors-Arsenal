@@ -32,5 +32,7 @@ public final class ModNetwork {
             TartsyBashMessage.class, 8, Side.SERVER);
         CHANNEL.registerMessage(BallAndChainWindupMessage.Handler.class,
             BallAndChainWindupMessage.class, 9, Side.CLIENT);
+        CHANNEL.registerMessage(BladeStaffReflectionMessage.Handler.class,
+            BladeStaffReflectionMessage.class, 10, Side.CLIENT);
     }
 }

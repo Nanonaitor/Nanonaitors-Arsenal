@@ -46,7 +46,14 @@ public final class DoubleBladedScimitarCombat {
     private static final Map<EntityPlayer,Object> OWN_COOLDOWN = new WeakHashMap<>();
     private static final java.lang.reflect.Field COOLDOWNS = net.minecraftforge.fml.relauncher.ReflectionHelper.findField(net.minecraft.util.CooldownTracker.class,"cooldowns","field_185147_a");
     private static Object cooldownEntry(EntityPlayer p){try{return ((Map<?,?>)COOLDOWNS.get(p.getCooldownTracker())).get(p.getHeldItemMainhand().getItem());}catch(IllegalAccessException ex){throw new IllegalStateException(ex);}}
-    private static boolean externalCooldown(EntityPlayer p){return p.getCooldownTracker().hasCooldown(p.getHeldItemMainhand().getItem())&&cooldownEntry(p)!=OWN_COOLDOWN.get(p);}
+    private static boolean externalCooldown(EntityPlayer p){
+        // SPacketCooldown creates a fresh client entry even for our own cooldown.
+        // Identity is authoritative only on the server; clients receive explicit
+        // reflection start/stop state instead of guessing from that identity.
+        return ReflectionWindow.externalCooldown(p.world.isRemote,
+            p.getCooldownTracker().hasCooldown(p.getHeldItemMainhand().getItem()),
+            cooldownEntry(p)==OWN_COOLDOWN.get(p));
+    }
     private static final Map<EntityPlayer, Map<Potion, PotionEffect>> REFLECTION_EFFECT_BASELINE =
         new WeakHashMap<>();
     private static final Map<EntityPlayer, PendingEffectReflection> PENDING_EFFECT_REFLECTION =
@@ -72,6 +79,7 @@ public final class DoubleBladedScimitarCombat {
         player.setActiveHand(EnumHand.MAIN_HAND);
         player.getCooldownTracker().setCooldown(stack.getItem(), NORMAL_COOLDOWN_TICKS);
         OWN_COOLDOWN.put(player,cooldownEntry(player));
+        syncReflection(player, REFLECTION_TICKS);
         player.world.playSound(player.world.isRemote ? player : null,
             player.posX, player.posY, player.posZ, SoundEvents.ITEM_ARMOR_EQUIP_IRON,
             SoundCategory.PLAYERS, 0.65F, 1.35F);
@@ -79,12 +87,30 @@ public final class DoubleBladedScimitarCombat {
     }
 
     public static void cancelReflection(EntityPlayer player) {
+        boolean active=REFLECTION_END.containsKey(player);
         OWN_COOLDOWN.remove(player);
         REFLECTION_END.remove(player);
         REFLECTION_EFFECT_BASELINE.remove(player);
         player.getEntityData().removeTag(ACTIVE);
         if(player.isHandActive() && player.getActiveItemStack().getItem() instanceof ItemDoubleBladedScimitar)
             player.resetActiveHand();
+        if(active)syncReflection(player,0);
+    }
+
+    private static void syncReflection(EntityPlayer player,int ticks) {
+        if(player.world.isRemote)return;
+        com.nanonaitor.arsenal.network.ModNetwork.CHANNEL.sendToAllAround(
+            new com.nanonaitor.arsenal.network.BladeStaffReflectionMessage(player.getEntityId(),ticks),
+            new net.minecraftforge.fml.common.network.NetworkRegistry.TargetPoint(
+                player.dimension,player.posX,player.posY,player.posZ,128.0D));
+    }
+
+    /** Called on the client thread by the server's reflection-state packet. */
+    public static void receiveReflection(EntityPlayer player,int ticks) {
+        if(!player.world.isRemote)return;
+        if(ticks<=0){cancelReflection(player);return;}
+        REFLECTION_END.put(player,player.world.getTotalWorldTime()+Math.min(ticks,REFLECTION_TICKS));
+        player.getEntityData().setBoolean(ACTIVE,true);
     }
 
     public static boolean isReflecting(EntityPlayer player) {
@@ -112,13 +138,7 @@ public final class DoubleBladedScimitarCombat {
         boolean expired = externalCooldown(player)||player.world.getTotalWorldTime() >= end || player.isDead
             || !doubleBlade || !player.getHeldItemOffhand().isEmpty();
         if (expired) {
-            OWN_COOLDOWN.remove(player);
-            REFLECTION_END.remove(player);
-            REFLECTION_EFFECT_BASELINE.remove(player);
-            player.getEntityData().removeTag(ACTIVE);
-            if (player.isHandActive() && player.getActiveItemStack() == main) {
-                player.resetActiveHand();
-            }
+            cancelReflection(player);
         } else {
             player.getEntityData().setBoolean(ACTIVE, true);
             if (!player.isHandActive()) player.setActiveHand(EnumHand.MAIN_HAND);
