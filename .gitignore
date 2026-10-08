@@ -10,6 +10,7 @@
 # Local inspection, test-profile backups, and unpublished concepts
 /.inspection/
 /profile-backups/
+/deployment-backups/
 /art_sources/
 /design-notes/
 

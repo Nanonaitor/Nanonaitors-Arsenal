@@ -18,6 +18,7 @@ import net.minecraftforge.fml.relauncher.Side;
 @Mod.EventBusSubscriber(modid = NanonaitorsArsenal.MOD_ID, value = Side.CLIENT)
 public final class FlailInputHandler {
     private static long lastRequestTick = Long.MIN_VALUE;
+    private static EntityPlayer lastPlayer;
 
     private FlailInputHandler() {}
 
@@ -28,6 +29,10 @@ public final class FlailInputHandler {
         }
         Minecraft minecraft = Minecraft.getMinecraft();
         EntityPlayer player = minecraft.player;
+        if (player != lastPlayer) {
+            lastPlayer = player;
+            lastRequestTick = Long.MIN_VALUE;
+        }
         if (player == null || minecraft.currentScreen != null
             || !(player.getHeldItemMainhand().getItem() instanceof ItemFlail)
             || !minecraft.gameSettings.keyBindAttack.isKeyDown()
@@ -48,7 +53,7 @@ public final class FlailInputHandler {
     }
 
     private static void requestSwing(EntityPlayer player) {
-        if(ShieldUsePriority.requested(player)||com.nanonaitor.arsenal.combat.AbilityUseRules.cooling(player,player.getHeldItemMainhand()))return;
+        if(ShieldUsePriority.flailSuppressed(player)||com.nanonaitor.arsenal.combat.AbilityUseRules.cooling(player,player.getHeldItemMainhand()))return;
         if (FlailCombat.isBlockingConventionalShield(player)) {
             return;
         }

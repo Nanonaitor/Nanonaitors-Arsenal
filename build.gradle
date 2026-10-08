@@ -20,8 +20,18 @@ task enchantmentRegression(type: JavaExec, dependsOn: testClasses) {
     main = 'com.nanonaitor.arsenal.item.EnchantmentRegressionTest'
 }
 check.dependsOn enchantmentRegression
+task worldEquipmentRegression(type: JavaExec, dependsOn: testClasses) {
+    classpath = sourceSets.test.runtimeClasspath
+    main = 'com.nanonaitor.arsenal.compat.WorldEquipmentRegressionTest'
+}
+check.dependsOn worldEquipmentRegression
+task flailDefenderRegression(type: JavaExec, dependsOn: testClasses) {
+    classpath = sourceSets.test.runtimeClasspath
+    main = 'com.nanonaitor.arsenal.combat.FlailDefenderRegressionTest'
+}
+check.dependsOn flailDefenderRegression
 
-version = '2.0.15'
+version = '2.0.17'
 group = 'com.nanonaitor.arsenal'
 archivesBaseName = 'nanonaitors-arsenal-1.12.2'
 

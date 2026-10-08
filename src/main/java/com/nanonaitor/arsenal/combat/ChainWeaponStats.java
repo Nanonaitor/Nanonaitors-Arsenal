@@ -42,7 +42,11 @@ public final class ChainWeaponStats {
     }
 
     public static int swingIntervalTicks(EntityPlayer player, ItemStack stack) {
-        return Math.max(1, (int) Math.round(20.0D / attackSpeed(player, stack)));
+        return intervalForSpeed(attackSpeed(player, stack));
+    }
+
+    public static int intervalForSpeed(double speed) {
+        return Math.max(1, (int) Math.round(20.0D / Math.max(MIN_ATTACK_SPEED, speed)));
     }
 
     public static int ballReleaseAnimationTicks(EntityPlayer player, ItemStack stack) {

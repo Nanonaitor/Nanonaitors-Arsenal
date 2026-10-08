@@ -12,6 +12,20 @@ public final class ArsenalConfig {
     public static Effects effects = new Effects();
     public static Shields shields = new Shields();
     public static Stunned stunned = new Stunned();
+    public static WorldEquipment worldEquipment = new WorldEquipment();
+
+    public static final class WorldEquipment {
+        @Config.Comment("Offer same-tier Arsenal alternatives in Forge loot tables containing vanilla/Spartan melee weapons. Socketed stays optional and handles its own loot rolls.")
+        public boolean lootIntegration = true;
+        @Config.RangeDouble(min=0D,max=1D)
+        public double lootReplacementChance = 0.25D;
+        @Config.Comment("Allow newly spawned vanilla humanoids already carrying a vanilla/Spartan melee weapon to use a same-tier Arsenal weapon. Does not equip empty hands or replace bows.")
+        public boolean mobEquipment = true;
+        @Config.RangeDouble(min=0D,max=1D)
+        public double mobReplacementChance = 0.25D;
+        @Config.Comment("If Socketed is installed, use its configured MOB_DROP socket roll for newly equipped Arsenal weapons. No effect without Socketed.")
+        public boolean socketMobEquipment = true;
+    }
 
     public static final class Weapons {
         @Config.Comment("Recipe switches only. False removes crafting/upgrade recipes; existing weapons remain registered, visible and usable. Restart required.")

@@ -9,6 +9,16 @@ import net.minecraft.item.ItemShield;
  */
 public final class ShieldUsePriority {
     private ShieldUsePriority() {}
+    /** Flails support Defender counterattacks, but never conventional shield use. */
+    public static boolean flailSuppressed(EntityPlayer player) {
+        if (ShieldInputHandler.suppressWeaponAttack()) return true;
+        if (com.nanonaitor.arsenal.combat.FlailCombat.isDefender(player.getHeldItemOffhand())
+            && (!player.isHandActive()
+                || com.nanonaitor.arsenal.combat.FlailCombat.isDefender(player.getActiveItemStack()))) {
+            return false;
+        }
+        return requested(player);
+    }
     public static boolean requested(EntityPlayer player) {
         if (player == Minecraft.getMinecraft().player && ShieldInputHandler.suppressWeaponAttack()) return true;
         Minecraft mc=Minecraft.getMinecraft();

@@ -148,9 +148,13 @@ public final class FlailCombat {
         if (active.isEmpty() || active.getItemUseAction() != EnumAction.BLOCK) {
             return false;
         }
-        ResourceLocation registryName = active.getItem().getRegistryName();
-        return registryName == null
-            || !"defenders".equals(registryName.getResourceDomain());
+        return !isDefender(active);
+    }
+
+    public static boolean isDefender(ItemStack stack) {
+        if (stack.isEmpty()) return false;
+        ResourceLocation registryName = stack.getItem().getRegistryName();
+        return registryName != null && "defenders".equals(registryName.getResourceDomain());
     }
 
     /** Mirrors the modern build's visible four-block flail hitbox ring. */
