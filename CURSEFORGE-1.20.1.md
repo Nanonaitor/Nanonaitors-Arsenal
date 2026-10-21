@@ -7,8 +7,8 @@ for this Minecraft version; do not replace or remove the 1.12.2 files.
 
 | Field | Value |
 | --- | --- |
-| File | nanonaitors-arsenal-1.20.1-0.1.5.jar, from build/libs |
-| Display name | Nanonaitor's Arsenal - 1.20.1 - 0.1.5 |
+| File | nanonaitors-arsenal-1.20.1-0.1.6.jar, from build/libs |
+| Display name | Nanonaitor's Arsenal - 1.20.1 - 0.1.6 |
 | Release type | Release |
 | Minecraft version | 1.20.1 only |
 | Mod loader | Forge only |
@@ -33,7 +33,7 @@ Source branch: https://github.com/Nanonaitor/Nanonaitors-Arsenal/tree/mc-1.20.1
 
 ## Ready-to-paste changelog
 
-### First public Forge 1.20.1 release — 0.1.0
+### Forge 1.20.1 release — 0.1.6
 
 Requires Minecraft Java 1.20.1, Forge 47.4.18 or newer 47.x, and Java 17.
 Install Arsenal on both client and server for multiplayer.
@@ -54,8 +54,37 @@ Install Arsenal on both client and server for multiplayer.
   only right-click charge acceleration requires an empty offhand.
 - Shield abilities no longer also activate the main-hand weapon. Tartsy's
   dash uses a shield sound instead of a sword-sweep sound.
-- Build and nine automated gameplay tests passed. Client model checks passed
-  for all 255 registered item models before the final input/audio-only patch.
+- Rebalanced paired Claws: removed guaranteed fourth-hit criticals and saved
+  critical counters. Fully charged paired i-frame-piercing hits now share a
+  four-tick minimum per player/target. Ordinary critical hits remain available.
+- Fixed dual-Scimitar shield-bash input, combined weapon/enchantment damage,
+  cooldown handling, and target detection. Improved paired attack timing,
+  offhand weapon calculations, blocking durability, and shield-break handling.
+- Improved real offhand-shield priority, including switching away from Blade
+  Staff reflection without interrupting the newly raised shield.
+- Blade Staff no longer auto-swings or reflects environmental damage. Improved
+  combat-damage blocking and reflection handling.
+- Flails now resume cleanly after reconnecting and correctly allow Defenders'
+  compatible guard input instead of treating it as a conventional shield block.
+- Living and Sentient weapon durability is read from the installed SRP Spartan
+  source weapons, with safe fallback values when that integration is absent.
+- Living and Sentient chain weapons now use their red parasite chain artwork.
+- Dual-Scimitar shield-break checks now use the matching material shield rather
+  than treating every pair as iron.
+- Added configurable world equipment: eligible vanilla humanoids that naturally
+  spawn with a vanilla sword or axe have a 25% default chance to receive a
+  same-tier Arsenal weapon while preserving item data and durability ratio.
+- Battering Ram charges with right click; ordinary attacks gain extra knockback.
+- Ball & Chain attack speed is 0.5, with throw damage multipliers of 1x, 1.5x,
+  and 2x. Improved blocking visuals and offhand interactions.
+- Fixed Bulwark bash damage to use 1 + armor points. Added a yellow guard-strain
+  bar: 25 blocked hits disable the shield briefly; strain decays over time.
+- Added optional JustLevelingFork Strength requirements with configurable tier
+  levels and an enable/disable setting. Requirement tooltips use a purple
+  heading and green/red levels according to the player's skill level.
+- Updated weapon tooltips with compact traits and expanded Shift descriptions.
+- Build and all 26 automated gameplay tests passed. Full modpack and visual
+  playtesting are still recommended.
 
 Multiplayer, balance, and full modpack compatibility testing
 are ongoing. Back up existing worlds before adding or updating mods.

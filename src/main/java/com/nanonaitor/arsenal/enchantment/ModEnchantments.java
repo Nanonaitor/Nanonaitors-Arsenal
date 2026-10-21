@@ -9,9 +9,13 @@ import net.minecraftforge.registries.*;
 public final class ModEnchantments {
  public static final DeferredRegister<Enchantment> ENCHANTMENTS=DeferredRegister.create(ForgeRegistries.ENCHANTMENTS,ArsenalMod.MOD_ID);
  public static final RegistryObject<Enchantment> LONG_CHAIN=register("long_chain",2,true);
- public static final RegistryObject<Enchantment> ROTATION_FORCE=register("rotation_force",2,true);
+ public static final RegistryObject<Enchantment> ROTATION_FORCE=register("rotation_force",3,true);
  public static final RegistryObject<Enchantment> RECOVERY=register("recovery",1,false);
  public static final RegistryObject<Enchantment> BREECHED=register("breeched",1,false);
+ public static final RegistryObject<Enchantment> REVERSO=weapon("reverso",1,WeaponKind.BLADE_STAFF);
+ public static final RegistryObject<Enchantment> LUNA=weapon("luna",2,WeaponKind.MORNING_STAR);
+ public static final RegistryObject<Enchantment> MAGIC_LOG=weapon("magic_log",1,WeaponKind.BATTERING_RAM);
+ public static final RegistryObject<Enchantment> ENDURE=weapon("endure",1,WeaponKind.SCIMITAR);
  private static RegistryObject<Enchantment> register(String id,int max,boolean chain){
   return ENCHANTMENTS.register(id,()->new Enchantment(Enchantment.Rarity.RARE,EnchantmentCategory.BREAKABLE,new EquipmentSlot[]{EquipmentSlot.MAINHAND,EquipmentSlot.OFFHAND}){
    public int getMaxLevel(){return max;} public int getMinCost(int level){return 10+15*(level-1);} public int getMaxCost(int level){return getMinCost(level)+30;}
@@ -25,11 +29,19 @@ public final class ModEnchantments {
    protected boolean checkCompatibility(Enchantment other){return super.checkCompatibility(other) && !(!chain && (other==RECOVERY.get() || other==BREECHED.get()));}
   });
  }
+ private static RegistryObject<Enchantment> weapon(String id,int max,WeaponKind kind){
+  return ENCHANTMENTS.register(id,()->new Enchantment(Enchantment.Rarity.RARE,EnchantmentCategory.WEAPON,new EquipmentSlot[]{EquipmentSlot.MAINHAND,EquipmentSlot.OFFHAND}){
+   public int getMaxLevel(){return max;} public int getMinCost(int level){return 15+15*(level-1);} public int getMaxCost(int level){return getMinCost(level)+30;}
+   public boolean isDiscoverable(){return enabled(id);} public boolean isTradeable(){return enabled(id);} public boolean isAllowedOnBooks(){return enabled(id);}
+   public boolean canEnchant(ItemStack s){return enabled(id) && s.getItem() instanceof ArsenalWeaponItem w && w.kind()==kind;}
+   public boolean canApplyAtEnchantingTable(ItemStack s){return canEnchant(s);}
+  });
+ }
  public static int level(LivingEntity owner,ItemStack stack,RegistryObject<Enchantment> enchantment){
   if(!enabled(enchantment.getId().getPath()))return 0;
   int value=EnchantmentHelper.getItemEnchantmentLevel(enchantment.get(),stack);
   return Math.min(value,enchantment==LONG_CHAIN?ArsenalConfig.LONG_CHAIN_MAX_LEVEL.get():enchantment==ROTATION_FORCE?ArsenalConfig.ROTATION_FORCE_MAX_LEVEL.get():value);
  }
- public static boolean enabled(String id){var value=ArsenalConfig.ENCHANTMENTS.get(id);return value!=null && value.get();}
+ public static boolean enabled(String id){var value=ArsenalConfig.ENCHANTMENTS.get(id);return ArsenalConfig.ENABLE_CUSTOM_ENCHANTMENTS.get() && value!=null && value.get();}
  private ModEnchantments(){}
 }

@@ -8,7 +8,8 @@ public final class ArsenalConfig {
     public static final ForgeConfigSpec.IntValue ROTATION_FORCE_MAX_LEVEL;
     public static final ForgeConfigSpec.DoubleValue MORNING_STAR_CHARGE_SECONDS;
     public static final ForgeConfigSpec.DoubleValue FLAIL_REACH, BALL_WINDUP_REACH, BALL_THROW_REACH;
-    public static final ForgeConfigSpec.BooleanValue SHIELD_ENCHANTMENTS, MATCHING_ARMOR_BONUSES;
+    public static final ForgeConfigSpec.BooleanValue SHIELD_ENCHANTMENTS, MATCHING_ARMOR_BONUSES, ENABLE_CUSTOM_ENCHANTMENTS, MOB_EQUIPMENT;
+    public static final ForgeConfigSpec.DoubleValue MOB_REPLACEMENT_CHANCE;
     public static final ForgeConfigSpec.ConfigValue<java.util.List<? extends String>> STUN_BLACKLIST;
     public static final ForgeConfigSpec.IntValue EVOLUTION_THRESHOLD;
     public static final java.util.Map<String,ForgeConfigSpec.BooleanValue> WEAPONS=new java.util.LinkedHashMap<>(), ENCHANTMENTS=new java.util.LinkedHashMap<>();
@@ -17,13 +18,14 @@ public final class ArsenalConfig {
 
     static {
         BUILDER.push("enchantments");
-        for(String id:new String[]{"long_chain","rotation_force","recovery","breeched"}) ENCHANTMENTS.put(id,BUILDER.define(id,true));
+        ENABLE_CUSTOM_ENCHANTMENTS=BUILDER.comment("Master switch for every Nanonaitor's Arsenal enchantment.").define("enabled",true);
+        for(String id:new String[]{"long_chain","rotation_force","recovery","breeched","reverso","luna","magic_log","endure"}) ENCHANTMENTS.put(id,BUILDER.define(id,true));
         LONG_CHAIN_MAX_LEVEL = BUILDER.comment(
             "Maximum effective Long Chain level. Natural enchanting is capped at level 2; this also caps higher levels supplied by commands or other mods.")
             .defineInRange("longChainMaxLevel", 2, 1, 100);
         ROTATION_FORCE_MAX_LEVEL = BUILDER.comment(
-            "Maximum effective Rotation Force level. Natural enchanting is capped at level 2; this also caps higher levels supplied by commands or other mods.")
-            .defineInRange("rotationForceMaxLevel", 2, 1, 100);
+            "Maximum effective Rotation Force level. Natural enchanting is capped at level 3; this also caps higher levels supplied by commands or other mods.")
+            .defineInRange("rotationForceMaxLevel", 3, 1, 100);
         BUILDER.pop();
         BUILDER.push("morningStar");
         MORNING_STAR_CHARGE_SECONDS = BUILDER.comment(
@@ -33,6 +35,10 @@ public final class ArsenalConfig {
         BUILDER.push("weapons");
         for(String id:new String[]{"morning_star","scimitar","blade_staff","claws","flail","battering_ram","ball_and_chain","sun_war_bulwark","tartsy_shield"})
             WEAPONS.put(id,BUILDER.comment("False disables crafting only; existing items remain usable.").define(id,true));
+        BUILDER.pop();
+        BUILDER.push("worldEquipment");
+        MOB_EQUIPMENT=BUILDER.comment("Allow newly spawned vanilla humanoids already carrying a vanilla melee weapon to use a same-tier Arsenal weapon.").define("mobEquipment",true);
+        MOB_REPLACEMENT_CHANCE=BUILDER.defineInRange("mobReplacementChance",.25D,0D,1D);
         BUILDER.pop();
         BUILDER.push("reach");
         FLAIL_REACH=BUILDER.defineInRange("flail",4D,0.5D,32D);

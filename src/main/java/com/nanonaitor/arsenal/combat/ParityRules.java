@@ -24,6 +24,17 @@ public final class ParityRules {
         p.getCooldowns().addCooldown(p.getOffhandItem().getItem(), ticks);
         p.stopUsingItem();
     }
+    public static int endureLevel(Player p) {
+        return Math.min(2, com.nanonaitor.arsenal.enchantment.ModEnchantments.level(p,p.getMainHandItem(),com.nanonaitor.arsenal.enchantment.ModEnchantments.ENDURE)
+            + com.nanonaitor.arsenal.enchantment.ModEnchantments.level(p,p.getOffhandItem(),com.nanonaitor.arsenal.enchantment.ModEnchantments.ENDURE));
+    }
+    public static int disabledTicks(Player p, int ticks) {
+        return Math.max(1, Math.round(ticks * (1.0F - .25F * endureLevel(p))));
+    }
+    public static boolean endureGuard(Player p) {
+        int level=endureLevel(p);
+        return level>0 && p.getRandom().nextFloat()<.25F*level;
+    }
     public static double attribute(Player p, ItemStack selected, Attribute type) {
         AttributeInstance original = p.getAttribute(type);
         if (original == null) return 0;

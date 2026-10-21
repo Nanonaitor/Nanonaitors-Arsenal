@@ -59,11 +59,12 @@ public final class ParityGameTests {
         var blade=new ItemStack(ModItems.get(WeaponKind.SCIMITAR,WeaponTier.IRON).get());
         p.setItemSlot(EquipmentSlot.MAINHAND,blade);
         var source=p.damageSources().playerAttack(p);
-        h.assertTrue(target.hurt(source,4),"Main hit accepted");
+        h.assertTrue(OffhandDamage.hurt(blade,target,target,source,4,false),"Main-hand window accepts its full hit");
         int mainTime=target.invulnerableTime;
         h.assertTrue(OffhandDamage.hurt(blade,target,target,source,4),"Offhand can hit during main immunity");
         h.assertTrue(target.invulnerableTime==mainTime,"Main immunity restored");
-        h.assertTrue(!OffhandDamage.hurt(blade,target,target,source,4),"Repeated same-hand hit respects immunity");
+        h.assertTrue(!OffhandDamage.hurt(blade,target,target,source,4,false),"Repeated main-hand hit respects its immunity");
+        h.assertTrue(!OffhandDamage.hurt(blade,target,target,source,4,true),"Repeated off-hand hit respects its immunity");
         h.succeed();
     }
     @GameTest(template="empty",templateNamespace="forge")

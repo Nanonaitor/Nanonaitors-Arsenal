@@ -41,6 +41,7 @@ public final class ArsenalShieldItem extends ShieldItem {
     @Override public boolean canApplyAtEnchantingTable(ItemStack stack,net.minecraft.world.item.enchantment.Enchantment enchantment){
         if(!com.nanonaitor.arsenal.config.ArsenalConfig.SHIELD_ENCHANTMENTS.get())
             return enchantment==net.minecraft.world.item.enchantment.Enchantments.UNBREAKING || enchantment==net.minecraft.world.item.enchantment.Enchantments.MENDING;
+        if(enchantment==net.minecraft.world.item.enchantment.Enchantments.THORNS)return true;
         return super.canApplyAtEnchantingTable(stack,enchantment);
     }
 

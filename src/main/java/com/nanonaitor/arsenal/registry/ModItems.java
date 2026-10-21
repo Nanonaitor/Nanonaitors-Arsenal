@@ -25,6 +25,7 @@ public final class ModItems {
     public static final Map<WeaponTier, RegistryObject<Item>> FLAIL_SPIKE_TRAIL_NEAR = new EnumMap<>(WeaponTier.class);
     public static final Map<WeaponTier, RegistryObject<Item>> FLAIL_SPIKE_TRAIL_FAR = new EnumMap<>(WeaponTier.class);
     public static final RegistryObject<Item> CHAIN_LINK_UPRIGHT = visualItem("chain_link_upright");
+    public static final RegistryObject<Item> PARASITE_CHAIN_LINK = visualItem("parasite_chain_link");
 
     public static final RegistryObject<Item> SUN_WAR = registerShield("sun_war_bulwark", ArsenalShieldItem.Type.SUN_WAR, new Item.Properties().durability(4096));
     public static final RegistryObject<Item> TARTSY_SHIELD = registerShield("tartsy_shield", ArsenalShieldItem.Type.TARTSY, new Item.Properties().durability(768));

@@ -21,6 +21,7 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.Vec3;
+import java.util.UUID;
 
 public final class ClientControls {
     private static boolean shieldAttackLatched;
@@ -45,6 +46,7 @@ public final class ClientControls {
     private static double releasedDistance;
     private static Vec3 releasedDirection = Vec3.ZERO;
     private static ItemStack activeFlailSprite = ItemStack.EMPTY, activeBallSprite = ItemStack.EMPTY;
+    private static UUID activePlayer;
 
     public static void register() {
         net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(ClientTooltip::requirements);
@@ -77,7 +79,7 @@ public final class ClientControls {
         ClientSmokeTest.tick();
         Minecraft minecraft = Minecraft.getInstance();
         LocalPlayer player = minecraft.player;
-        if (player == null) { clearFlailSprite(); clearBallSprite(); ballWasDown = false; flailWasDown = false;
+        if (player == null) { activePlayer = null; clearFlailSprite(); clearBallSprite(); ballWasDown = false; flailWasDown = false;
             scimitarBashLatched = false;
             shieldAttackLatched = false;
             if (morningStarCharging) ModNetwork.send(ModNetwork.MORNING_STAR, false);
@@ -85,6 +87,10 @@ public final class ClientControls {
             ballWindBoostWasDown = false;
             morningStarCharging = false; menuBulwarkGuard = false;
             offhandScimitarWasDown = false; bladeStaffReflectUntil = Long.MIN_VALUE; return; }
+        if (!player.getUUID().equals(activePlayer)) {
+            resetForPlayerChange();
+            activePlayer = player.getUUID();
+        }
         boolean attack = minecraft.screen == null && minecraft.options.keyAttack.isDown();
         updateScimitarGuardModels(player);
         if (!attack) scimitarBashLatched = false;
@@ -105,7 +111,9 @@ public final class ClientControls {
         boolean shieldUsing = player.isUsingItem()
             && (player.getUseItem().getItem() instanceof net.minecraft.world.item.ShieldItem
                 || player.getUseItem().canPerformAction(net.minecraftforge.common.ToolActions.SHIELD_BLOCK));
-        if (shieldUsing || shieldAttackLatched) {
+        boolean defenderFlail = player.getMainHandItem().getItem() instanceof ArsenalWeaponItem held
+            && held.kind() == WeaponKind.FLAIL && isDefender(player.getUseItem());
+        if ((shieldUsing && !defenderFlail) || shieldAttackLatched) {
             if (ballWasDown || morningStarCharging || ramLocked || flailWasDown)
                 ModNetwork.send(ModNetwork.CANCEL_WEAPON_INPUTS, true);
             ballWasDown = false; ballWindBoostWasDown = false;
@@ -627,8 +635,22 @@ public final class ClientControls {
         if (!player.isUsingItem()) return false;
         ItemStack active = player.getUseItem();
         if (active.isEmpty() || active.getItem().getUseAnimation(active) != UseAnim.BLOCK) return false;
-        ResourceLocation id = BuiltInRegistries.ITEM.getKey(active.getItem());
-        return id == null || !"defenders".equals(id.getNamespace());
+        return !isDefender(active);
+    }
+    private static boolean isDefender(ItemStack stack) {
+        if (stack.isEmpty()) return false;
+        ResourceLocation id = BuiltInRegistries.ITEM.getKey(stack.getItem());
+        return id != null && "defenders".equals(id.getNamespace());
+    }
+    private static void resetForPlayerChange() {
+        clearFlailSprite(); clearBallSprite();
+        ballWasDown = ballWindBoostWasDown = flailWasDown = morningStarCharging = ramLocked = false;
+        mainClawWasDown = offhandClawWasDown = offhandScimitarWasDown = false;
+        shieldAttackLatched = scimitarBashLatched = menuBulwarkGuard = false;
+        lastFlailHeartbeat = lastHeartbeat = lastMorningStarHeartbeat = Long.MIN_VALUE;
+        lastMainClawAttack = lastOffhandClawAttack = Long.MIN_VALUE;
+        ballStarted = ballReleaseStarted = nextBallSwing = Long.MIN_VALUE;
+        bladeStaffReflectUntil = flailVisualUntil = Long.MIN_VALUE;
     }
     private static void updateFlailSprite(ItemStack stack, boolean active) {
         if (!active) { clearFlailSprite(); return; }

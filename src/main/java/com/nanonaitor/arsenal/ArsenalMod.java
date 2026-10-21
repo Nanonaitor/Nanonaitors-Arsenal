@@ -29,6 +29,7 @@ public final class ArsenalMod {
         var group = FMLJavaModLoadingContext.get().getModEventBus();
         ModItems.ITEMS.register(group);
         ModEffects.EFFECTS.register(group);
+        com.nanonaitor.arsenal.registry.ModSounds.SOUNDS.register(group);
         ModTabs.TABS.register(group);
         com.nanonaitor.arsenal.registry.ModRecipes.SERIALIZERS.register(group);
         com.nanonaitor.arsenal.enchantment.ModEnchantments.ENCHANTMENTS.register(group);

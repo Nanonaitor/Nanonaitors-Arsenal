@@ -22,6 +22,9 @@ import net.minecraftforge.client.event.RenderLevelStageEvent;
 import org.joml.Quaternionf;
 
 public final class ClientWeaponRenderer {
+    /** Four complete rotations per second throughout the reflection window. */
+    private static final double BLADE_STAFF_REFLECT_DEGREES_PER_TICK = 72.0D;
+
     public static void render(RenderLivingEvent.Post<?, ?> event) {
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.player == null || minecraft.level == null) return;
@@ -41,7 +44,11 @@ public final class ClientWeaponRenderer {
                 event.getPackedLight(), 0,
                 player.getMainHandItem().copy(), -sinBody * 0.72D, 1.15D,
                 cosBody * 0.72D, 1.25F, (float)-Math.toDegrees(bodyYaw),
-                (float)((now + partial) * 48.0D));
+                (float)((now + partial) * BLADE_STAFF_REFLECT_DEGREES_PER_TICK));
+        } else if (weapon.kind() == WeaponKind.SCIMITAR
+            && com.nanonaitor.arsenal.combat.ParityRules.guarding(player)) {
+            renderCrossedScimitars(event.getPoseStack(), event.getMultiBufferSource(),
+                event.getPackedLight(), player);
         } else if (weapon.kind() == WeaponKind.FLAIL && (local ? ClientControls.flailActive() : player.isUsingItem())) {
             double angle = -(now + minecraft.getFrameTime()) / swingTicks * Math.PI * 2.0D;
             double reach = ChainWeaponStats.flailReach(player, player.getMainHandItem());
@@ -163,7 +170,7 @@ public final class ClientWeaponRenderer {
             event.setCanceled(true);
             renderSpinningItem(event.getPoseStack(), event.getMultiBufferSource(), event.getPackedLight(), 0,
                 event.getItemStack().copy(), 0.0D, -0.18D, -1.05D, 1.6875F, 0.0F,
-                (float)((now + partial) * 48.0D));
+                (float)((now + partial) * BLADE_STAFF_REFLECT_DEGREES_PER_TICK));
         } else if (weapon.kind() == WeaponKind.MORNING_STAR && ClientControls.morningStarCharging()) {
             float charge = ClientControls.morningStarChargeProgress(now);
             event.getPoseStack().translate(-0.10D, 0.08D + charge * 0.10D, -0.18D);
@@ -237,7 +244,7 @@ public final class ClientWeaponRenderer {
             double t = i / (double)links;
             renderLink(pose, collector, light, outline, ax + dx * t, ay + dy * t, az + dz * t,
                 dx / length, dy / length, dz / length, linkScale,
-                0.0F, true);
+                0.0F, true, tier == WeaponTier.LIVING || tier == WeaponTier.SENTIENT);
         }
         if (spikedHead) {
             renderItem(pose, collector, light, outline, ballVisualStack(tier), bx, by, bz, ballScale);
@@ -249,14 +256,14 @@ public final class ClientWeaponRenderer {
 
     private static void renderLink(PoseStack pose, MultiBufferSource collector, int light, int outline,
             double x, double y, double z, double dx, double dy, double dz, float scale, float twist,
-            boolean blockModel) {
+            boolean blockModel, boolean parasite) {
         pose.pushPose();
         pose.translate(x, y, z);
         pose.mulPose(new Quaternionf().rotationTo(0.0F, 1.0F, 0.0F, (float)dx, (float)dy, (float)dz));
         pose.mulPose(Axis.YP.rotationDegrees(twist));
         pose.scale(scale, scale, scale);
-        submitItem(pose, collector, light, outline, new ItemStack(blockModel
-            ? ModItems.CHAIN_LINK_UPRIGHT.get() : Items.CHAIN));
+        submitItem(pose, collector, light, outline, new ItemStack(parasite
+            ? ModItems.PARASITE_CHAIN_LINK.get() : blockModel ? ModItems.CHAIN_LINK_UPRIGHT.get() : Items.CHAIN));
         pose.popPose();
     }
 
@@ -296,6 +303,26 @@ public final class ClientWeaponRenderer {
         pose.mulPose(Axis.ZP.rotationDegrees(angle));
         pose.scale(scale, scale, scale);
         submitItem(pose, collector, light, outline, stack);
+        pose.popPose();
+    }
+
+    private static void renderCrossedScimitars(PoseStack pose, MultiBufferSource collector,
+            int light, net.minecraft.world.entity.player.Player player) {
+        double partial=Minecraft.getInstance().getFrameTime();
+        float yaw=-Mth.rotLerp((float)partial,player.yBodyRotO,player.yBodyRot);
+        renderGuardBlade(pose,collector,light,player.getMainHandItem().copy(),yaw,-56.0F,true);
+        renderGuardBlade(pose,collector,light,player.getOffhandItem().copy(),yaw,56.0F,false);
+    }
+
+    private static void renderGuardBlade(PoseStack pose,MultiBufferSource collector,int light,
+            ItemStack stack,float yaw,float roll,boolean mirror) {
+        pose.pushPose();
+        pose.translate(0.0D,1.18D,0.0D);
+        pose.mulPose(Axis.YP.rotationDegrees(yaw));
+        pose.translate(0.0D,0.0D,0.48D);
+        pose.mulPose(Axis.ZP.rotationDegrees(roll));
+        pose.scale(mirror?-0.84F:0.84F,0.84F,0.84F);
+        submitItem(pose,collector,light,0,stack);
         pose.popPose();
     }
 

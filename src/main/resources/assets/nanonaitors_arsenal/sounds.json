@@ -1,0 +1,11 @@
+{
+  "reverso_heal": {
+    "sounds": ["nanonaitors_arsenal:reverso_heal"]
+  },
+  "blade_staff_reflect": {
+    "sounds": ["nanonaitors_arsenal:blade_staff_reflect"]
+  },
+  "scimitar_bash": {
+    "sounds": ["nanonaitors_arsenal:scimitar_bash"]
+  }
+}

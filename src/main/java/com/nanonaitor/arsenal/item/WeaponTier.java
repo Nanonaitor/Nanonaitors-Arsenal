@@ -37,4 +37,10 @@ public enum WeaponTier {
  public boolean available(){return ordinal()<=NETHERITE.ordinal() || !material.getRepairIngredient().isEmpty();}
  public int weaknessLevel(){return this==SENTIENT?3:switch(this){case WOOD,STONE,COPPER,GOLD,IRON,SILVER,BRONZE->1;default->2;};}
  public int armorPiercePercent(){return switch(this){case WOOD->25;case STONE,COPPER,GOLD,BRONZE->50;case IRON,SILVER,STEEL,UMBRIUM->75;default->100;};}
+ /** Fraction of incoming damage returned by a Blade Staff. Wood is handled as a flat point. */
+ public float reflectionMultiplier(){return switch(this){
+  case WOOD->0; case STONE->.10F; case COPPER,BRONZE->.25F;
+  case IRON,GOLD,SILVER,STEEL,UMBRIUM->.50F;
+  case DIAMOND,DRAGONBONE->.75F; default->1.0F;
+ };}
 }

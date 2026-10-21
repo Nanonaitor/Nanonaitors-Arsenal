@@ -41,6 +41,9 @@ public class ArsenalWeaponItem extends net.minecraft.world.item.SwordItem {
 
     public WeaponTier tier() { return tier; }
     public WeaponKind kind() { return kind; }
+    @Override public int getMaxDamage(ItemStack stack) {
+        return com.nanonaitor.arsenal.compat.ParasiteWeaponCompat.maxDamage(tier, super.getMaxDamage(stack));
+    }
 
     @Override public boolean canAttackBlock(net.minecraft.world.level.block.state.BlockState state,
             Level level,net.minecraft.core.BlockPos pos,Player player) {
@@ -53,8 +56,12 @@ public class ArsenalWeaponItem extends net.minecraft.world.item.SwordItem {
     }
     private boolean forbiddenSweep(net.minecraft.world.item.enchantment.Enchantment enchantment) {
         var id=net.minecraftforge.registries.ForgeRegistries.ENCHANTMENTS.getKey(enchantment);
+        boolean swifterBlocked = kind==WeaponKind.FLAIL || kind==WeaponKind.BALL_AND_CHAIN
+            || kind==WeaponKind.CLAWS || kind==WeaponKind.LINKED_CLAWS;
         return kind==WeaponKind.BLADE_STAFF && (enchantment==net.minecraft.world.item.enchantment.Enchantments.SWEEPING_EDGE
-            || id!=null && id.getPath().equals("arc_slash"));
+            || id!=null && id.getPath().equals("arc_slash"))
+            || swifterBlocked && id!=null && "somanyenchantments".equals(id.getNamespace())
+                && ("swifter_slashes".equals(id.getPath()) || "swifterslashes".equals(id.getPath()));
     }
     @Override public boolean canApplyAtEnchantingTable(ItemStack stack,net.minecraft.world.item.enchantment.Enchantment enchantment) {
         return !forbiddenSweep(enchantment) && super.canApplyAtEnchantingTable(stack,enchantment);
@@ -183,6 +190,7 @@ public class ArsenalWeaponItem extends net.minecraft.world.item.SwordItem {
                     + ("sentient".equals(tier.id) ? "3" : "2")
                     + " blocks of the target.").withStyle(ChatFormatting.GOLD));
                 lines.add(Component.literal("Use to spin for 1 sec and reflect incoming damage before armor.").withStyle(ChatFormatting.AQUA));
+                lines.add(Component.literal(bladeStaffReflectionDescription()).withStyle(ChatFormatting.AQUA));
                 lines.add(Component.literal("Reflection also returns harmful effects delivered by the attack.").withStyle(ChatFormatting.DARK_PURPLE));
                 lines.add(Component.literal("Reflected non-melee attacks Stun their attacker for 1 sec.").withStyle(ChatFormatting.DARK_PURPLE));
                 lines.add(Component.literal("Missed reflection: 3 sec cooldown; successful reflection: 0.5 sec.").withStyle(ChatFormatting.GRAY));
@@ -190,6 +198,15 @@ public class ArsenalWeaponItem extends net.minecraft.world.item.SwordItem {
             }
         }
         WeaponTooltipLayout.details(lines,detailStart);
+    }
+    private String bladeStaffReflectionDescription() {
+        return switch (tier) {
+            case WOOD -> "Reflects a flat 1 damage per incoming hit.";
+            case SILVER -> "Reflects 50% damage, or 200% against undead enemies.";
+            case GOLD -> "Reflects 50% damage, or 100% with matching gold armor.";
+            default -> "Reflects " + Math.round(tier.reflectionMultiplier() * 100.0F)
+                + "% of incoming combat damage.";
+        };
     }
     private String summary() {
         return switch (kind) {

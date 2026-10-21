@@ -6,6 +6,7 @@ import com.nanonaitor.arsenal.network.ModNetwork;
 import com.nanonaitor.arsenal.config.ArsenalConfig;
 import com.nanonaitor.arsenal.registry.ModEffects;
 import com.nanonaitor.arsenal.registry.ModItems;
+import com.nanonaitor.arsenal.registry.ModSounds;
 import com.nanonaitor.arsenal.enchantment.ModEnchantments;
 import java.util.*;
 import net.minecraft.core.BlockPos;
@@ -106,23 +107,34 @@ public final class CombatEvents {
                     BLADE_STAFF_EFFECT_BASELINE.getOrDefault(player.getUUID(), harmfulEffects(player)),
                     now + 2L);
                 PENDING_BLADE_STAFF_EFFECTS.put(player.getUUID(), pending);
+                float reflected=bladeStaffReflection(player,staff.tier(),attacker,event.getAmount());
+                int incomingWear=Math.max(0,(int)Math.floor(event.getAmount()));
+                boolean reverso=ModEnchantments.level(player,main,ModEnchantments.REVERSO)>0;
+                net.minecraft.world.item.Item staffItem=main.getItem();
                 REFLECTING_DAMAGE.set(true);
                 boolean returned;
                 try {
-                    returned = attacker.hurt(player.damageSources().playerAttack(player), event.getAmount());
-                    if (returned && !isDirectMelee(source)) {
+                    returned = reverso ? reflected>0.0F : attacker.hurt(player.damageSources().playerAttack(player), reflected);
+                    if (returned && !reverso && !isDirectMelee(source)) {
                         com.nanonaitor.arsenal.config.ConfiguredEffects.apply(attacker,"bladeStaffReflect",20,0);
                     }
                 }
                 finally { REFLECTING_DAMAGE.set(false); }
+                damage(main, player, incomingWear);
+                if(reverso){
+                    player.heal(reflected);
+                    repair(main,(int)Math.ceil(reflected));
+                }
                 if (!returned) return true;
                 transferReflectedEffects(player, pending);
-                player.getCooldowns().addCooldown(main.getItem(), recoveryCooldown(player, main, 10));
+                player.getCooldowns().addCooldown(staffItem, recoveryCooldown(player, main, 10));
                 BLADE_STAFF_REFLECT_UNTIL.remove(player.getUUID());
                 BLADE_STAFF_EFFECT_BASELINE.remove(player.getUUID());
                 player.stopUsingItem();
-                damage(main, player, 1);
-                level.playSound(null, player.blockPosition(), SoundEvents.SHIELD_BLOCK, SoundSource.PLAYERS, 1.0F, 1.25F);
+                level.playSound(null, player.blockPosition(), reverso
+                    ? com.nanonaitor.arsenal.registry.ModSounds.REVERSO_HEAL.get()
+                    : com.nanonaitor.arsenal.registry.ModSounds.BLADE_STAFF_REFLECT.get(),
+                    SoundSource.PLAYERS, 1.0F, 1.0F);
             }
             return true;
         }
@@ -158,17 +170,20 @@ public final class CombatEvents {
                 int wear = ParityRules.blockWear(event.getAmount());
                 damage(player.getMainHandItem(), player, wear);
                 damage(player.getOffhandItem(), player, wear);
-                var referenceId=new ResourceLocation("spartanshields","iron_basic_shield");
+                var referenceId=spartanShieldForScimitars(player);
                 ItemStack reference=new ItemStack(BuiltInRegistries.ITEM.containsKey(referenceId)
                     ? BuiltInRegistries.ITEM.get(referenceId) : net.minecraft.world.item.Items.SHIELD);
                 if (source.getEntity() instanceof LivingEntity attacker
                     && attacker.getMainHandItem().canDisableShield(reference,player,attacker)
                     && player.getRandom().nextFloat() < .25F
                         + .05F * EnchantmentHelper.getBlockEfficiency(attacker) + (attacker.isSprinting() ? .75F : 0)) {
-                    ParityRules.disable(player, 100);
-                    player.level().broadcastEntityEvent(player, (byte)30);
+                    if(!ParityRules.endureGuard(player)) {
+                        ParityRules.disable(player, ParityRules.disabledTicks(player,100));
+                        player.level().broadcastEntityEvent(player, (byte)30);
+                    }
                 }
             } else damage(active, player, 1);
+            triggerShieldThorns(player,active,source);
             if (active.getItem() instanceof ArsenalShieldItem shield
                 && shield.shieldType() == ArsenalShieldItem.Type.SUN_WAR) {
                 int strain = active.getOrCreateTag().getInt("ArsenalGuardStrain") + 1;
@@ -295,6 +310,7 @@ public final class CombatEvents {
     }
 
     public static boolean onEntityJoin(EntityJoinLevelEvent event) {
+        com.nanonaitor.arsenal.compat.WorldEquipmentCompat.onEntityJoin(event);
         if(event.getEntity() instanceof ItemEntity dropped && dropped.getItem().getItem() instanceof ArsenalWeaponItem)
             setFlailFlag(dropped.getItem(),false);
         if (event.getEntity() instanceof Display.ItemDisplay display
@@ -349,7 +365,7 @@ public final class CombatEvents {
         player.swinging=false;
         player.swing(InteractionHand.MAIN_HAND,true);
         ServerLevel level=player.serverLevel();
-        level.playSound(null,player.blockPosition(),SoundEvents.PLAYER_ATTACK_SWEEP,SoundSource.PLAYERS,1,1);
+        level.playSound(null,player.blockPosition(),ModSounds.SCIMITAR_BASH.get(),SoundSource.PLAYERS,1,1);
         if (target == null) return;
         DamageSource source=player.damageSources().playerAttack(player);
         float amount=0;
@@ -580,8 +596,10 @@ public final class CombatEvents {
             DamageSource source = player.damageSources().playerAttack(player);
             float attributeDamage = (float)ParityRules.attribute(player,stack,Attributes.ATTACK_DAMAGE);
             float amount = EnchantmentBridge.modifyDamage(level, stack, target, source, attributeDamage);
-            if (offhand ? OffhandDamage.hurt(stack,hitbox,target,source,amount)
-                : TierEffects.hurtEntityWithStack(stack,hitbox,source,amount)) {
+            // Each blade keeps its own normal hurt window. This lets a valid
+            // alternating turn land without weakening either hand or allowing
+            // repeated packets from the same hand to bypass immunity.
+            if (OffhandDamage.hurt(stack,hitbox,target,source,amount,offhand)) {
                 EnchantmentBridge.doPostAttackEffectsWithItemSource(level, target, source, stack);
                 float knockback=EnchantmentBridge.modifyKnockback(level,stack,target,source,0);
                 if(knockback>0) target.knockback(knockback*.5D,Math.sin(Math.toRadians(player.getYRot())),
@@ -843,8 +861,9 @@ public final class CombatEvents {
         return ticks;
     }
 
-    private static int morningStarChargeTicks() {
-        return Math.max(1, (int)Math.ceil(ArsenalConfig.MORNING_STAR_CHARGE_SECONDS.get() * 20.0D));
+    private static int morningStarChargeTicks(ItemStack stack, Player player) {
+        int luna=ModEnchantments.level(player,stack,ModEnchantments.LUNA);
+        return Math.max(1, (int)Math.ceil(ArsenalConfig.MORNING_STAR_CHARGE_SECONDS.get() * 20.0D * (1.0D-.25D*luna)));
     }
 
     private static void morningStarControl(ServerPlayer player, boolean active) {
@@ -874,14 +893,14 @@ public final class CombatEvents {
             return;
         }
         if (!player.isUsingItem()) player.startUsingItem(InteractionHand.MAIN_HAND);
-        if (!state.chimed && player.level().getGameTime() - state.started >= morningStarChargeTicks()) {
+        if (!state.chimed && player.level().getGameTime() - state.started >= morningStarChargeTicks(player.getMainHandItem(),player)) {
             state.chimed = true;
             ((ServerLevel)player.level()).playSound(null, player.blockPosition(), SoundEvents.PLAYER_LEVELUP,
                 SoundSource.PLAYERS, 0.55F, 1.55F);
         }
         if (player.level().getGameTime() % 3L == 0L) {
             double progress = Math.min(1.0D, Math.max(0.0D,
-                (player.level().getGameTime() - state.started) / (double)morningStarChargeTicks()));
+                (player.level().getGameTime() - state.started) / (double)morningStarChargeTicks(player.getMainHandItem(),player)));
             VisualEffects.morningStarCharge((ServerLevel)player.level(), player, progress);
         }
     }
@@ -901,7 +920,7 @@ public final class CombatEvents {
             return;
         }
         long elapsed = Math.max(0L, player.level().getGameTime() - state.started);
-        int chargeTicks = morningStarChargeTicks();
+        int chargeTicks = morningStarChargeTicks(player.getMainHandItem(),player);
         boolean full = elapsed >= chargeTicks;
         int quarters = Math.min(4, (int)Math.floor(elapsed * 4.0D / chargeTicks));
         float multiplier = 1.0F + quarters * 0.10F;
@@ -915,7 +934,8 @@ public final class CombatEvents {
         // It never extends the forward axis; reach still governs the ordinary
         // center-line hit independently of charge.
         double maximumSweep = Math.max(1.0D, reach);
-        double sweepRange = maximumSweep * quarters / 4.0D;
+        int luna=ModEnchantments.level(player,stack,ModEnchantments.LUNA);
+        double sweepRange = maximumSweep * quarters / 4.0D * (1.0D+.25D*luna);
         double queryRange = Math.max(reach, sweepRange + 1.0D);
         AABB area = player.getBoundingBox().inflate(queryRange, 1.25D, queryRange);
         ArrayList<LivingEntity> targets = new ArrayList<>();
@@ -1310,9 +1330,11 @@ public final class CombatEvents {
         breakRamBlocks(player, weapon.tier(), forward);
         for (LivingEntity target : ((ServerLevel)player.level()).getEntitiesOfClass(LivingEntity.class,
                 player.getBoundingBox().move(forward.scale(0.8D)).inflate(0.7D, 0.4D, 0.7D), target -> validTarget(player, target))) {
-            if (state.hit.add(target.getId()) && target.hurt(player.damageSources().playerAttack(player),
+            boolean magicLog=ModEnchantments.level(player,player.getMainHandItem(),ModEnchantments.MAGIC_LOG)>0;
+            DamageSource ramSource=magicLog?player.damageSources().magic():player.damageSources().playerAttack(player);
+            if (state.hit.add(target.getId()) && target.hurt(ramSource,
                     (float)player.getAttributeValue(Attributes.ATTACK_DAMAGE) * state.damageMultiplier)) {
-                damage(player.getMainHandItem(), player, 1); player.causeFoodExhaustion(0.5F);
+                damage(player.getMainHandItem(), player, 1); player.causeFoodExhaustion(magicLog?0.25F:0.5F);
             }
         }
     }
@@ -1329,7 +1351,8 @@ public final class CombatEvents {
             if (net.minecraftforge.common.ForgeHooks.onBlockBreakEvent(level, player.gameMode.getGameModeForPlayer(), player, pos) < 0) continue;
             if (!player.mayInteract(level,pos) || !player.mayUseItemAt(pos,net.minecraft.core.Direction.UP,player.getMainHandItem())) continue;
             if (level.destroyBlock(pos, true, player)) {
-                damage(player.getMainHandItem(), player, 1); player.causeFoodExhaustion(0.35F);
+                boolean magicLog=ModEnchantments.level(player,player.getMainHandItem(),ModEnchantments.MAGIC_LOG)>0;
+                damage(player.getMainHandItem(), player, 1); player.causeFoodExhaustion(magicLog?0.175F:0.35F);
                 if (player.getMainHandItem().isEmpty()) return;
             }
         }
@@ -1549,6 +1572,40 @@ public final class CombatEvents {
     }
     private static net.minecraft.world.phys.shapes.CollisionContext playerForClip(Vec3 start, ServerLevel level) {
         return net.minecraft.world.phys.shapes.CollisionContext.empty();
+    }
+    private static float bladeStaffReflection(Player player, WeaponTier tier, LivingEntity attacker, float incoming) {
+        if(tier==WeaponTier.WOOD)return 1.0F;
+        if(tier==WeaponTier.SILVER && attacker.getMobType()==net.minecraft.world.entity.MobType.UNDEAD)return incoming*2.0F;
+        if(tier==WeaponTier.GOLD && TierEffects.matchingArmor(player,tier))return incoming;
+        return incoming*tier.reflectionMultiplier();
+    }
+    private static void triggerShieldThorns(Player defender, ItemStack stack, DamageSource source) {
+        if(!(stack.getItem() instanceof ArsenalShieldItem) || !(source.getEntity() instanceof LivingEntity attacker))return;
+        int level=EnchantmentHelper.getItemEnchantmentLevel(net.minecraft.world.item.enchantment.Enchantments.THORNS,stack);
+        if(level>0)net.minecraft.world.item.enchantment.Enchantments.THORNS.doPostHurt(defender,attacker,level);
+    }
+    private static ResourceLocation spartanShieldForScimitars(Player player) {
+        WeaponTier main = ((ArsenalWeaponItem)player.getMainHandItem().getItem()).tier();
+        WeaponTier off = ((ArsenalWeaponItem)player.getOffhandItem().getItem()).tier();
+        WeaponTier stronger = main.material.getUses() >= off.material.getUses() ? main : off;
+        String shield = switch (stronger) {
+            case WOOD -> "wooden_basic_shield";
+            case STONE -> "stone_basic_shield";
+            case COPPER -> "copper_basic_shield";
+            case GOLD -> "golden_basic_shield";
+            case SILVER -> "silver_basic_shield";
+            case BRONZE -> "bronze_basic_shield";
+            case STEEL -> "steel_basic_shield";
+            case DIAMOND -> "diamond_basic_shield";
+            case NETHERITE, FLAMED_DRAGONBONE, ICED_DRAGONBONE, ELECTRIC_DRAGONBONE,
+                DESERT_MYRMEX, JUNGLE_MYRMEX, DESERT_VENOM, JUNGLE_VENOM,
+                LIVING, SENTIENT -> "netherite_basic_shield";
+            default -> "iron_basic_shield";
+        };
+        return new ResourceLocation("spartanshields", shield);
+    }
+    private static void repair(ItemStack stack,int amount) {
+        if(amount>0 && !stack.isEmpty() && stack.isDamaged())stack.setDamageValue(Math.max(0,stack.getDamageValue()-amount));
     }
     private static void damage(ItemStack stack, LivingEntity owner, int amount) {
         if (amount > 0 && !stack.isEmpty()) stack.hurtAndBreak(amount, owner,
