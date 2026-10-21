@@ -54,13 +54,13 @@ public final class ClientWeaponRenderer {
                 cosBody * 0.72D, 1.25F, (float)-Math.toDegrees(bodyYaw),
                 (float)((now + partial) * 48.0D));
         } else if (weapon.kind() == WeaponKind.FLAIL && (local ? ClientControls.flailActive() : player.isUsingItem())) {
-            double angle = -(now + minecraft.getDeltaTracker().getGameTimeDeltaPartialTick(false)) / swingTicks * Math.PI * 2.0D;
+            float partial=(float)minecraft.getDeltaTracker().getGameTimeDeltaPartialTick(false);
+            double angle = -(now + partial) / swingTicks * Math.PI * 2.0D;
             double reach = ChainWeaponStats.flailReach(player, player.getMainHandItem());
-            renderFlailTrails(event.getPoseStack(), event.getNodeCollector(), event.getState().lightCoords,
-                event.getState().outlineColor, weapon.tier(), angle, reach, 0.0D);
+            Vec3 anchor=flailAnchor(player,partial);
+            Vec3 head=flailPoint(player,partial,angle,reach);
             renderChain(event, player.getMainHandItem(), weapon.tier(),
-                0.34D, 1.2D, 0.0D, Math.cos(angle) * reach, 1.05D,
-                Math.sin(angle) * reach, 0.87F, false);
+                anchor.x,anchor.y,anchor.z,head.x,head.y,head.z,0.87F,false);
         } else if (weapon.kind() == WeaponKind.BALL_AND_CHAIN) {
             double partial = minecraft.getDeltaTracker().getGameTimeDeltaPartialTick(false);
             double bodyYaw = Math.toRadians(Mth.rotLerp((float)partial, player.yBodyRotO, player.yBodyRot));
@@ -83,25 +83,21 @@ public final class ClientWeaponRenderer {
             } else if ((local && ClientControls.ballWindup(now)) || (!local && attackVisual)) {
                 double angle = (now - (local ? ClientControls.ballStarted() : now - player.getTicksUsingItem()) + partial) / swingTicks * Math.PI * 2.0D;
                 double scale = ChainWeaponStats.ballWindupReach(player, player.getMainHandItem()) / 3.0D;
-                double localBallZ = (0.75D + Math.cos(angle) * 0.45D) * scale;
+                Vec3 anchor=ballWindupAnchor(player,(float)partial);
+                Vec3 ball=ballWindupHead(player,(float)partial,angle,scale);
                 renderChain(event, player.getMainHandItem(), weapon.tier(),
-                    handX, handY, handZ,
-                    -sinBody * localBallZ, 1.2D + Math.sin(angle) * 0.72D * scale,
-                    cosBody * localBallZ, 0.48F, true);
+                    anchor.x,anchor.y,anchor.z,ball.x,ball.y,ball.z,0.48F,true);
             } else if (local && ClientControls.ballRelease(now)) {
                 double progress = (now - ClientControls.ballReleaseStarted() + partial)
                     / ClientControls.ballReleaseDuration();
                 double travel = Math.sin(progress * Math.PI);
                 double distance = ClientControls.releasedDistance() * travel;
-                // Third person follows the same live aim shown in first person.
-                // Turning during the throw now bends the visible path toward the
-                // direction used by outgoing/returning collision checks.
-                Vec3 look = player.getViewVector((float)partial);
+                Vec3 look = ClientControls.releasedDirection();
+                Vec3 anchor=ballAnchor(look,player.isCrouching());
                 renderChain(event, player.getMainHandItem(), weapon.tier(),
-                    handX, handY, handZ,
-                    handX * (1.0D - travel) + look.x * distance,
-                    handY + (player.getEyeHeight() - handY) * travel + look.y * distance,
-                    handZ * (1.0D - travel) + look.z * distance,
+                    anchor.x,anchor.y,anchor.z,
+                    anchor.x+look.x*distance,anchor.y+look.y*distance,
+                    anchor.z+look.z*distance,
                     0.48F + ClientControls.releasedCharge() * 0.05F, true);
             }
         }
@@ -145,33 +141,21 @@ public final class ClientWeaponRenderer {
                 -0.42D - Math.max(0.0D, pulse) * 0.035D);
             event.getPoseStack().mulPose(Axis.XP.rotationDegrees(-7.0F));
         } else if (weapon.kind() == WeaponKind.FLAIL && ClientControls.flailActive()) {
-            // Use the exact same world-space anchor and orbit as third person,
-            // then transform both through the live first-person camera. This also
-            // accounts for pitch, which the earlier approximation omitted.
             double angle = -(now + partial) / swingTicks * Math.PI * 2.0D;
             double reach = ChainWeaponStats.flailReach(minecraft.player, event.getItemStack());
-            Vec3 hand = worldOffsetToCamera(minecraft.player, 0.34D,
-                1.20D - minecraft.player.getEyeHeight(), 0.0D, (float)partial);
-            Vec3 ball = worldOffsetToCamera(minecraft.player, Math.cos(angle) * reach,
-                1.05D - minecraft.player.getEyeHeight(), Math.sin(angle) * reach, (float)partial);
-            double gap = Math.min(Math.toRadians(9.0D), 0.42D / Math.max(0.01D, reach));
-            // The orbit angle decreases over time, so older positions are at a
-            // positive angular offset. Using a negative offset put the echoes
-            // ahead of the ball and made them appear to travel backwards.
-            Vec3 near = worldOffsetToCamera(minecraft.player, Math.cos(angle + gap) * reach,
-                1.05D - minecraft.player.getEyeHeight(), Math.sin(angle + gap) * reach, (float)partial);
-            Vec3 far = worldOffsetToCamera(minecraft.player, Math.cos(angle + gap * 1.75D) * reach,
-                1.05D - minecraft.player.getEyeHeight(), Math.sin(angle + gap * 1.75D) * reach, (float)partial);
-            renderCrossedFlailBall(event.getPoseStack(), event.getNodeCollector(), event.getPackedLight(), 0,
-                flailTrailStack(weapon.tier(), true), near.x, near.y, near.z, 0.51F);
-            renderCrossedFlailBall(event.getPoseStack(), event.getNodeCollector(), event.getPackedLight(), 0,
-                flailTrailStack(weapon.tier(), false), far.x, far.y, far.z, 0.33F);
+            Vec3 worldHand=flailAnchor(minecraft.player,(float)partial);
+            Vec3 worldBall=flailPoint(minecraft.player,(float)partial,angle,reach);
+            Vec3 hand=worldOffsetToCamera(minecraft.player,worldHand.x,
+                worldHand.y-minecraft.player.getEyeHeight(),worldHand.z,(float)partial);
+            Vec3 ball=worldOffsetToCamera(minecraft.player,worldBall.x,
+                worldBall.y-minecraft.player.getEyeHeight(),worldBall.z,(float)partial);
             renderChain(event.getPoseStack(), event.getNodeCollector(), event.getPackedLight(), 0,
                 weapon.tier(), hand.x, hand.y, hand.z, ball.x, ball.y, ball.z,
                 0.87F, 0.28F, false);
         } else if (weapon.kind() == WeaponKind.BALL_AND_CHAIN && minecraft.player.isUsingItem()
             && minecraft.player.getUseItem() == event.getItemStack()
-            && minecraft.player.getOffhandItem().isEmpty() && !customModelFlag(event.getItemStack())) {
+            && minecraft.player.getOffhandItem().isEmpty()
+            && !ClientControls.ballWindup(now) && !ClientControls.ballRelease(now)) {
             // Large and low: only the upper half rises into the first-person view.
             // No chain is rendered while the ball itself is used as a shield.
             renderItem(event.getPoseStack(), event.getNodeCollector(), event.getPackedLight(), 0,
@@ -179,24 +163,29 @@ public final class ClientWeaponRenderer {
         } else if (weapon.kind() == WeaponKind.BALL_AND_CHAIN && ClientControls.ballWindup(now)) {
             double angle = (now - ClientControls.ballStarted() + partial) / swingTicks * Math.PI * 2.0D;
             double scale = ChainWeaponStats.ballWindupReach(minecraft.player, event.getItemStack()) / 3.0D;
+            Vec3 worldHand=ballWindupAnchor(minecraft.player,(float)partial);
+            Vec3 worldBall=ballWindupHead(minecraft.player,(float)partial,angle,scale);
+            Vec3 hand=worldOffsetToCamera(minecraft.player,worldHand.x,
+                worldHand.y-minecraft.player.getEyeHeight(),worldHand.z,(float)partial);
+            Vec3 ball=worldOffsetToCamera(minecraft.player,worldBall.x,
+                worldBall.y-minecraft.player.getEyeHeight(),worldBall.z,(float)partial);
             renderChain(event.getPoseStack(), event.getNodeCollector(), event.getPackedLight(), 0,
-                weapon.tier(), 0.50D, -0.40D, -0.72D,
-                0.04D, -0.12D + Math.sin(angle) * 0.44D * scale,
-                -1.18D + Math.cos(angle) * 0.50D * scale, 0.48F, 0.20F, true);
+                weapon.tier(),hand.x,hand.y,hand.z,ball.x,ball.y,ball.z,
+                0.48F,0.20F,true);
         } else if (weapon.kind() == WeaponKind.BALL_AND_CHAIN && ClientControls.ballRelease(now)) {
             double progress = (now - ClientControls.ballReleaseStarted() + partial)
                 / ClientControls.ballReleaseDuration();
             double travel = Math.sin(progress * Math.PI);
             double distance = ClientControls.releasedDistance() * travel;
-            // RenderHandEvent is already camera-relative. Applying the camera yaw/pitch
-            // again makes the ball rotate twice as fast when the player looks around.
-            Vec3 direction = new Vec3(0.0D, 0.0D, -1.0D);
-            double anchorX = 0.50D, anchorY = -0.40D, anchorZ = -0.72D;
+            Vec3 direction=ClientControls.releasedDirection();
+            Vec3 worldHand=ballAnchor(direction,minecraft.player.isCrouching());
+            Vec3 worldBall=worldHand.add(direction.scale(distance));
+            Vec3 hand=worldOffsetToCamera(minecraft.player,worldHand.x,
+                worldHand.y-minecraft.player.getEyeHeight(),worldHand.z,(float)partial);
+            Vec3 ball=worldOffsetToCamera(minecraft.player,worldBall.x,
+                worldBall.y-minecraft.player.getEyeHeight(),worldBall.z,(float)partial);
             renderChain(event.getPoseStack(), event.getNodeCollector(), event.getPackedLight(), 0,
-                weapon.tier(), anchorX, anchorY, anchorZ,
-                anchorX * (1.0D - travel) + direction.x * distance,
-                anchorY * (1.0D - travel) + direction.y * distance,
-                anchorZ * (1.0D - travel) + direction.z * distance,
+                weapon.tier(),hand.x,hand.y,hand.z,ball.x,ball.y,ball.z,
                 0.48F + ClientControls.releasedCharge() * 0.05F, 0.20F, true);
         }
     }
@@ -251,11 +240,11 @@ public final class ClientWeaponRenderer {
         pose.popPose();
     }
 
-    /** Two perpendicular sprite planes make the tiered spike read as a ball. */
+    /** Two opposed sprite planes make the tiered spike read consistently from either side. */
     private static void renderCrossedFlailBall(PoseStack pose, SubmitNodeCollector collector,
             int light, int outline, ItemStack stack, double x, double y, double z, float scale) {
         renderRotatedItem(pose, collector, light, outline, stack, x, y, z, scale, 0.0F);
-        renderRotatedItem(pose, collector, light, outline, stack, x, y, z, scale, 90.0F);
+        renderRotatedItem(pose, collector, light, outline, stack, x, y, z, scale, 180.0F);
     }
 
     private static void renderRotatedItem(PoseStack pose, SubmitNodeCollector collector,
@@ -285,11 +274,45 @@ public final class ClientWeaponRenderer {
             double worldX, double worldY, double worldZ, float partial) {
         double yaw = Math.toRadians(Mth.rotLerp(partial, player.yRotO, player.getYRot()));
         double pitch = Math.toRadians(Mth.lerp(partial, player.xRotO, player.getXRot()));
-        double horizontalX = worldX * Math.cos(yaw) + worldZ * Math.sin(yaw);
-        double depth = worldX * Math.sin(yaw) - worldZ * Math.cos(yaw);
-        return new Vec3(horizontalX,
-            worldY * Math.cos(pitch) - depth * Math.sin(pitch),
-            worldY * Math.sin(pitch) + depth * Math.cos(pitch));
+        double cameraX=-Math.cos(yaw)*worldX-Math.sin(yaw)*worldZ;
+        double cameraZ=Math.sin(yaw)*worldX-Math.cos(yaw)*worldZ;
+        return new Vec3(cameraX,worldY*Math.cos(pitch)-cameraZ*Math.sin(pitch),
+            cameraZ*Math.cos(pitch)+worldY*Math.sin(pitch));
+    }
+
+    private static Vec3 flailAnchor(net.minecraft.world.entity.player.Player player,float partial){
+        double yaw=Math.toRadians(Mth.rotLerp(partial,player.yBodyRotO,player.yBodyRot));
+        return new Vec3(-Math.cos(yaw)*.38D,player.isCrouching()?1.0D:1.2D,
+            -Math.sin(yaw)*.38D);
+    }
+    private static Vec3 flailPoint(net.minecraft.world.entity.player.Player player,float partial,
+            double angle,double reach){
+        double yaw=Math.toRadians(Mth.rotLerp(partial,player.yBodyRotO,player.yBodyRot));
+        double rightX=-Math.cos(yaw),rightZ=-Math.sin(yaw);
+        double forwardX=-Math.sin(yaw),forwardZ=Math.cos(yaw);
+        return new Vec3(rightX*Math.cos(angle)*reach+forwardX*Math.sin(angle)*reach,
+            player.isCrouching()?.85D:1.05D,
+            rightZ*Math.cos(angle)*reach+forwardZ*Math.sin(angle)*reach);
+    }
+    private static Vec3 ballAnchor(Vec3 forward,boolean crouching){
+        double horizontal=Math.sqrt(forward.x*forward.x+forward.z*forward.z);
+        double rightX=horizontal>.0001D?-forward.z/horizontal:-1.0D;
+        double rightZ=horizontal>.0001D?forward.x/horizontal:0.0D;
+        return new Vec3(forward.x*.18D+rightX*.28D,crouching?1.05D:1.25D,
+            forward.z*.18D+rightZ*.28D);
+    }
+    private static Vec3 ballWindupAnchor(net.minecraft.world.entity.player.Player player,float partial){
+        double yaw=Math.toRadians(Mth.rotLerp(partial,player.yRotO,player.getYRot()));
+        return ballAnchor(new Vec3(-Math.sin(yaw),0.0D,Math.cos(yaw)),player.isCrouching());
+    }
+    private static Vec3 ballWindupHead(net.minecraft.world.entity.player.Player player,float partial,
+            double angle,double scale){
+        double yaw=Math.toRadians(Mth.rotLerp(partial,player.yRotO,player.getYRot()));
+        Vec3 forward=new Vec3(-Math.sin(yaw),0.0D,Math.cos(yaw));
+        Vec3 anchor=ballAnchor(forward,player.isCrouching());
+        double distance=(.75D+Math.cos(angle)*.45D)*scale;
+        return new Vec3(anchor.x+forward.x*distance,
+            anchor.y+Math.sin(angle)*.72D*scale,anchor.z+forward.z*distance);
     }
 
     private static void submitItem(PoseStack pose, SubmitNodeCollector collector, int light, int outline,

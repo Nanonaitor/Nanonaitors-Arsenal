@@ -28,6 +28,7 @@ public final class ModTabs {
             addEnchantedBook(output, enchantments.getOrThrow(ModEnchantments.LONG_CHAIN));
             addEnchantedBook(output, enchantments.getOrThrow(ModEnchantments.ROTATION_FORCE));
             addEnchantedBook(output, enchantments.getOrThrow(ModEnchantments.RECOVERY));
+            addEnchantedBook(output, enchantments.getOrThrow(ModEnchantments.BREECHED));
         })
         .build());
 

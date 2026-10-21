@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+- Fixed intermittent Blade Staff auto-attacks by removing a client/server
+  attack-cooldown race; ordinary melee splash still works with an occupied
+  offhand.
+- Removed the fixed dual-Scimitar auto-attack speed clamp so actual attack-speed
+  bonuses and penalties control its alternating cadence.
+- Rotated the Flail's second ball plane and both trail planes by 180 degrees,
+  and increased both afterimage opacities by 20%.
+- Adapted the supplied Charge Targsy model and texture for the 26.1.2 Tartsy
+  Shield while retaining its existing blocking transforms.
+- Adapted the supplied Sun-War Bulwark model and texture to the 26.1.2 item
+  model format.
+- Claws now give villagers, mounts, and other entities first priority on right
+  click before the linked-claw attack is considered.
+- Added the Breeched curse, which doubles Tartsy Shield and Sun-War Bulwark
+  disable cooldowns.
 - Added vanilla-tier Blade Staffs with empty-offhand auto-attacks, two-block
   melee splash damage, and a timed reflection spin that Stuns attackers when
   reflecting non-melee damage.

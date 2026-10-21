@@ -21,6 +21,7 @@ import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.Vec3;
 
 public final class ClientControls {
@@ -35,10 +36,11 @@ public final class ClientControls {
         lastMorningStarHeartbeat = Long.MIN_VALUE;
     private static boolean morningStarFullSwing;
     private static boolean mainClawWasDown, offhandClawWasDown;
+    private static boolean clawEntityInteraction;
     private static boolean menuBulwarkGuard, scimitarNextOffhand;
     private static boolean offhandScimitarWasDown, bladeStaffWasDown;
     private static long lastScimitarAttack = Long.MIN_VALUE, lastBulwarkAttack = Long.MIN_VALUE,
-        bladeStaffReflectUntil = Long.MIN_VALUE;
+        bladeStaffReflectUntil = Long.MIN_VALUE, lastBladeStaffAutoAttack = Long.MIN_VALUE;
     private static int releasedCharge, ballCharge, ballReleaseDuration = 16;
     private static double releasedDistance;
     private static Vec3 releasedDirection = Vec3.ZERO;
@@ -85,10 +87,15 @@ public final class ClientControls {
         }
         if (weapon.kind() == WeaponKind.BLADE_STAFF) {
             boolean auto = attack && player.getOffhandItem().isEmpty() && !bladeStaffReflecting(now);
-            if (auto && player.getAttackStrengthScale(0.5F) >= 0.95F) {
+            double cooldown = 20.0D / Math.max(0.1D,
+                player.getAttributeValue(Attributes.ATTACK_SPEED));
+            if (auto && player.getAttackStrengthScale(0.5F) >= 0.95F
+                && elapsed(now, lastBladeStaffAutoAttack, cooldown)) {
                 player.swing(InteractionHand.MAIN_HAND, true);
                 ModNetwork.send(ModNetwork.BLADE_STAFF_ATTACK, true);
-                player.resetAttackStrengthTicker();
+                // The server-side attack resets attack strength. Resetting it here
+                // first made the packet intermittently fail server validation.
+                lastBladeStaffAutoAttack = now;
             }
             bladeStaffWasDown = attack;
         } else bladeStaffWasDown = false;
@@ -182,8 +189,11 @@ public final class ClientControls {
                 ballReleaseStarted = now;
                 ModNetwork.send(ModNetwork.BALL_CHAIN, false);
             }
+            boolean guarding = !down && !releasing && player.isUsingItem()
+                && player.getUseItem() == player.getMainHandItem()
+                && player.getOffhandItem().isEmpty();
             updateBallSprite(player.getMainHandItem(), down
-                || within(now, ballReleaseStarted, ballReleaseDuration));
+                || within(now, ballReleaseStarted, ballReleaseDuration) || guarding);
             ballWasDown = down;
         } else if (ballWasDown) {
             ModNetwork.send(ModNetwork.BALL_CHAIN, false);
@@ -277,12 +287,28 @@ public final class ClientControls {
         // linked claw only when the matching generated partner is equipped; any
         // other offhand item keeps its normal use behavior.
         if (event.isUseItem() && !paired) return false;
+        if (event.isUseItem() && tryClawEntityInteraction(minecraft, player)) {
+            clawEntityInteraction = true;
+            event.setSwingHand(false);
+            return true;
+        }
         // Both physical buttons are handled once per client tick below. Modern
         // Minecraft repeatedly emits use interactions while right click is held;
         // resolving attacks here made the linked claw strike and play whiff audio
         // every tick instead of respecting its weapon cooldown.
         event.setSwingHand(false);
         return true;
+    }
+
+    private static boolean tryClawEntityInteraction(Minecraft minecraft, LocalPlayer player) {
+        if (!(minecraft.hitResult instanceof EntityHitResult hit) || minecraft.gameMode == null) {
+            return false;
+        }
+        // Ask the actual entity interaction API first, so villagers and modded
+        // mounts work without a hardcoded entity-class list. PASS remains a
+        // linked-claw attack; any consumed result belongs to the entity.
+        return minecraft.gameMode.interact(player, hit.getEntity(), hit,
+            InteractionHand.MAIN_HAND).consumesAction();
     }
 
     private static void tickMenuBulwarkGuard(Minecraft minecraft, LocalPlayer player) {
@@ -335,8 +361,7 @@ public final class ClientControls {
             // speed attribute. Alternate once per resulting combined cooldown.
             double attackSpeed = offhandOnly ? offhandScimitarAttackSpeed(player)
                 : player.getAttributeValue(Attributes.ATTACK_SPEED);
-            double cooldown = dual ? Math.max(10.0D, 20.0D / Math.max(0.1D, attackSpeed))
-                : 20.0D / Math.max(0.1D, attackSpeed);
+            double cooldown = 20.0D / Math.max(0.1D, attackSpeed);
             if (elapsed(now, lastScimitarAttack, cooldown)) {
                 boolean offhandAttack = offhandOnly || scimitarNextOffhand;
                 player.swing(offhandAttack ? InteractionHand.OFF_HAND : InteractionHand.MAIN_HAND, true);
@@ -425,7 +450,9 @@ public final class ClientControls {
         double cooldown = 20.0D / speed;
         boolean paired = hasMatchingLinkedClaw(player, claws);
         boolean mainDown = minecraft.options.keyAttack.isDown();
-        boolean offhandDown = paired && minecraft.options.keyUse.isDown();
+        if (!minecraft.options.keyUse.isDown()) clawEntityInteraction = false;
+        boolean offhandDown = paired && minecraft.options.keyUse.isDown()
+            && !clawEntityInteraction;
         boolean fullyCharged = player.getAttackStrengthScale(0.5F) >= 1.0F;
 
         // A fresh press remains a normal manual attack and may be partially

@@ -440,8 +440,7 @@ public final class CombatEvents {
         long previous = LAST_SCIMITAR_ATTACK.getOrDefault(player.getUUID(), Long.MIN_VALUE);
         double attackSpeed = offhand && !dual ? offhandScimitarAttackSpeed(player)
             : player.getAttributeValue(Attributes.ATTACK_SPEED);
-        double cooldown = dual ? Math.max(10.0D, 20.0D / Math.max(0.1D, attackSpeed))
-            : 20.0D / Math.max(0.1D, attackSpeed);
+        double cooldown = 20.0D / Math.max(0.1D, attackSpeed);
         if (previous != Long.MIN_VALUE && now >= previous && now - previous + 0.5D < cooldown) return;
         LAST_SCIMITAR_ATTACK.put(player.getUUID(), now);
         LivingEntity target = clawTarget(player);
@@ -668,7 +667,13 @@ public final class CombatEvents {
     }
 
     private static int recoveryCooldown(Player player, ItemStack stack, int base) {
-        return ModEnchantments.level(player, stack, ModEnchantments.RECOVERY) > 0 ? Math.max(1, base / 2) : base;
+        int ticks = ModEnchantments.level(player, stack, ModEnchantments.RECOVERY) > 0
+            ? Math.max(1, base / 2) : base;
+        if (stack.getItem() instanceof ArsenalShieldItem
+            && ModEnchantments.level(player, stack, ModEnchantments.BREECHED) > 0) {
+            ticks *= 2;
+        }
+        return ticks;
     }
 
     private static int morningStarChargeTicks() {
@@ -1212,10 +1217,10 @@ public final class CombatEvents {
             speed.removeModifier(DUAL_SCIMITAR_ATTACK_SPEED);
             return;
         }
-        // Raise the normal 1.8 Scimitar speed to the exact 2.0 attacks/second
-        // supported by Minecraft's ten-tick damage-immunity window.
+        // Add the second blade's full speed. External speed bonuses and penalties
+        // remain effective instead of being clamped to two attacks per second.
         double secondBladeSpeed = Math.max(0.0D,
-            2.0D - (4.0D + WeaponKind.SCIMITAR.speedModifier));
+            4.0D + WeaponKind.SCIMITAR.speedModifier);
         speed.addOrUpdateTransientModifier(new AttributeModifier(DUAL_SCIMITAR_ATTACK_SPEED,
             secondBladeSpeed, AttributeModifier.Operation.ADD_VALUE));
     }
