@@ -18,6 +18,7 @@ import net.minecraft.inventory.EntityEquipmentSlot;
 import net.minecraft.entity.Entity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.ItemSword;
+import net.minecraft.util.ResourceLocation;
 import net.minecraft.world.World;
 
 public abstract class ItemArsenalWeapon extends ItemSword {
@@ -62,6 +63,11 @@ public abstract class ItemArsenalWeapon extends ItemSword {
      */
     @Override
     public boolean canApplyAtEnchantingTable(ItemStack stack, Enchantment enchantment) {
+        if (isSwifterSlashes(enchantment)
+            && (this instanceof ItemFlail || this instanceof ItemBallAndChain
+                || this instanceof ItemClaws)) {
+            return false;
+        }
         if (enchantment.getRegistryName() != null
             && "somanyenchantments:desolator".equals(enchantment.getRegistryName().toString())) {
             if (!(this instanceof ItemMorningStar)) return false;
@@ -91,6 +97,23 @@ public abstract class ItemArsenalWeapon extends ItemSword {
             checking.remove(enchantment);
             if (checking.isEmpty()) CHECKING_ENCHANTMENTS.remove();
         }
+    }
+
+    @Override
+    public boolean isBookEnchantable(ItemStack stack, ItemStack book) {
+        if ((this instanceof ItemFlail || this instanceof ItemBallAndChain
+                || this instanceof ItemClaws)
+            && net.minecraft.enchantment.EnchantmentHelper.getEnchantments(book).keySet().stream()
+                .anyMatch(ItemArsenalWeapon::isSwifterSlashes)) {
+            return false;
+        }
+        return super.isBookEnchantable(stack, book);
+    }
+
+    private static boolean isSwifterSlashes(Enchantment enchantment) {
+        ResourceLocation id = enchantment.getRegistryName();
+        return id != null && "somanyenchantments".equals(id.getResourceDomain())
+            && ("swifter_slashes".equals(id.getResourcePath()) || "swifterslashes".equals(id.getResourcePath()));
     }
 
     @Override

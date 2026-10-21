@@ -42,12 +42,12 @@ import net.minecraftforge.fml.common.gameevent.TickEvent;
 @Mod.EventBusSubscriber(modid = NanonaitorsArsenal.MOD_ID)
 public final class ModernBackportCombat {
     private static final Map<EntityPlayer, MorningState> MORNING = new WeakHashMap<>();
-    private static final Map<UUID, Long> LAST_SCIMITAR = new java.util.HashMap<>();
+    private static final Map<UUID, Double> NEXT_SCIMITAR_TURN = new java.util.HashMap<>();
     private static final Map<UUID, Long> LAST_AUXILIARY_SCIMITAR = new java.util.HashMap<>();
 
     private ModernBackportCombat() {}
 
-    public static void handleControl(EntityPlayerMP player, byte action, boolean active) {
+    public static void handleControl(EntityPlayerMP player,byte action,boolean active,int targetId) {
         if (action == ModernWeaponControlMessage.SHIELD_TAKEOVER) {
             if (AbilityUseRules.shield(player, player.getHeldItemOffhand())) {
                 cancelMorning(player);
@@ -59,7 +59,7 @@ public final class ModernBackportCombat {
         if (action == ModernWeaponControlMessage.MORNING_STAR) morningStar(player, active);
         else if (action == ModernWeaponControlMessage.SCIMITAR_BASH) scimitarBash(player);
         else if (action == ModernWeaponControlMessage.MORNING_CANCEL) cancelMorning(player);
-        else if (action == ModernWeaponControlMessage.SCIMITAR_ATTACK) scimitar(player, active);
+        else if (action == ModernWeaponControlMessage.SCIMITAR_ATTACK) scimitar(player,active,targetId);
         else if (action == ModernWeaponControlMessage.BULWARK_MENU_GUARD) menuGuard(player, active);
         else if (action == ModernWeaponControlMessage.BALL_WIND_BOOST)
             player.getEntityData().setBoolean("ArsenalBallWindBoost", active
@@ -100,15 +100,16 @@ public final class ModernBackportCombat {
             return;
         }
         if (!player.isHandActive()) player.setActiveHand(EnumHand.MAIN_HAND);
-        if (!state.chimed && now - state.started >= chargeTicks()) {
+        if (!state.chimed && now - state.started >= chargeTicks(player.getHeldItemMainhand())) {
             state.chimed = true;
             player.world.playSound(null, player.posX, player.posY, player.posZ,
                 SoundEvents.ENTITY_PLAYER_LEVELUP, SoundCategory.PLAYERS, 0.55F, 1.55F);
         }
     }
 
-    private static int chargeTicks() {
-        return Math.max(1, (int)Math.ceil(ArsenalConfig.morningStar.fullChargeSeconds * 20.0D));
+    private static int chargeTicks(ItemStack stack) {
+        int luna=ModContent.LUNA==null?0:EnchantmentHelper.getEnchantmentLevel(ModContent.LUNA,stack);
+        return Math.max(1, (int)Math.ceil(ArsenalConfig.morningStar.fullChargeSeconds * 20.0D*(1.0D-.25D*luna)));
     }
 
     private static void morningStar(EntityPlayerMP player, boolean active) {
@@ -158,11 +159,12 @@ public final class ModernBackportCombat {
         }
         ItemMorningStar item = (ItemMorningStar) stack.getItem();
         long elapsed = Math.max(0L, player.world.getTotalWorldTime() - state.started);
-        int quarters = Math.min(4, (int)Math.floor(elapsed * 4.0D / chargeTicks()));
+        int quarters = Math.min(4, (int)Math.floor(elapsed * 4.0D / chargeTicks(stack)));
         boolean full = quarters >= 4;
         float multiplier = 1.0F + quarters * 0.10F;
         double reach = player.getEntityAttribute(EntityPlayer.REACH_DISTANCE).getAttributeValue();
-        double halfWidth = 2.0D * quarters / 4.0D;
+        int luna=ModContent.LUNA==null?0:EnchantmentHelper.getEnchantmentLevel(ModContent.LUNA,stack);
+        double halfWidth = 2.0D * quarters / 4.0D * (1.0D+.25D*luna);
         Vec3d eye = player.getPositionEyes(1.0F);
         Vec3d look = player.getLookVec().normalize();
         Vec3d horizontal = new Vec3d(look.x, 0, look.z);
@@ -249,7 +251,7 @@ public final class ModernBackportCombat {
         ItemStack main = player.getHeldItemMainhand(), off = player.getHeldItemOffhand();
         if (!com.nanonaitor.arsenal.compat.ReskillableCompat.canUse(player, main)
             || !com.nanonaitor.arsenal.compat.ReskillableCompat.canUse(player, off)) return;
-        net.minecraft.entity.Entity entity = scimitarTarget(player, 4.0D);
+        net.minecraft.entity.Entity entity = scimitarTarget(player, 4.0D, -1);
         if (entity instanceof EntityLivingBase && CombatTargetRules.canHit(player, (EntityLivingBase)entity)) {
             EntityLivingBase target = (EntityLivingBase)entity;
             float damage = com.nanonaitor.arsenal.compat.ScimitarAttackBridge.bashDamage(player, target);
@@ -272,7 +274,7 @@ public final class ModernBackportCombat {
         player.addExhaustion(0.1F);
     }
 
-    private static void scimitar(EntityPlayerMP player, boolean offhand) {
+    private static void scimitar(EntityPlayerMP player,boolean offhand,int targetId) {
         boolean independentOffhand = offhand && (player.getHeldItemMainhand().getItem() instanceof ItemMorningStar
             || player.getHeldItemMainhand().getItem() instanceof com.nanonaitor.arsenal.item.ItemFlail);
         if (player.isHandActive() && !(independentOffhand && player.getActiveHand() == EnumHand.MAIN_HAND)) return;
@@ -286,39 +288,56 @@ public final class ModernBackportCombat {
         if (!dual && !offhand) return;
         long now = player.world.getTotalWorldTime();
         boolean auxiliary = offhand && !dual;
-        Map<UUID, Long> clock = auxiliary ? LAST_AUXILIARY_SCIMITAR : LAST_SCIMITAR;
-        long last = clock.getOrDefault(player.getUniqueID(), Long.MIN_VALUE);
-        double cooldown = dual ? com.nanonaitor.arsenal.compat.ScimitarAttackBridge.pairedInterval(player)
-            : com.nanonaitor.arsenal.compat.ScimitarAttackBridge.cooldown(player, offhand);
-        if (!auxiliary && last != Long.MIN_VALUE && now - last + 0.5D < cooldown) {
-            return;
+        if(auxiliary) {
+            long last=LAST_AUXILIARY_SCIMITAR.getOrDefault(player.getUniqueID(),Long.MIN_VALUE);
+            double cooldown=com.nanonaitor.arsenal.compat.ScimitarAttackBridge.cooldown(player,true);
+            if((last!=Long.MIN_VALUE && now-last+0.5D<cooldown)
+                || !com.nanonaitor.arsenal.compat.ScimitarAttackBridge.ready(player,true))return;
+            LAST_AUXILIARY_SCIMITAR.put(player.getUniqueID(),now);
+        } else {
+            double deadline=NEXT_SCIMITAR_TURN.getOrDefault(player.getUniqueID(),Double.NEGATIVE_INFINITY);
+            if(now+0.5D<deadline)return;
+            double interval=com.nanonaitor.arsenal.compat.ScimitarAttackBridge.pairedDamageInterval(player);
+            NEXT_SCIMITAR_TURN.put(player.getUniqueID(),GuardRules.nextTurnDeadline(deadline,now,interval));
         }
-        clock.put(player.getUniqueID(), now);
-        net.minecraft.entity.Entity target = scimitarTarget(player,
-            com.nanonaitor.arsenal.compat.ScimitarAttackBridge.reach(player, offhand));
+        net.minecraft.entity.Entity target=scimitarTarget(player,
+            com.nanonaitor.arsenal.compat.ScimitarAttackBridge.reach(player,offhand),targetId);
         player.isSwingInProgress = false;
         player.swingArm(hand);
         if (target != null) {
+            if (!auxiliary)
+                com.nanonaitor.arsenal.compat.ScimitarAttackBridge.prepareScheduledStrike(player,offhand);
             com.nanonaitor.arsenal.compat.ScimitarAttackBridge.strike(player, target, offhand);
         }
     }
 
-    private static net.minecraft.entity.Entity scimitarTarget(EntityPlayer player, double reach) {
+    private static net.minecraft.entity.Entity scimitarTarget(EntityPlayer player,double reach,int targetId) {
+        if(targetId>=0) {
+            net.minecraft.entity.Entity selected=player.world.getEntityByID(targetId);
+            if(validScimitarTarget(player,selected)
+                && player.getDistanceSq(selected)<=Math.pow(reach+selected.width+1.0D,2.0D)
+                && player.canEntityBeSeen(selected))return selected;
+        }
         Vec3d start = player.getPositionEyes(1.0F), end = start.add(player.getLookVec().scale(reach));
         net.minecraft.util.math.RayTraceResult wall = player.world.rayTraceBlocks(start, end, false, true, false);
         double closest = wall == null ? reach : start.distanceTo(wall.hitVec);
         net.minecraft.entity.Entity best = null;
         for (net.minecraft.entity.Entity candidate : player.world.getEntitiesWithinAABBExcludingEntity(player,
                 player.getEntityBoundingBox().expand(end.x-start.x,end.y-start.y,end.z-start.z).grow(1.0D))) {
-            if (!candidate.canBeCollidedWith() || candidate.isDead || player.isOnSameTeam(candidate)) continue;
-            if (candidate instanceof EntityPlayer && (((EntityPlayer)candidate).isSpectator()
-                || !player.canAttackPlayer((EntityPlayer)candidate))) continue;
+            if(!validScimitarTarget(player,candidate))continue;
             AxisAlignedBB bounds = candidate.getEntityBoundingBox().grow(candidate.getCollisionBorderSize());
             net.minecraft.util.math.RayTraceResult hit = bounds.calculateIntercept(start,end);
             double distance = bounds.contains(start) ? 0.0D : hit == null ? Double.MAX_VALUE : start.distanceTo(hit.hitVec);
             if (distance < closest) { closest = distance; best = candidate; }
         }
         return best;
+    }
+
+    private static boolean validScimitarTarget(EntityPlayer player,net.minecraft.entity.Entity candidate) {
+        if(candidate==null || !candidate.canBeCollidedWith() || candidate.isDead
+            || player.isOnSameTeam(candidate))return false;
+        return !(candidate instanceof EntityPlayer) || (!((EntityPlayer)candidate).isSpectator()
+            && player.canAttackPlayer((EntityPlayer)candidate));
     }
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
@@ -331,8 +350,18 @@ public final class ModernBackportCombat {
         }
         boolean dual = player.getHeldItemMainhand().getItem() instanceof ItemScimitar
             && player.getHeldItemOffhand().getItem() instanceof ItemScimitar;
+        // A disabled cross-guard is a recovery state for the pair, not an
+        // opportunity for RLCombat to fall back to a native hand attack.
+        if (dual && com.nanonaitor.arsenal.compat.ScimitarShieldCompat.disabled(player)) {
+            event.setCanceled(true);
+            return;
+        }
+        boolean nativeRlCombat = "bettercombat.mod.event.RLCombatAttackEntityEvent"
+            .equals(event.getClass().getName());
         if (dual && (player.isHandActive()
-            || !com.nanonaitor.arsenal.compat.ScimitarAttackBridge.isControlledAttack())) event.setCanceled(true);
+            || !nativeRlCombat
+                && !com.nanonaitor.arsenal.compat.ScimitarAttackBridge.isControlledAttack()))
+            event.setCanceled(true);
     }
 
     private static double reach(EntityPlayer player) {

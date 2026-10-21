@@ -19,20 +19,29 @@ public final class ModernWeaponControlMessage implements IMessage {
     public static final byte SHIELD_TAKEOVER = 7;
     private byte action;
     private boolean active;
+    private int targetId = -1;
 
     public ModernWeaponControlMessage() {}
     public ModernWeaponControlMessage(byte action, boolean active) {
         this.action = action;
         this.active = active;
     }
-    @Override public void fromBytes(ByteBuf buf) { action = buf.readByte(); active = buf.readBoolean(); }
-    @Override public void toBytes(ByteBuf buf) { buf.writeByte(action); buf.writeBoolean(active); }
+    public ModernWeaponControlMessage(byte action, boolean active, int targetId) {
+        this(action,active);
+        this.targetId=targetId;
+    }
+    @Override public void fromBytes(ByteBuf buf) {
+        action=buf.readByte();active=buf.readBoolean();targetId=buf.readInt();
+    }
+    @Override public void toBytes(ByteBuf buf) {
+        buf.writeByte(action);buf.writeBoolean(active);buf.writeInt(targetId);
+    }
 
     public static final class Handler implements IMessageHandler<ModernWeaponControlMessage, IMessage> {
         @Override public IMessage onMessage(ModernWeaponControlMessage message, MessageContext context) {
             EntityPlayerMP player = context.getServerHandler().player;
             player.getServerWorld().addScheduledTask(() ->
-                ModernBackportCombat.handleControl(player, message.action, message.active));
+                ModernBackportCombat.handleControl(player,message.action,message.active,message.targetId));
             return null;
         }
     }

@@ -49,7 +49,7 @@ public final class ModRecipes {
             venom ? " V " : " M ", venom ? "VMV" : "MMM", " S ",
             'M', m, 'V', v);
         recipe(e, "scimitar", t, ModContent.SCIMITARS, venom?" VM":" MM", "MM ", "S  ", 'M', m, 'V', v);
-        recipe(e, "double_bladed_scimitar", t, ModContent.DOUBLE_BLADED_SCIMITARS,
+        recipe(e, "blade_staff", t, ModContent.DOUBLE_BLADED_SCIMITARS,
             venom ? "VM " : "MM ", " S ", venom ? " MV" : " MM",
             'M', m, 'V', v);
         recipe(e, "claws", t, ModContent.CLAWS, venom?"V V":"M M", "MWM", " S ", 'M', m, 'V', v, 'W', "plankWood");
@@ -107,7 +107,7 @@ public final class ModRecipes {
         Object shell = ArsenalCompatManager.itemStack("srparasites:vile_shell");
         living(e, "morning_star", ModContent.MORNING_STARS.get(t), " F ", "FCF", " H ", f,c,h);
         living(e, "scimitar", ModContent.SCIMITARS.get(t), " FF", "FC ", "H  ", f,c,h);
-        living(e, "double_bladed_scimitar", ModContent.DOUBLE_BLADED_SCIMITARS.get(t),
+        living(e, "blade_staff", ModContent.DOUBLE_BLADED_SCIMITARS.get(t),
             "FF ", " H ", " FF", f,c,h);
         living(e, "claws", ModContent.CLAWS.get(t), "F F", "FCF", " H ", f,c,h);
         living(e, "flail", ModContent.FLAILS.get(t), "FC ", " T ", " H ", f,c,h, 'T',tendon);
@@ -151,7 +151,7 @@ public final class ModRecipes {
         upgrade(e,"flail",ModContent.FLAILS,target,blood);
         upgrade(e,"battering_ram",ModContent.BATTERING_RAMS,target,blood);
         upgrade(e,"ball_and_chain",ModContent.BALLS_AND_CHAINS,target,blood);
-        upgrade(e,"double_bladed_scimitar",ModContent.DOUBLE_BLADED_SCIMITARS,target,blood);
+        upgrade(e,"blade_staff",ModContent.DOUBLE_BLADED_SCIMITARS,target,blood);
     }
     private static <T extends ItemArsenalWeapon> void upgrade(RegistryEvent.Register<IRecipe> e,
             String family, Map<WeaponTier,T> map, WeaponTier target, String blood) {

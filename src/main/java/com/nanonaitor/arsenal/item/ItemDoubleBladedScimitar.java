@@ -28,7 +28,7 @@ public final class ItemDoubleBladedScimitar extends ItemArsenalWeapon {
 
     public ItemDoubleBladedScimitar(WeaponTier tier) {
         // Vanilla swords deal material damage + 4. This family deals one more.
-        super(tier, "double_bladed_scimitar",
+        super(tier, "blade_staff",
             4.0D + tier.getMaterial().getAttackDamage(), -2.0D);
         addPropertyOverride(REFLECTING, new IItemPropertyGetter() {
             @Override
@@ -93,7 +93,8 @@ public final class ItemDoubleBladedScimitar extends ItemArsenalWeapon {
                 "Blade Staff with sweeping hits and timed reflection.")) return;
         tooltip.add(TextFormatting.GOLD + "Melee hits damage other enemies within "
             + (getTier() == WeaponTier.SENTIENT ? "3" : "2") + " blocks of the target.");
-        tooltip.add(TextFormatting.BLUE + "Right click: reflect attacks for 1 sec.");
+        tooltip.add(TextFormatting.BLUE + "Right click: reflect incoming damage for 1 sec.");
+        tooltip.add(TextFormatting.AQUA + reflectionDescription());
         tooltip.add(TextFormatting.GRAY + "An offhand shield takes priority over reflection.");
         tooltip.add(TextFormatting.DARK_PURPLE
             + "Reflection returns incoming damage before armor reduction.");
@@ -109,5 +110,16 @@ public final class ItemDoubleBladedScimitar extends ItemArsenalWeapon {
             tooltip.add(TextFormatting.DARK_GREEN + "Held: cleanses Call of the Hive from entities within "
                 + (getTier() == WeaponTier.SENTIENT ? "10" : "5") + " blocks.");
         }
+    }
+
+    private String reflectionDescription() {
+        if (getTier() == WeaponTier.WOOD)
+            return "Reflects a flat 1 damage per incoming hit.";
+        if (getTier() == WeaponTier.SILVER)
+            return "Reflects 50% damage, or 200% against undead enemies.";
+        if (getTier() == WeaponTier.GOLD)
+            return "Reflects 50% damage, or 100% with matching gold armor.";
+        return "Reflects " + Math.round(getTier().getReflectionMultiplier() * 100.0F)
+            + "% of incoming combat damage.";
     }
 }

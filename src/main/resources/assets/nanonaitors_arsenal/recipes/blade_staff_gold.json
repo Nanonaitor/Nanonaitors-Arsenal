@@ -16,12 +16,12 @@
     }
   },
   "result": {
-    "item": "nanonaitors_arsenal:double_bladed_scimitar_gold"
+    "item": "nanonaitors_arsenal:blade_staff_gold"
   },
   "conditions": [
     {
       "type": "nanonaitors_arsenal:weapon_enabled",
-      "family": "double_bladed_scimitar"
+      "family": "blade_staff"
     }
   ]
 }

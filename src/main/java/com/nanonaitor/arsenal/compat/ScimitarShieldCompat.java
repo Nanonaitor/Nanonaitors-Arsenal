@@ -27,10 +27,18 @@ public final class ScimitarShieldCompat {
             && player.getActiveItemStack().getItem() instanceof com.nanonaitor.arsenal.item.ItemScimitar;
     }
     public static void disable(EntityPlayer player, int ticks) {
+        int endure=endureLevel(player);
+        if(endure>0 && player.getRNG().nextFloat()<.25F*endure)return;
+        ticks=Math.max(1,Math.round(ticks*(1.0F-.25F*endure)));
         player.getCooldownTracker().setCooldown(player.getHeldItemMainhand().getItem(), ticks);
         player.getCooldownTracker().setCooldown(player.getHeldItemOffhand().getItem(), ticks);
         player.getEntityData().setBoolean("ArsenalScimitarGuard", false);
         player.resetActiveHand();
+    }
+    private static int endureLevel(EntityPlayer player) {
+        if(com.nanonaitor.arsenal.registry.ModContent.ENDURE==null)return 0;
+        return Math.min(2,EnchantmentHelper.getEnchantmentLevel(com.nanonaitor.arsenal.registry.ModContent.ENDURE,player.getHeldItemMainhand())
+            + EnchantmentHelper.getEnchantmentLevel(com.nanonaitor.arsenal.registry.ModContent.ENDURE,player.getHeldItemOffhand()));
     }
     public static int bashCooldown() {
         if (!Loader.isModLoaded("spartanshields")) return 30;

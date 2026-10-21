@@ -23,12 +23,12 @@ import net.minecraftforge.fml.common.event.FMLServerStartedEvent;
     version = NanonaitorsArsenal.VERSION,
     acceptedMinecraftVersions = "[1.12.2]",
     guiFactory = "com.nanonaitor.arsenal.client.ArsenalGuiFactory",
-    dependencies = "after:setbonus;after:iceandfire;after:xat;after:quark;after:spartanweaponry;after:spartanfire;after:srparasites;after:reskillable;after:distinctdamagedescriptions"
+    dependencies = "after:setbonus;after:iceandfire;after:xat;after:quark;after:spartanweaponry;after:spartanfire;after:srparasites;after:reskillable;after:distinctdamagedescriptions;after:mobends"
 )
 public final class NanonaitorsArsenal {
     public static final String MOD_ID = "nanonaitors_arsenal";
     public static final String NAME = "Nanonaitor's Arsenal";
-    public static final String VERSION = "2.0.17";
+    public static final String VERSION = "2.0.18";
     public static final Logger LOGGER = LogManager.getLogger(NAME);
     public static final CreativeTabs CREATIVE_TAB = new ArsenalCreativeTab();
 

@@ -20,6 +20,7 @@ import net.minecraft.util.math.RayTraceResult;
 import net.minecraftforge.client.event.MouseEvent;
 import net.minecraftforge.client.event.RenderSpecificHandEvent;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.common.Loader;
 import net.minecraftforge.fml.common.eventhandler.EventPriority;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent;
@@ -30,10 +31,16 @@ import net.minecraft.client.renderer.GlStateManager;
 /** Client controls and lightweight poses for the modern-mechanics backport. */
 @Mod.EventBusSubscriber(modid = NanonaitorsArsenal.MOD_ID, value = Side.CLIENT)
 public final class ModernWeaponInputHandler {
-    private static boolean morning, menuGuard, nextScimitarOffhand, ballBoost, attackWasDown;
+    private static boolean morning, menuGuard, ballBoost, attackWasDown;
     private static boolean offhandWasDown;
     private static long morningStarted = Long.MIN_VALUE, heartbeat = Long.MIN_VALUE;
-    private static long lastScimitar = Long.MIN_VALUE;
+    private static double nextScimitarTurnAt = Double.NEGATIVE_INFINITY;
+    private static boolean nextScimitarOffhand, scimitarPressedThisTick;
+    private static boolean cancelNativeMainhandSweep;
+    private static boolean scimitarBashOwnsAttack;
+    private static boolean temporaryScimitarUse;
+    private static EntityPlayerSP rlCombatScimitarPlayer;
+    private static ItemStack rlCombatHiddenScimitar = ItemStack.EMPTY;
 
     private ModernWeaponInputHandler() {}
 
@@ -42,9 +49,72 @@ public final class ModernWeaponInputHandler {
         if (ShieldInputHandler.handleShieldAttack(event)) return;
         EntityPlayerSP player = Minecraft.getMinecraft().player;
         if (player == null) return;
+        boolean dualScimitars = player.getHeldItemMainhand().getItem() instanceof ItemScimitar
+            && player.getHeldItemOffhand().getItem() instanceof ItemScimitar;
+        boolean dualScimitarsDisabled = dualScimitars
+            && com.nanonaitor.arsenal.compat.ScimitarShieldCompat.disabled(player);
+        int useKey = Minecraft.getMinecraft().gameSettings.keyBindUseItem.getKeyCode();
+        boolean usePress = useKey < 0 && event.getButton() == useKey + 100;
+        if (dualScimitars && usePress && event.isButtonstate() && !player.isHandActive()) {
+            // RLCombat listens to canceled MouseEvents and otherwise interprets
+            // right click as an offhand attack. Marking a Scimitar active before
+            // its listener runs reserves this click from RLCombat. The marker is
+            // removed at LOWEST priority so vanilla can still open containers,
+            // use blocks and trade with entities before starting cross-guard.
+            player.setActiveHand(EnumHand.MAIN_HAND);
+            temporaryScimitarUse=true;
+        }
+        if (dualScimitars && usePress && event.isButtonstate()
+            && Loader.isModLoaded("bettercombatmod")) {
+            // RLCombat treats every right click with an offhand weapon as an
+            // offhand strike, even when that click is raising this pair's guard
+            // or using a block/entity. Hide only the client-side offhand for its
+            // NORMAL-priority mouse listener, then restore it at LOWEST before
+            // vanilla handles the actual right-click interaction.
+            restoreRlCombatScimitar();
+            rlCombatScimitarPlayer=player;
+            rlCombatHiddenScimitar=player.getHeldItemOffhand();
+            player.inventory.offHandInventory.set(0,ItemStack.EMPTY);
+        }
         if (event.getButton() == 0 && player.getHeldItemMainhand().getItem() instanceof ItemScimitar
             && player.getHeldItemOffhand().getItem() instanceof ItemScimitar) {
             event.setCanceled(true);
+            if (!event.isButtonstate()) {
+                scimitarBashOwnsAttack=false;
+                return;
+            }
+            if (scimitarBashOwnsAttack) return;
+            if (dualScimitarsDisabled) {
+                // The pair's shield cooldown disables both native and scheduled
+                // attacks. This temporary active item also makes RLCombat's
+                // receiveCanceled mouse listener decline the same left click.
+                if(!player.isHandActive()) {
+                    player.setActiveHand(EnumHand.MAIN_HAND);
+                    temporaryScimitarUse=true;
+                }
+                return;
+            }
+            boolean guardIntent = useKey < 0 && Mouse.isButtonDown(useKey + 100);
+            if (guardIntent && !player.isHandActive()) {
+                player.setActiveHand(EnumHand.MAIN_HAND);
+                temporaryScimitarUse=true;
+            }
+            if(event.isButtonstate() && Minecraft.getMinecraft().currentScreen==null
+                && !guardIntent
+                && !com.nanonaitor.arsenal.compat.ScimitarShieldCompat.isGuarding(player)) {
+                scimitarPressedThisTick=true;
+                Boolean attackedOffhand=attackNextReadyScimitar(
+                    player,player.world.getTotalWorldTime());
+                cancelNativeMainhandSweep=Boolean.TRUE.equals(attackedOffhand);
+                // Arsenal owns this physical click. RLCombat listens to canceled
+                // mouse events and would otherwise send a second main-hand packet
+                // after Arsenal has already consumed that hand's cooldown. Its
+                // duplicate therefore resolves at RLCombat's 20% minimum charge.
+                if(!player.isHandActive()) {
+                    player.setActiveHand(EnumHand.MAIN_HAND);
+                    temporaryScimitarUse=true;
+                }
+            }
             return;
         }
         if (event.getButton() == 0
@@ -75,6 +145,22 @@ public final class ModernWeaponInputHandler {
         }
     }
 
+    @SubscribeEvent(priority = EventPriority.LOWEST, receiveCanceled = true)
+    public static void afterBetterCombatMouse(MouseEvent event) {
+        if (event.isButtonstate()) restoreRlCombatScimitar();
+        if (temporaryScimitarUse && event.isButtonstate()) {
+            EntityPlayerSP player=Minecraft.getMinecraft().player;
+            if(player!=null && player.isHandActive()
+                && player.getActiveItemStack().getItem() instanceof ItemScimitar)
+                player.resetActiveHand();
+            temporaryScimitarUse=false;
+        }
+        if(event.getButton()==0 && event.isButtonstate() && cancelNativeMainhandSweep) {
+            com.nanonaitor.arsenal.compat.BetterCombatScimitarAnimation.cancelNativeMainhandSweep();
+            cancelNativeMainhandSweep=false;
+        }
+    }
+
     // Vanilla reaches item-use only after block/entity interaction has passed.
     // Do not consume the raw mouse click: boats, villagers and other usable
     // entities must get their normal interaction before the offhand attack.
@@ -91,8 +177,11 @@ public final class ModernWeaponInputHandler {
         if(offhandWasDown)return;
         offhandWasDown=true;
         player.swingArm(EnumHand.OFF_HAND);
-        ModNetwork.CHANNEL.sendToServer(new ModernWeaponControlMessage(
-            ModernWeaponControlMessage.SCIMITAR_ATTACK,true));
+        int targetId=scimitarTargetId();
+        if(!com.nanonaitor.arsenal.compat.ScimitarAttackBridge.sendNativeAttack(
+                player,targetId,true))
+            ModNetwork.CHANNEL.sendToServer(new ModernWeaponControlMessage(
+                ModernWeaponControlMessage.SCIMITAR_ATTACK,true,targetId));
     }
 
     @SubscribeEvent
@@ -156,20 +245,17 @@ public final class ModernWeaponInputHandler {
         player.getEntityData().setBoolean("ArsenalScimitarGuard", guard);
         if (mc.currentScreen == null && guard && attack && !attackWasDown
             && com.nanonaitor.arsenal.compat.ScimitarShieldCompat.isGuarding(player)) {
+            scimitarBashOwnsAttack=true;
             ModNetwork.CHANNEL.sendToServer(new ModernWeaponControlMessage(
                 ModernWeaponControlMessage.SCIMITAR_BASH, true));
         }
-        if (mc.currentScreen == null && !guard && !offhandButton && !disabled && dualScimitars && attack) {
-            double cooldown = com.nanonaitor.arsenal.compat.ScimitarAttackBridge.pairedInterval(player);
-            if (lastScimitar == Long.MIN_VALUE || now - lastScimitar + 0.5D >= cooldown) {
-                boolean offhand = nextScimitarOffhand;
-                player.isSwingInProgress = false;
-                player.swingArm(offhand ? EnumHand.OFF_HAND : EnumHand.MAIN_HAND);
-                ModNetwork.CHANNEL.sendToServer(new ModernWeaponControlMessage(
-                    ModernWeaponControlMessage.SCIMITAR_ATTACK, offhand));
-                nextScimitarOffhand = !nextScimitarOffhand;
-                lastScimitar = now;
-            }
+        if (mc.currentScreen == null && !scimitarBashOwnsAttack
+            && !guard && !offhandButton && !disabled && dualScimitars
+            && attack && attackWasDown && !scimitarPressedThisTick) {
+            attackNextReadyScimitar(player,now);
+        } else if (!dualScimitars) {
+            nextScimitarTurnAt=Double.NEGATIVE_INFINITY;
+            nextScimitarOffhand=false;
         }
 
         boolean shouldMenuGuard = mc.currentScreen != null && hasFreeHandBulwark(player);
@@ -184,6 +270,7 @@ public final class ModernWeaponInputHandler {
         }
         attackWasDown = attack;
         offhandWasDown = offhandButton;
+        scimitarPressedThisTick=false;
     }
 
     @SubscribeEvent(priority = EventPriority.HIGHEST, receiveCanceled = true)
@@ -223,6 +310,27 @@ public final class ModernWeaponInputHandler {
             && player.getHeldItemOffhand().isEmpty()
             || player.getHeldItemOffhand().getItem() instanceof ItemSunWarBulwark
             && player.getHeldItemMainhand().isEmpty());
+    }
+
+    private static void automaticScimitar(EntityPlayerSP player, boolean offhand) {
+        player.isSwingInProgress=false;
+        player.swingArm(offhand ? EnumHand.OFF_HAND : EnumHand.MAIN_HAND);
+        com.nanonaitor.arsenal.compat.BetterCombatScimitarAnimation.play(player,offhand);
+        int targetId=scimitarTargetId();
+        // Do not send RLCombat's raw attack packet for paired automatic turns.
+        // Its client and server cooldown counters can be a tick apart after the
+        // alternating hand animation, causing the server to resolve an otherwise
+        // ready main-hand turn at RLCombat's 20% minimum damage.  The Arsenal
+        // packet applies the pair cadence server-side, restores the selected
+        // hand to a full charge, then delegates the actual hit to RLCombat.
+        ModNetwork.CHANNEL.sendToServer(new ModernWeaponControlMessage(
+            ModernWeaponControlMessage.SCIMITAR_ATTACK,offhand,targetId));
+    }
+
+    private static int scimitarTargetId() {
+        RayTraceResult hit=Minecraft.getMinecraft().objectMouseOver;
+        return hit!=null && hit.typeOfHit==RayTraceResult.Type.ENTITY && hit.entityHit!=null
+            ? hit.entityHit.getEntityId():-1;
     }
 
     private static void beginMorning(EntityPlayerSP player) {
@@ -291,6 +399,36 @@ public final class ModernWeaponInputHandler {
 
     private static void reset() {
         morning = menuGuard = ballBoost = attackWasDown = offhandWasDown = false;
-        morningStarted = heartbeat = lastScimitar = Long.MIN_VALUE;
+        morningStarted = heartbeat = Long.MIN_VALUE;
+        nextScimitarTurnAt=Double.NEGATIVE_INFINITY;
+        nextScimitarOffhand=scimitarPressedThisTick=cancelNativeMainhandSweep=false;
+        scimitarBashOwnsAttack=false;
+        temporaryScimitarUse=false;
+        restoreRlCombatScimitar();
+    }
+
+    private static void restoreRlCombatScimitar() {
+        if(rlCombatScimitarPlayer!=null && !rlCombatHiddenScimitar.isEmpty())
+            rlCombatScimitarPlayer.inventory.offHandInventory.set(0,rlCombatHiddenScimitar);
+        rlCombatScimitarPlayer=null;
+        rlCombatHiddenScimitar=ItemStack.EMPTY;
+    }
+
+    private static Boolean attackNextReadyScimitar(EntityPlayerSP player,long now) {
+        boolean preferred=nextScimitarOffhand;
+        if(scimitarTurnReady(player,now)
+            && com.nanonaitor.arsenal.compat.ScimitarAttackBridge.ready(player,preferred)) {
+            automaticScimitar(player,preferred);
+            double interval=com.nanonaitor.arsenal.compat.ScimitarAttackBridge.pairedDamageInterval(player);
+            nextScimitarTurnAt=com.nanonaitor.arsenal.combat.GuardRules.nextTurnDeadline(
+                nextScimitarTurnAt,now,interval);
+            nextScimitarOffhand=!preferred;
+            return preferred;
+        }
+        return null;
+    }
+
+    private static boolean scimitarTurnReady(EntityPlayerSP player,long now) {
+        return now+0.5D>=nextScimitarTurnAt;
     }
 }

@@ -43,6 +43,7 @@ import net.minecraftforge.oredict.OreDictionary;
 
 @Mod.EventBusSubscriber(modid = NanonaitorsArsenal.MOD_ID)
 public final class ModContent {
+    private static final String LEGACY_BLADE_STAFF_PREFIX = "double_bladed_scimitar_";
     public static final Map<WeaponTier, ItemMorningStar> MORNING_STARS =
         new EnumMap<>(WeaponTier.class);
     public static final Map<WeaponTier, ItemScimitar> SCIMITARS =
@@ -65,6 +66,7 @@ public final class ModContent {
     public static EnchantmentRotationForce ROTATION_FORCE;
     public static EnchantmentRecovery RECOVERY;
     public static EnchantmentBreeched BREECHED;
+    public static Enchantment REVERSO, LUNA, MAGIC_LOG, ENDURE;
     public static ItemSunWarBulwark SUN_WAR_BULWARK;
     public static ItemTartsyShield TARTSY_SHIELD;
     public static final BlockIronChain IRON_CHAIN = new BlockIronChain();
@@ -115,6 +117,31 @@ public final class ModContent {
     }
 
     /**
+     * Keeps Blade Staffs from existing worlds intact after their registry IDs
+     * were renamed from double_bladed_scimitar_* to blade_staff_*.
+     */
+    @SubscribeEvent
+    public static void remapLegacyBladeStaffIds(
+        RegistryEvent.MissingMappings<Item> event) {
+        for (RegistryEvent.MissingMappings.Mapping<Item> mapping : event.getMappings()) {
+            ResourceLocation key = mapping.key;
+            if (!NanonaitorsArsenal.MOD_ID.equals(key.getResourceDomain())
+                || !key.getResourcePath().startsWith(LEGACY_BLADE_STAFF_PREFIX)) {
+                continue;
+            }
+
+            String tierId = key.getResourcePath()
+                .substring(LEGACY_BLADE_STAFF_PREFIX.length());
+            for (WeaponTier tier : WeaponTier.values()) {
+                if (!tier.getId().equals(tierId)) continue;
+                Item replacement = DOUBLE_BLADED_SCIMITARS.get(tier);
+                if (replacement != null) mapping.remap(replacement);
+                break;
+            }
+        }
+    }
+
+    /**
      * Prefer Quark's chain while retaining Arsenal's standalone chain as the
      * recipe fallback. Quark's chain is registered first so recipe viewers
      * present it as the primary ingredient when Quark is installed.
@@ -156,6 +183,7 @@ public final class ModContent {
 
     @SubscribeEvent
     public static void registerEnchantments(RegistryEvent.Register<Enchantment> event) {
+        if (!com.nanonaitor.arsenal.config.ArsenalConfig.enchantments.enableAll) return;
         if (com.nanonaitor.arsenal.config.ArsenalConfig.enchantments.enableLongChain)
             event.getRegistry().register(LONG_CHAIN = new EnchantmentLongChain());
         if (com.nanonaitor.arsenal.config.ArsenalConfig.enchantments.enableRotationForce)
@@ -164,6 +192,18 @@ public final class ModContent {
             event.getRegistry().register(RECOVERY = new EnchantmentRecovery());
         if (com.nanonaitor.arsenal.config.ArsenalConfig.enchantments.enableBreeched)
             event.getRegistry().register(BREECHED = new EnchantmentBreeched());
+        if (com.nanonaitor.arsenal.config.ArsenalConfig.enchantments.enableReverso)
+            event.getRegistry().register(REVERSO = exclusive("reverso",1,com.nanonaitor.arsenal.item.ItemDoubleBladedScimitar.class));
+        if (com.nanonaitor.arsenal.config.ArsenalConfig.enchantments.enableLuna)
+            event.getRegistry().register(LUNA = exclusive("luna",2,com.nanonaitor.arsenal.item.ItemMorningStar.class));
+        if (com.nanonaitor.arsenal.config.ArsenalConfig.enchantments.enableMagicLog)
+            event.getRegistry().register(MAGIC_LOG = exclusive("magic_log",1,com.nanonaitor.arsenal.item.ItemBatteringRam.class));
+        if (com.nanonaitor.arsenal.config.ArsenalConfig.enchantments.enableEndure)
+            event.getRegistry().register(ENDURE = exclusive("endure",1,com.nanonaitor.arsenal.item.ItemScimitar.class));
+    }
+
+    private static Enchantment exclusive(String id,int max,Class<? extends Item> type) {
+        return new com.nanonaitor.arsenal.enchantment.EnchantmentWeaponExclusive(id,max,s->type.isInstance(s.getItem()));
     }
 
     @SubscribeEvent

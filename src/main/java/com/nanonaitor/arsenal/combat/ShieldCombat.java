@@ -95,6 +95,7 @@ public final class ShieldCombat {
             event.setCanceled(true);
             ItemStack tartsy = findEquipped(player, ItemTartsyShield.class);
             tartsy.damageItem(1, player);
+            triggerThorns(player,tartsy,event.getSource());
             player.getCooldownTracker().setCooldown(tartsy.getItem(),
                 shieldCooldown(tartsy, TARTSY_DISABLE_TICKS));
             player.resetActiveHand();
@@ -107,6 +108,7 @@ public final class ShieldCombat {
             && player.getHeldItemOffhand().isEmpty() && isFrontDamage(player, source)) {
             event.setCanceled(true);
             findEquipped(player, ItemSunWarBulwark.class).damageItem(1, player);
+            triggerThorns(player,findEquipped(player, ItemSunWarBulwark.class),source);
             player.world.playSound(null, player.posX, player.posY, player.posZ,
                 SoundEvents.BLOCK_METAL_PLACE, SoundCategory.PLAYERS, 1.125F, 0.90F);
             return;
@@ -116,10 +118,17 @@ public final class ShieldCombat {
             && isBulwarkCombatDamage(source)) {
             event.setCanceled(true);
             findEquipped(player, ItemSunWarBulwark.class).damageItem(1, player);
+            triggerThorns(player,findEquipped(player, ItemSunWarBulwark.class),source);
             com.nanonaitor.arsenal.item.ItemSunWarBulwark.recordBlock(player,
                 findEquipped(player, ItemSunWarBulwark.class));
             playBlock(player, 0.65F);
         }
+    }
+
+    private static void triggerThorns(EntityPlayer defender,ItemStack shield,DamageSource source) {
+        if(defender.world.isRemote || !(source.getTrueSource() instanceof EntityLivingBase))return;
+        int level=net.minecraft.enchantment.EnchantmentHelper.getEnchantmentLevel(net.minecraft.init.Enchantments.THORNS,shield);
+        if(level>0)net.minecraft.init.Enchantments.THORNS.onUserHurt(defender,(EntityLivingBase)source.getTrueSource(),level);
     }
 
     /** Run after NORMAL-priority Counter Attack, rather than hiding the hit from it. */

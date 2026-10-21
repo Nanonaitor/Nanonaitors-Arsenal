@@ -7,6 +7,9 @@ import net.minecraft.item.ItemStack;
 public final class CombatModifierMethodsTest {
     private static int calls,checks;
     private static void check(boolean value) { checks++;if(!value)throw new AssertionError("API check "+checks); }
+    private static void near(double expected,double actual) {
+        check(Math.abs(expected-actual)<0.00001D);
+    }
     public static class Legacy {
         public static void clearOldModifiers(EntityLivingBase p,ItemStack s) { calls++; }
         public static void addNewModifiers(EntityLivingBase p,ItemStack s) { calls++; }
@@ -36,6 +39,11 @@ public final class CombatModifierMethodsTest {
         boolean rejected=false;
         try {CombatModifierMethods.resolve(Incomplete.class);}catch(NoSuchMethodException expected){rejected=true;}
         check(rejected);
+        // One 4.5 main-hand hit plus RLCombat's 50%-efficient 2.25 off-hand
+        // hit, while both target-specific enchantment bonuses remain unscaled.
+        near(10.75D,ScimitarAttackBridge.combineBashDamage(4.5D,1.5F,2.25D,2.5F));
+        check(ScimitarAttackBridge.resolveMainCooldownTicksField().getDeclaringClass()
+            == EntityLivingBase.class);
         System.out.println("Passed "+checks+" legacy/modern RLCombat API checks");
     }
 }

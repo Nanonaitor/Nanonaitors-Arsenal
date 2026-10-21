@@ -17,8 +17,12 @@ public final class CombatModifierMethods {
         return new Method[]{helpers.getMethod("clearOldModifiers",parameters),helpers.getMethod("addNewModifiers",parameters)};
     }
     public static void invoke(Method method,EntityLivingBase entity,ItemStack stack) throws ReflectiveOperationException {
+        invoke(method,entity,stack,true,true,true);
+    }
+    public static void invoke(Method method,EntityLivingBase entity,ItemStack stack,
+                              boolean damage,boolean speed,boolean reach) throws ReflectiveOperationException {
         if(method.getParameterCount()==2)method.invoke(null,entity,stack);
-        else method.invoke(null,entity,stack,true,true,true);
+        else method.invoke(null,entity,stack,damage,speed,reach);
     }
     private CombatModifierMethods() {}
 }

@@ -92,19 +92,24 @@ public final class ArsenalConfig {
     private ArsenalConfig() {}
 
     public static final class Enchantments {
+        @Config.RequiresMcRestart public boolean enableAll = true;
         @Config.RequiresMcRestart public boolean enableLongChain = true;
         @Config.RequiresMcRestart public boolean enableRotationForce = true;
         @Config.RequiresMcRestart public boolean enableRecovery = true;
         @Config.RequiresMcRestart public boolean enableBreeched = true;
+        @Config.RequiresMcRestart public boolean enableReverso = true;
+        @Config.RequiresMcRestart public boolean enableLuna = true;
+        @Config.RequiresMcRestart public boolean enableMagicLog = true;
+        @Config.RequiresMcRestart public boolean enableEndure = true;
         @Config.Name("longChainMaxLevel")
         @Config.Comment("Maximum level of Long Chain. The natural default cap is 2.")
         @Config.RangeInt(min = 1, max = 100)
         public int longChainMaxLevel = 2;
 
         @Config.Name("rotationForceMaxLevel")
-        @Config.Comment("Maximum level of Rotation Force. Each level adds 0.2 attack speed.")
+        @Config.Comment("Maximum level of Rotation Force. Each level adds 0.2 attack speed; the default cap is 3.")
         @Config.RangeInt(min = 1, max = 100)
-        public int rotationForceMaxLevel = 2;
+        public int rotationForceMaxLevel = 3;
     }
 
     public static final class MorningStar {

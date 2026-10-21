@@ -5,6 +5,7 @@ import com.nanonaitor.arsenal.compat.ArsenalCompatManager;
 import com.nanonaitor.arsenal.compat.ReskillableCompat;
 import com.nanonaitor.arsenal.item.ItemBatteringRam;
 import com.nanonaitor.arsenal.item.WeaponTier;
+import com.nanonaitor.arsenal.registry.ModContent;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -108,7 +109,7 @@ public final class BatteringRamCombat {
         player.motionZ = forwardZ * CHARGE_SPEED;
         player.velocityChanged = true;
         if (!player.capabilities.isCreativeMode) {
-            player.addExhaustion(CHARGE_EXHAUSTION_PER_TICK);
+            player.addExhaustion(CHARGE_EXHAUSTION_PER_TICK * hungerMultiplier(stack));
         }
 
         breakRamBlocks(player, stack, forwardX, forwardZ, state.lockedYaw);
@@ -151,7 +152,7 @@ public final class BatteringRamCombat {
                                 Enchantments.UNBREAKING, stack) == 0) {
                             stack.setItemDamage(previousDamage + 1);
                         }
-                        player.addExhaustion(BLOCK_BREAK_EXHAUSTION);
+                        player.addExhaustion(BLOCK_BREAK_EXHAUSTION * hungerMultiplier(stack));
                         player.inventory.markDirty();
                     }
                 }
@@ -276,16 +277,21 @@ public final class BatteringRamCombat {
             if (!CombatTargetRules.canHit(player, target)) continue;
             float enchantmentDamage = EnchantmentHelper.getModifierForCreature(
                 stack, target.getCreatureAttribute());
-            if (target.attackEntityFrom(DamageSource.causePlayerDamage(player),
+            boolean magic=ModContent.MAGIC_LOG!=null && EnchantmentHelper.getEnchantmentLevel(ModContent.MAGIC_LOG,stack)>0;
+            if (target.attackEntityFrom(magic?DamageSource.MAGIC:DamageSource.causePlayerDamage(player),
                 baseDamage * state.damageMultiplier + enchantmentDamage)) {
                 state.hitEntities.add(target.getEntityId());
                 target.knockBack(player, 1.5F, forwardX, forwardZ);
                 stack.damageItem(1, player);
                 if (!player.capabilities.isCreativeMode) {
-                    player.addExhaustion(ENTITY_HIT_EXHAUSTION);
+                    player.addExhaustion(ENTITY_HIT_EXHAUSTION * hungerMultiplier(stack));
                 }
             }
         }
+    }
+
+    private static float hungerMultiplier(ItemStack stack) {
+        return ModContent.MAGIC_LOG!=null && EnchantmentHelper.getEnchantmentLevel(ModContent.MAGIC_LOG,stack)>0 ? 0.5F : 1.0F;
     }
 
     private static boolean hasChargeEnergy(EntityPlayer player) {

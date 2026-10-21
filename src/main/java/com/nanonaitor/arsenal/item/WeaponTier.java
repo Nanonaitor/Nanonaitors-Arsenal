@@ -83,4 +83,14 @@ public enum WeaponTier {
         if (this == IRON || this == SILVER || this == STEEL || this == UMBRIUM) return 75;
         return 100;
     }
+    public float getReflectionMultiplier() {
+        switch (this) {
+            case WOOD: return 0.0F;
+            case STONE: return 0.10F;
+            case BRONZE: return 0.25F;
+            case IRON: case GOLD: case SILVER: case STEEL: case UMBRIUM: return 0.50F;
+            case DIAMOND: case DRAGONBONE: return 0.75F;
+            default: return 1.0F;
+        }
+    }
 }

@@ -24,6 +24,13 @@ public final class GuardRulesTest {
         near(4.0D,GuardRules.pairedInterval(5,20));
         near(1.0D,GuardRules.pairedInterval(1,1));
         near(2.5D,GuardRules.pairedInterval(5,5));
+        near(4.5D,GuardRules.nextTurnDeadline(Double.NEGATIVE_INFINITY,0,4.5D));
+        near(9.0D,GuardRules.nextTurnDeadline(4.5D,5,4.5D));
+        near(13.5D,GuardRules.nextTurnDeadline(9.0D,9,4.5D));
+        near(24.5D,GuardRules.nextTurnDeadline(4.5D,20,4.5D));
+        near(5.0D,GuardRules.damageSafeTurnInterval(1.0D));
+        near(5.0D,GuardRules.damageSafeTurnInterval(4.99D));
+        near(5.5D,GuardRules.damageSafeTurnInterval(5.5D));
         equal(1, GuardRules.scimitarWear(0));
         equal(1, GuardRules.scimitarWear(1));
         equal(1, GuardRules.scimitarWear(2));

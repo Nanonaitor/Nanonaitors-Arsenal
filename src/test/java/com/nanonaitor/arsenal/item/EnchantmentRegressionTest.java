@@ -45,6 +45,11 @@ public final class EnchantmentRegressionTest {
             Enchantment combo = category(EnumEnchantmentType.WEAPON)
                 .setRegistryName("mujmajnkraftsbettersurvival", "combo");
             check(weapon.canApplyAtEnchantingTable(stack, combo) == (weapon instanceof ItemDoubleBladedScimitar));
+            Enchantment swifter = category(EnumEnchantmentType.WEAPON)
+                .setRegistryName("somanyenchantments", "swifterslashes");
+            check(weapon.canApplyAtEnchantingTable(stack, swifter)
+                == !(weapon instanceof ItemFlail || weapon instanceof ItemBallAndChain
+                    || weapon instanceof ItemClaws));
             check(weapon.canApplyAtEnchantingTable(stack, new Desolator()) == (weapon instanceof ItemMorningStar));
         }
         System.out.println("Passed " + checks + " enchantment eligibility checks");

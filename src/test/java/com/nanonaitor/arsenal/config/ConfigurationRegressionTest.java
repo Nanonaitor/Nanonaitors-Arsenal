@@ -26,7 +26,7 @@ public final class ConfigurationRegressionTest {
         check(BallChargeRules.nextCharge(1,2,true)==2);
         check(BallChargeRules.nextCharge(1,2,false)==2);
         String[][] families={{"morningStar","morning_star"},{"scimitar","scimitar"},
-            {"bladeStaff","double_bladed_scimitar"},{"claws","claws"},{"flail","flail"},
+            {"bladeStaff","blade_staff"},{"claws","claws"},{"flail","flail"},
             {"batteringRam","battering_ram"},{"ballAndChain","ball_and_chain"},
             {"tartsyShield","tartsy_shield"},{"sunWarBulwark","sun_war_bulwark"}};
         try {

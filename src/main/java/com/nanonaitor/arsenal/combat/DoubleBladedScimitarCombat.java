@@ -13,6 +13,7 @@ import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.SharedMonsterAttributes;
 import net.minecraft.entity.ai.attributes.AttributeModifier;
 import net.minecraft.entity.ai.attributes.IAttributeInstance;
+import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.init.SoundEvents;
 import net.minecraft.item.ItemStack;
@@ -176,28 +177,46 @@ public final class DoubleBladedScimitarCombat {
             transferReflectedEffects(defender, pending);
         }
         boolean hit;
+        ItemStack weapon = defender.getHeldItemMainhand();
+        net.minecraft.item.Item staffItem=weapon.getItem();
+        ItemDoubleBladedScimitar staff=(ItemDoubleBladedScimitar)weapon.getItem();
+        float returnedDamage=reflectionDamage(defender,staff.getTier(),(EntityLivingBase)source,event.getAmount());
+        boolean reverso=ModContent.REVERSO!=null && EnchantmentHelper.getEnchantmentLevel(ModContent.REVERSO,weapon)>0;
         RETURNING.set(Boolean.TRUE);
         try {
-            hit = source.attackEntityFrom(new EntityDamageSource(
-                "double_bladed_scimitar_reflect", defender), event.getAmount());
+            hit = reverso ? returnedDamage>0.0F : source.attackEntityFrom(new EntityDamageSource(
+                "blade_staff_reflect", defender), returnedDamage);
         } finally {
             RETURNING.set(Boolean.FALSE);
         }
+        int wear=Math.max(0,(int)Math.floor(event.getAmount()));
+        weapon.damageItem(wear,defender);
+        if(reverso && !weapon.isEmpty()) {
+            defender.heal(returnedDamage);
+            weapon.setItemDamage(Math.max(0,weapon.getItemDamage()-(int)Math.ceil(returnedDamage)));
+        }
         if (hit) {
-            if (!isDirectMelee(event.getSource()) && source instanceof EntityLivingBase
+            if (!reverso && !isDirectMelee(event.getSource()) && source instanceof EntityLivingBase
                 && ModContent.STUNNED != null) {
                 com.nanonaitor.arsenal.config.ConfiguredEffects.apply((EntityLivingBase)source,
                     com.nanonaitor.arsenal.config.ArsenalConfig.effects.bladeStaffReflect, 20, 0);
             }
-            ItemStack weapon = defender.getHeldItemMainhand();
-            defender.getCooldownTracker().removeCooldown(weapon.getItem());
-            defender.getCooldownTracker().setCooldown(weapon.getItem(), SUCCESS_COOLDOWN_TICKS);
+            defender.getCooldownTracker().removeCooldown(staffItem);
+            defender.getCooldownTracker().setCooldown(staffItem, SUCCESS_COOLDOWN_TICKS);
             OWN_COOLDOWN.put(defender,cooldownEntry(defender));
             REFLECTION_EFFECT_BASELINE.remove(defender);
             defender.world.playSound(null, defender.posX, defender.posY, defender.posZ,
-                SoundEvents.ENTITY_PLAYER_ATTACK_SWEEP, SoundCategory.PLAYERS,
-                0.8F, 1.25F);
+                reverso ? com.nanonaitor.arsenal.registry.ModSounds.REVERSO_HEAL
+                    : com.nanonaitor.arsenal.registry.ModSounds.BLADE_STAFF_REFLECT,
+                SoundCategory.PLAYERS, 1.0F, 1.0F);
         }
+    }
+
+    private static float reflectionDamage(EntityPlayer defender,WeaponTier tier,EntityLivingBase attacker,float incoming) {
+        if(tier==WeaponTier.WOOD)return 1.0F;
+        if(tier==WeaponTier.SILVER && attacker.getCreatureAttribute()==net.minecraft.entity.EnumCreatureAttribute.UNDEAD)return incoming*2.0F;
+        if(tier==WeaponTier.GOLD && com.nanonaitor.arsenal.compat.SilverSetBonusCompat.isMagicInfusedGoldSetActive(defender))return incoming;
+        return incoming*tier.getReflectionMultiplier();
     }
 
     private static Entity reflectionAttacker(DamageSource source) {

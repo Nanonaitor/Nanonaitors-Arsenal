@@ -9,7 +9,7 @@ public final class ContentSwitches {
     public static boolean enabled(String id) {
         ArsenalConfig.Weapons w = ArsenalConfig.weapons;
         if (id.startsWith("morning_star")) return w.morningStar;
-        if (id.startsWith("double_bladed_scimitar")) return w.bladeStaff;
+        if (id.startsWith("blade_staff")) return w.bladeStaff;
         if (id.startsWith("scimitar")) return w.scimitar;
         if (id.startsWith("claws") || id.startsWith("linked_claw")) return w.claws;
         if (id.startsWith("flail")) return w.flail;

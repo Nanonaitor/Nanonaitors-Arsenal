@@ -1,0 +1,2 @@
+{"parent":"nanonaitors_arsenal:item/blade_staff_base","overrides":[{"predicate":{"nanonaitors_arsenal:reflecting":1.0},"model":"nanonaitors_arsenal:item/blade_staff_reflecting"}],"textures":{"layer0":"nanonaitors_arsenal:items/blade_staff_diamond"}}
+

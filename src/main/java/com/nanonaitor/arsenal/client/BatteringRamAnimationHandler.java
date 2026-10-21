@@ -49,10 +49,10 @@ public final class BatteringRamAnimationHandler {
             // NONE, so this pose is stable and cannot cycle bow model frames.
             model.rightArmPose = ModelBiped.ArmPose.BOW_AND_ARROW;
         } else if (scimitars) {
+            // Let ModelBiped place the player's real arms and held items into
+            // the crossed guard. Do not draw duplicate swords in world space.
             model.leftArmPose = ModelBiped.ArmPose.BLOCK;
             model.rightArmPose = ModelBiped.ArmPose.BLOCK;
-            model.bipedRightArm.rotateAngleZ = -0.52F;
-            model.bipedLeftArm.rotateAngleZ = 0.52F;
         } else if (ballGuard) {
             model.leftArmPose = ModelBiped.ArmPose.BLOCK;
             model.rightArmPose = ModelBiped.ArmPose.BLOCK;

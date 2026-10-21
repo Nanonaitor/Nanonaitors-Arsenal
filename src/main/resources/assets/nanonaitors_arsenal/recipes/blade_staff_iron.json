@@ -8,7 +8,7 @@
   "key": {
     "M": {
       "type": "forge:ore_dict",
-      "ore": "plankWood"
+      "ore": "ingotIron"
     },
     "S": {
       "type": "forge:ore_dict",
@@ -16,12 +16,12 @@
     }
   },
   "result": {
-    "item": "nanonaitors_arsenal:double_bladed_scimitar_wood"
+    "item": "nanonaitors_arsenal:blade_staff_iron"
   },
   "conditions": [
     {
       "type": "nanonaitors_arsenal:weapon_enabled",
-      "family": "double_bladed_scimitar"
+      "family": "blade_staff"
     }
   ]
 }

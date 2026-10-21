@@ -13,6 +13,8 @@ public final class ModSounds {
     public static final SoundEvent BALL_CHAIN_SWING = create("ball_chain.swing");
     public static final SoundEvent BALL_CHAIN_HIT = create("ball_chain.hit");
     public static final SoundEvent SCIMITAR_BASH = create("scimitar.bash");
+    public static final SoundEvent REVERSO_HEAL = create("reverso_heal");
+    public static final SoundEvent BLADE_STAFF_REFLECT = create("blade_staff_reflect");
 
     private ModSounds() {}
 
@@ -23,6 +25,7 @@ public final class ModSounds {
 
     @SubscribeEvent
     public static void register(RegistryEvent.Register<SoundEvent> event) {
-        event.getRegistry().registerAll(BALL_CHAIN_SWING, BALL_CHAIN_HIT, SCIMITAR_BASH);
+        event.getRegistry().registerAll(BALL_CHAIN_SWING, BALL_CHAIN_HIT, SCIMITAR_BASH,
+            REVERSO_HEAL, BLADE_STAFF_REFLECT);
     }
 }
