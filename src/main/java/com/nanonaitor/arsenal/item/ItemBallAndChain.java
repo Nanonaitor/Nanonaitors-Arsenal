@@ -63,36 +63,11 @@ public final class ItemBallAndChain extends ItemArsenalWeapon {
     @Override
     public void addInformation(ItemStack stack, World world, List<String> tooltip,
                                ITooltipFlag flag) {
-        int charges = getTier() == WeaponTier.GOLD ? 2 : 3;
         if (!ArsenalTooltip.begin(tooltip, TextFormatting.GOLD,
                 "Hold attack to swing; release to throw.")) return;
-        if (getTier() == WeaponTier.GOLD) {
-            tooltip.add(TextFormatting.GOLD + "Gold reaches full charge in 2 rotations.");
-            tooltip.add(TextFormatting.YELLOW
-                + "Its second charge jumps to full reach and throw damage.");
-        } else {
-            tooltip.add(TextFormatting.GOLD
-                + "Hold attack to build up to " + charges + " charges.");
-        }
-        tooltip.add(TextFormatting.GRAY + "Wind-up: 0.5x damage, "
-            + com.nanonaitor.arsenal.config.ArsenalConfig.reach.ballWindupReach + " base blocks.");
-        tooltip.add(TextFormatting.GRAY + "Throw: "
-            + com.nanonaitor.arsenal.config.ArsenalConfig.reach.ballThrowReachPerCharge + " base blocks per charge.");
-        if (getTier() == WeaponTier.SILVER && net.minecraftforge.fml.common.Loader.isModLoaded("setbonus"))
-            tooltip.add(TextFormatting.YELLOW + "Matching RLCraft Silver set: second rotation reaches full charge.");
-        tooltip.add(TextFormatting.DARK_GRAY + "Reach and attack-speed modifiers apply.");
-        if (getTier() == WeaponTier.GOLD) {
-            tooltip.add(TextFormatting.GRAY
-                + "Throws deal 1x / 2x damage at charges 1 / 2.");
-        } else {
-            tooltip.add(TextFormatting.GRAY
-                + "Throws deal 1x / 1.5x / 2x damage.");
-        }
-        tooltip.add(TextFormatting.GRAY + "Hits in both directions; stops at solid blocks.");
-        tooltip.add(TextFormatting.DARK_RED + "Full-charge throw pierces "
-            + getTier().getArmorPiercePercent() + "% armor.");
-        tooltip.add(TextFormatting.DARK_GRAY + "Throw hits fracture armor.");
-        tooltip.add(TextFormatting.DARK_GRAY + "Empty offhand allows guarding; occupied offhand halves speed.");
+        tooltip.add(TextFormatting.GRAY + "Higher rotations increase throw reach and damage.");
+        tooltip.add(TextFormatting.GRAY + "An empty offhand allows guarding.");
+        tooltip.add(TextFormatting.RED + "Two-Handed");
     }
 
 }

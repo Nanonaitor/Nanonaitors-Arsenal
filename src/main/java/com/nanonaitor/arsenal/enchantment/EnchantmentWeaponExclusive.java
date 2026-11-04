@@ -21,8 +21,14 @@ public final class EnchantmentWeaponExclusive extends Enchantment {
         setName(NanonaitorsArsenal.MOD_ID + "." + id);
     }
 
-    @Override public boolean canApply(ItemStack stack) { return weapon.test(stack); }
+    @Override public boolean canApply(ItemStack stack) {
+        return com.nanonaitor.arsenal.config.ContentSwitches.enchantmentEnabled(this)
+            && weapon.test(stack);
+    }
     @Override public boolean canApplyAtEnchantingTable(ItemStack stack) { return canApply(stack); }
+    @Override public boolean isAllowedOnBooks() {
+        return com.nanonaitor.arsenal.config.ContentSwitches.enchantmentEnabled(this);
+    }
     @Override public int getMinEnchantability(int level) { return 15 + (level - 1) * 15; }
     @Override public int getMaxEnchantability(int level) { return getMinEnchantability(level) + 30; }
     @Override public int getMaxLevel() { return maxLevel; }

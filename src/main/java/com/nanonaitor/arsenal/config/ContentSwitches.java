@@ -1,6 +1,9 @@
 package com.nanonaitor.arsenal.config;
 
 import net.minecraft.item.Item;
+import net.minecraft.enchantment.Enchantment;
+import net.minecraft.enchantment.EnchantmentHelper;
+import net.minecraft.item.ItemStack;
 public final class ContentSwitches {
     private ContentSwitches() {}
     public static boolean enabled(Item item) {
@@ -18,5 +21,34 @@ public final class ContentSwitches {
         if (id.startsWith("tartsy_shield")) return w.tartsyShield;
         if (id.startsWith("sun_war_bulwark")) return w.sunWarBulwark;
         return true;
+    }
+
+    /**
+     * Enchantment IDs are always registered so disabling one never damages an
+     * existing save. This method controls whether it can be obtained or have
+     * an effect in the current configuration.
+     */
+    public static boolean enchantmentEnabled(Enchantment enchantment) {
+        return enchantment != null && enchantment.getRegistryName() != null
+            && enchantmentEnabled(enchantment.getRegistryName().getResourcePath());
+    }
+
+    public static boolean enchantmentEnabled(String id) {
+        ArsenalConfig.Enchantments e = ArsenalConfig.enchantments;
+        if (!e.enableAll) return false;
+        if ("long_chain".equals(id)) return e.enableLongChain;
+        if ("rotation_force".equals(id)) return e.enableRotationForce;
+        if ("recovery".equals(id)) return e.enableRecovery;
+        if ("breeched".equals(id)) return e.enableBreeched;
+        if ("reverso".equals(id)) return e.enableReverso;
+        if ("luna".equals(id)) return e.enableLuna;
+        if ("magic_log".equals(id)) return e.enableMagicLog;
+        if ("endure".equals(id)) return e.enableEndure;
+        return true;
+    }
+
+    public static int enabledEnchantmentLevel(Enchantment enchantment, ItemStack stack) {
+        return enchantmentEnabled(enchantment)
+            ? EnchantmentHelper.getEnchantmentLevel(enchantment, stack) : 0;
     }
 }

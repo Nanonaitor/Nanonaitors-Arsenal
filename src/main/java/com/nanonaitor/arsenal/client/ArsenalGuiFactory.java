@@ -15,7 +15,8 @@ public final class ArsenalGuiFactory implements IModGuiFactory {
     @Override public boolean hasConfigGui() { return true; }
     @Override public GuiScreen createConfigGui(GuiScreen parent) {
         return new GuiConfig(parent, ConfigElement.from(ArsenalConfig.class).getChildElements(),
-            NanonaitorsArsenal.MOD_ID, false, true, "Nanonaitor's Arsenal — restart required");
+            NanonaitorsArsenal.MOD_ID, false, true,
+            "Nanonaitor's Arsenal - some changes require a restart");
     }
     @Override public Set<RuntimeOptionCategoryElement> runtimeGuiCategories() { return Collections.emptySet(); }
 }

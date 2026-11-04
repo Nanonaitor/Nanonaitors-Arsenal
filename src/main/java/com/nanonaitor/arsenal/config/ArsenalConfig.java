@@ -4,7 +4,6 @@ import com.nanonaitor.arsenal.NanonaitorsArsenal;
 import net.minecraftforge.common.config.Config;
 
 @Config(modid = NanonaitorsArsenal.MOD_ID, name = "nanonaitors_arsenal")
-@Config.RequiresMcRestart
 public final class ArsenalConfig {
     @Config.RequiresMcRestart
     public static Weapons weapons = new Weapons();
@@ -28,7 +27,7 @@ public final class ArsenalConfig {
     }
 
     public static final class Weapons {
-        @Config.Comment("Recipe switches only. False removes crafting/upgrade recipes; existing weapons remain registered, visible and usable. Restart required.")
+        @Config.Comment("Per-family content switches. False removes crafting/upgrade recipes and generated loot, and hides the family from Creative. Existing items remain registered and usable so old worlds are safe. Restart required.")
         public boolean morningStar = true;
         public boolean scimitar = true;
         public boolean bladeStaff = true;
@@ -86,12 +85,10 @@ public final class ArsenalConfig {
     @Config.Name("morningStar")
     public static MorningStar morningStar = new MorningStar();
 
-    @Config.Name("raceWeaponAffinity")
-    public static RaceWeaponAffinity raceWeaponAffinity = new RaceWeaponAffinity();
-
     private ArsenalConfig() {}
 
     public static final class Enchantments {
+        @Config.Comment("Disabled enchantments remain registered to protect existing saves, but cannot be obtained, applied, or provide effects. Restart required.")
         @Config.RequiresMcRestart public boolean enableAll = true;
         @Config.RequiresMcRestart public boolean enableLongChain = true;
         @Config.RequiresMcRestart public boolean enableRotationForce = true;
@@ -119,22 +116,4 @@ public final class ArsenalConfig {
         public double fullChargeSeconds = 2.0D;
     }
 
-    public static final class RaceWeaponAffinity {
-        @Config.Name("enabled")
-        @Config.Comment({
-            "Enables race weapon affinities when Trinkets and Baubles/XAT is installed.",
-            "Does nothing when XAT is absent."
-        })
-        public boolean enabled = true;
-
-        @Config.Name("damageMultiplier")
-        @Config.Comment("Matching-race damage multiplier. 1.25 means +25% damage.")
-        @Config.RangeDouble(min = 1.0D, max = 100.0D)
-        public double damageMultiplier = 1.25D;
-
-        @Config.Name("minimumBonusDamage")
-        @Config.Comment("Minimum damage added by a matching affinity when 25% would be smaller.")
-        @Config.RangeDouble(min = 0.0D, max = 1000.0D)
-        public double minimumBonusDamage = 3.0D;
-    }
 }

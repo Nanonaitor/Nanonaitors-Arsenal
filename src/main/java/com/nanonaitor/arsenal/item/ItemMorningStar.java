@@ -2,6 +2,8 @@ package com.nanonaitor.arsenal.item;
 
 import com.nanonaitor.arsenal.combat.MorningStarCombat;
 import com.nanonaitor.arsenal.client.ArsenalTooltip;
+import com.nanonaitor.arsenal.config.ArsenalConfig;
+import com.nanonaitor.arsenal.config.ConfiguredEffects;
 import java.util.List;
 import net.minecraft.client.util.ITooltipFlag;
 import net.minecraft.entity.Entity;
@@ -52,21 +54,16 @@ public final class ItemMorningStar extends ItemArsenalWeapon {
     public void addInformation(ItemStack stack, World world, List<String> tooltip, ITooltipFlag flag) {
         if (!ArsenalTooltip.begin(tooltip, TextFormatting.GOLD,
                 "Hold attack to charge for a stronger sweeping hit.")) return;
-        tooltip.add(TextFormatting.GOLD + "Each quarter adds 10% damage.");
-        tooltip.add(TextFormatting.DARK_RED + "Charged hits sweep up to 2 blocks to each side.");
-        tooltip.add(TextFormatting.DARK_RED + "Full charge inflicts Armor Fracture and may Stun.");
-        tooltip.add(TextFormatting.GRAY + "20% less armor per level; max "
-            + toRoman(getTier().getMorningStarFractureCap()) + ".");
-        tooltip.add(TextFormatting.DARK_GRAY + "30 secs vs mobs; 10 secs vs players.");
+        tooltip.add(TextFormatting.GRAY + "Charge increases damage and sweep width.");
+        String effects = ConfiguredEffects.displayNames(combine(
+            ArsenalConfig.effects.morningStarFracture, ArsenalConfig.effects.morningStarStun));
+        if (!effects.isEmpty()) tooltip.add(TextFormatting.GRAY + "Full charge applies: " + effects + ".");
     }
 
-    private static String toRoman(int level) {
-        switch (level) {
-            case 2: return "II";
-            case 3: return "III";
-            case 4: return "IV";
-            case 5: return "V";
-            default: return Integer.toString(level);
-        }
+    private static String[] combine(String[] first, String[] second) {
+        String[] combined = new String[first.length + second.length];
+        System.arraycopy(first, 0, combined, 0, first.length);
+        System.arraycopy(second, 0, combined, first.length, second.length);
+        return combined;
     }
 }

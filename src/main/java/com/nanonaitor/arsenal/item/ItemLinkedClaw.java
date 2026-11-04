@@ -29,8 +29,7 @@ public final class ItemLinkedClaw extends ItemArsenalWeapon {
                                ITooltipFlag flag) {
         if (!ArsenalTooltip.begin(tooltip, TextFormatting.GOLD,
                 "The automatically managed half of a paired Claw.")) return;
-        tooltip.add(TextFormatting.GRAY + "Copies the main Claw's durability, enchantments, and quality.");
-        tooltip.add(TextFormatting.DARK_GRAY + "Disappears when its matching main Claw is unequipped.");
+        tooltip.add(TextFormatting.GRAY + "Mirrors its matching main-hand Claw.");
     }
 
     @Override

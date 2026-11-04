@@ -26,8 +26,8 @@ public final class ChainWeaponStats {
     }
 
     public static double longChainBonus(EntityPlayer player, ItemStack stack) {
-        return ModContent.LONG_CHAIN == null ? 0.0D
-            : EnchantmentHelper.getEnchantmentLevel(ModContent.LONG_CHAIN, stack);
+        return com.nanonaitor.arsenal.config.ContentSwitches
+            .enabledEnchantmentLevel(ModContent.LONG_CHAIN, stack);
     }
 
     public static double ballWindupReach(EntityPlayer player, ItemStack stack) {
@@ -62,10 +62,8 @@ public final class ChainWeaponStats {
         IAttributeInstance attribute = player.getEntityAttribute(
             SharedMonsterAttributes.ATTACK_SPEED);
         double speed = attribute == null ? 0.8D : attribute.getAttributeValue();
-        if (ModContent.ROTATION_FORCE != null) {
-            speed += 0.2D * EnchantmentHelper.getEnchantmentLevel(
-                ModContent.ROTATION_FORCE, stack);
-        }
+        speed += 0.2D * com.nanonaitor.arsenal.config.ContentSwitches
+            .enabledEnchantmentLevel(ModContent.ROTATION_FORCE, stack);
         // Haste did not alter ATTACK_SPEED in vanilla 1.12.2, so chain weapons
         // explicitly interpret it as +10% rotation speed per amplifier level.
         PotionEffect haste = player.getActivePotionEffect(MobEffects.HASTE);

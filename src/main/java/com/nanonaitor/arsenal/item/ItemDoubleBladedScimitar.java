@@ -3,6 +3,8 @@ package com.nanonaitor.arsenal.item;
 import com.nanonaitor.arsenal.client.ArsenalTooltip;
 import com.nanonaitor.arsenal.combat.DoubleBladedScimitarCombat;
 import com.nanonaitor.arsenal.compat.ReskillableCompat;
+import com.nanonaitor.arsenal.config.ArsenalConfig;
+import com.nanonaitor.arsenal.config.ConfiguredEffects;
 import java.util.List;
 import java.util.Map;
 import net.minecraft.enchantment.Enchantment;
@@ -90,26 +92,11 @@ public final class ItemDoubleBladedScimitar extends ItemArsenalWeapon {
     public void addInformation(ItemStack stack, World world, List<String> tooltip,
                                ITooltipFlag flag) {
         if (!ArsenalTooltip.begin(tooltip, TextFormatting.GOLD,
-                "Blade Staff with sweeping hits and timed reflection.")) return;
-        tooltip.add(TextFormatting.GOLD + "Melee hits damage other enemies within "
-            + (getTier() == WeaponTier.SENTIENT ? "3" : "2") + " blocks of the target.");
-        tooltip.add(TextFormatting.BLUE + "Right click: reflect incoming damage for 1 sec.");
-        tooltip.add(TextFormatting.AQUA + reflectionDescription());
-        tooltip.add(TextFormatting.GRAY + "An offhand shield takes priority over reflection.");
-        tooltip.add(TextFormatting.DARK_PURPLE
-            + "Reflection returns incoming damage before armor reduction.");
-        tooltip.add(TextFormatting.DARK_PURPLE
-            + "Reflection also returns harmful effects delivered by the attack.");
-        tooltip.add(TextFormatting.DARK_PURPLE
-            + "Reflected non-melee attacks Stun their attacker for 1 sec.");
-        tooltip.add(TextFormatting.GRAY
-            + "Failed guard cooldown: 3 secs; successful reflection: 0.5 secs.");
-        tooltip.add(TextFormatting.RED
-            + "Occupied off-hand: half attack speed; special abilities disabled.");
-        if (getTier() == WeaponTier.LIVING || getTier() == WeaponTier.SENTIENT) {
-            tooltip.add(TextFormatting.DARK_GREEN + "Held: cleanses Call of the Hive from entities within "
-                + (getTier() == WeaponTier.SENTIENT ? "10" : "5") + " blocks.");
-        }
+                "Sweeps nearby enemies; right-click to reflect damage.")) return;
+        tooltip.add(TextFormatting.GRAY + reflectionDescription());
+        String effects = ConfiguredEffects.displayNames(ArsenalConfig.effects.bladeStaffReflect);
+        if (!effects.isEmpty()) tooltip.add(TextFormatting.GRAY + "Reflected projectiles apply: " + effects + ".");
+        tooltip.add(TextFormatting.RED + "Two-Handed");
     }
 
     private String reflectionDescription() {

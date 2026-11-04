@@ -1,6 +1,8 @@
 package com.nanonaitor.arsenal.item;
 
 import java.util.List;
+import com.nanonaitor.arsenal.config.ArsenalConfig;
+import com.nanonaitor.arsenal.config.ConfiguredEffects;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.util.EnumHand;
 import net.minecraft.util.text.TextFormatting;
@@ -20,9 +22,8 @@ public final class ItemTartsyShield extends ItemArsenalShield {
     }
 
     @Override protected void appendShieldDetails(List<String> tooltip) {
-        line(tooltip, TextFormatting.AQUA, "Negates any one hit, then disables for 4 secs");
-        line(tooltip, TextFormatting.BLUE, "Attack while guarding to charge forward");
-        line(tooltip, TextFormatting.DARK_PURPLE, "Dash: 1 sec immunity, 2 damage and Stunned for 1 sec");
-        line(tooltip, TextFormatting.RED, "A confirmed dash hit primes one guaranteed critical");
+        line(tooltip, TextFormatting.GRAY, "Blocks one hit; attack while guarding to dash.");
+        String effects = ConfiguredEffects.displayNames(ArsenalConfig.effects.tartsyDash);
+        if (!effects.isEmpty()) line(tooltip, TextFormatting.GRAY, "Dash hits apply: " + effects + ".");
     }
 }

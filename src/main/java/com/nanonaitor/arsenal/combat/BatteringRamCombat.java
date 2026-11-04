@@ -277,7 +277,8 @@ public final class BatteringRamCombat {
             if (!CombatTargetRules.canHit(player, target)) continue;
             float enchantmentDamage = EnchantmentHelper.getModifierForCreature(
                 stack, target.getCreatureAttribute());
-            boolean magic=ModContent.MAGIC_LOG!=null && EnchantmentHelper.getEnchantmentLevel(ModContent.MAGIC_LOG,stack)>0;
+            boolean magic=com.nanonaitor.arsenal.config.ContentSwitches
+                .enabledEnchantmentLevel(ModContent.MAGIC_LOG,stack)>0;
             if (target.attackEntityFrom(magic?DamageSource.MAGIC:DamageSource.causePlayerDamage(player),
                 baseDamage * state.damageMultiplier + enchantmentDamage)) {
                 state.hitEntities.add(target.getEntityId());
@@ -291,7 +292,8 @@ public final class BatteringRamCombat {
     }
 
     private static float hungerMultiplier(ItemStack stack) {
-        return ModContent.MAGIC_LOG!=null && EnchantmentHelper.getEnchantmentLevel(ModContent.MAGIC_LOG,stack)>0 ? 0.5F : 1.0F;
+        return com.nanonaitor.arsenal.config.ContentSwitches
+            .enabledEnchantmentLevel(ModContent.MAGIC_LOG,stack)>0 ? 0.5F : 1.0F;
     }
 
     private static boolean hasChargeEnergy(EntityPlayer player) {

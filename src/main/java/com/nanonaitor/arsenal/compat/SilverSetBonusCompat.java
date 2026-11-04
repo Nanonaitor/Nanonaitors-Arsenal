@@ -3,25 +3,19 @@ package com.nanonaitor.arsenal.compat;
 import com.nanonaitor.arsenal.NanonaitorsArsenal;
 import com.nanonaitor.arsenal.item.ItemArsenalWeapon;
 import com.nanonaitor.arsenal.item.WeaponTier;
-import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
-import java.util.List;
 import java.util.UUID;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.SharedMonsterAttributes;
 import net.minecraft.entity.ai.attributes.AttributeModifier;
 import net.minecraft.entity.ai.attributes.IAttributeInstance;
 import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.fml.common.Loader;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent;
-import net.minecraftforge.fml.common.registry.ForgeRegistries;
 
 /** Integrates Arsenal's Gold and Silver weapons with RLCraft's SetBonus rules. */
 @Mod.EventBusSubscriber(modid = NanonaitorsArsenal.MOD_ID)
@@ -43,44 +37,6 @@ public final class SilverSetBonusCompat {
     private static Object goldArmorSet;
 
     private SilverSetBonusCompat() {}
-
-    /**
-     * Extends SetBonus's in-memory configuration before SetBonus compiles it
-     * during FMLServerStartingEvent. This makes Arsenal weapons genuine members
-     * of GSetW/SSetW, so SetBonus supplies both mechanics and tooltips itself.
-     * The user's on-disk SetBonus config is not modified.
-     */
-    public static void prepareRlcraftEquipmentSets() {
-        if (!Loader.isModLoaded("setbonus")) return;
-        try {
-            Class<?> configClass = Class.forName(
-                "com.fantasticsource.setbonus.config.SetBonusConfig");
-            Object serverSettings = configClass.getField("serverSettings").get(null);
-            if (serverSettings == null) return;
-
-            Field equipmentField = serverSettings.getClass().getField("equipment");
-            Field setsField = serverSettings.getClass().getField("sets");
-            List<String> equipment = new ArrayList<>(Arrays.asList(
-                (String[]) equipmentField.get(serverSettings)));
-            List<String> sets = new ArrayList<>(Arrays.asList(
-                (String[]) setsField.get(serverSettings)));
-
-            int silverAdded = addTierToConfig(equipment, sets, "SSetW",
-                WeaponTier.SILVER, SILVER_EQUIP_PREFIX);
-            int goldAdded = addTierToConfig(equipment, sets, "GSetW",
-                WeaponTier.GOLD, GOLD_EQUIP_PREFIX);
-
-            equipmentField.set(serverSettings, equipment.toArray(new String[0]));
-            setsField.set(serverSettings, sets.toArray(new String[0]));
-            NanonaitorsArsenal.LOGGER.info(
-                "Prepared native SetBonus entries for {} Silver and {} Gold Arsenal weapons",
-                silverAdded, goldAdded);
-        } catch (ReflectiveOperationException | LinkageError | RuntimeException exception) {
-            NanonaitorsArsenal.LOGGER.warn(
-                "Could not prepare native RLCraft Gold/Silver weapon-set entries; "
-                    + "the numeric compatibility fallback will be used", exception);
-        }
-    }
 
     /** Detects the fully parsed sets after SetBonus has built its server data. */
     public static void registerRlcraftEquipmentSets() {
@@ -155,49 +111,6 @@ public final class SilverSetBonusCompat {
             !goldNativeRegistration && goldBonusDetected
                 && heldTier == WeaponTier.GOLD
                 && isSetComplete(goldArmorSet, player));
-    }
-
-    private static int addTierToConfig(List<String> equipment, List<String> sets,
-                                       String setId, WeaponTier tier,
-                                       String equipPrefix) {
-        int setIndex = findConfigEntry(sets, setId);
-        if (setIndex < 0) return 0;
-        String setLine = sets.get(setIndex);
-        int added = 0;
-        for (Item item : ForgeRegistries.ITEMS.getValuesCollection()) {
-            if (!(item instanceof ItemArsenalWeapon)
-                || ((ItemArsenalWeapon) item).getTier() != tier
-                || item.getRegistryName() == null) continue;
-
-            String equipId = equipPrefix + item.getRegistryName().getResourcePath();
-            if (findConfigEntry(equipment, equipId) < 0) {
-                equipment.add(equipId + ", " + item.getRegistryName());
-            }
-            if (!containsSetMember(setLine, equipId)) {
-                setLine += " | " + equipId;
-            }
-            added++;
-        }
-        sets.set(setIndex, setLine);
-        return added;
-    }
-
-    private static int findConfigEntry(List<String> entries, String id) {
-        for (int i = 0; i < entries.size(); i++) {
-            String value = entries.get(i);
-            if (value != null && value.trim().startsWith(id + ",")) return i;
-        }
-        return -1;
-    }
-
-    private static boolean containsSetMember(String setLine, String equipId) {
-        int equals = setLine.indexOf('=');
-        if (equals < 0) return false;
-        String[] members = setLine.substring(equals + 1).split("[|]");
-        for (String member : members) {
-            if (equipId.equals(member.trim())) return true;
-        }
-        return false;
     }
 
     private static boolean containsEquipPrefix(Object weaponSet, String prefix)

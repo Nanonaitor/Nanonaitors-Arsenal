@@ -2,6 +2,7 @@ package com.nanonaitor.arsenal.client;
 
 import com.nanonaitor.arsenal.item.WeaponTier;
 import com.nanonaitor.arsenal.compat.ArsenalCompatManager;
+import com.nanonaitor.arsenal.config.ContentSwitches;
 import com.nanonaitor.arsenal.registry.ModContent;
 import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.init.Items;
@@ -17,8 +18,19 @@ public final class ArsenalCreativeTab extends CreativeTabs {
 
     @Override
     public ItemStack getTabIconItem() {
-        if (ModContent.MORNING_STARS.get(WeaponTier.DIAMOND) != null) {
-            return new ItemStack(ModContent.MORNING_STARS.get(WeaponTier.DIAMOND));
+        net.minecraft.item.Item[] icons = {
+            ModContent.MORNING_STARS.get(WeaponTier.DIAMOND),
+            ModContent.SCIMITARS.get(WeaponTier.DIAMOND),
+            ModContent.DOUBLE_BLADED_SCIMITARS.get(WeaponTier.DIAMOND),
+            ModContent.CLAWS.get(WeaponTier.DIAMOND),
+            ModContent.FLAILS.get(WeaponTier.DIAMOND),
+            ModContent.BATTERING_RAMS.get(WeaponTier.DIAMOND),
+            ModContent.BALLS_AND_CHAINS.get(WeaponTier.DIAMOND),
+            ModContent.TARTSY_SHIELD,
+            ModContent.SUN_WAR_BULWARK
+        };
+        for (net.minecraft.item.Item icon : icons) {
+            if (icon != null && ContentSwitches.enabled(icon)) return new ItemStack(icon);
         }
         return new ItemStack(Items.DIAMOND_SWORD);
     }
@@ -48,26 +60,26 @@ public final class ArsenalCreativeTab extends CreativeTabs {
         for (WeaponTier tier : WeaponTier.values()) {
             if (ArsenalCompatManager.isTierAvailable(tier)) add(items, ModContent.BALLS_AND_CHAINS.get(tier));
         }
-        if (ModContent.LONG_CHAIN != null) {
+        if (ContentSwitches.enchantmentEnabled(ModContent.LONG_CHAIN)) {
             items.add(ItemEnchantedBook.getEnchantedItemStack(new EnchantmentData(
                 ModContent.LONG_CHAIN, ModContent.LONG_CHAIN.getMaxLevel())));
         }
-        if (ModContent.ROTATION_FORCE != null) {
+        if (ContentSwitches.enchantmentEnabled(ModContent.ROTATION_FORCE)) {
             items.add(ItemEnchantedBook.getEnchantedItemStack(new EnchantmentData(
                 ModContent.ROTATION_FORCE, ModContent.ROTATION_FORCE.getMaxLevel())));
         }
-        if (ModContent.RECOVERY != null) {
+        if (ContentSwitches.enchantmentEnabled(ModContent.RECOVERY)) {
             items.add(ItemEnchantedBook.getEnchantedItemStack(new EnchantmentData(
                 ModContent.RECOVERY, ModContent.RECOVERY.getMaxLevel())));
         }
-        if (ModContent.BREECHED != null) {
+        if (ContentSwitches.enchantmentEnabled(ModContent.BREECHED)) {
             items.add(ItemEnchantedBook.getEnchantedItemStack(new EnchantmentData(
                 ModContent.BREECHED, ModContent.BREECHED.getMaxLevel())));
         }
     }
 
     private static void add(NonNullList<ItemStack> items, net.minecraft.item.Item item) {
-        if (item != null) {
+        if (item != null && ContentSwitches.enabled(item)) {
             items.add(new ItemStack(item));
         }
     }

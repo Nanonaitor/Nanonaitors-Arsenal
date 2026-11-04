@@ -2,6 +2,7 @@ package com.nanonaitor.arsenal.config;
 
 import com.nanonaitor.arsenal.NanonaitorsArsenal;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.Set;
 import net.minecraft.entity.EntityList;
 import net.minecraft.entity.EntityLivingBase;
@@ -28,10 +29,26 @@ public final class ConfiguredEffects {
                 EffectSpec spec = EffectSpec.parse(entry, defaultTicks, defaultAmplifier);
                 Potion potion = ForgeRegistries.POTIONS.getValue(new ResourceLocation(spec.id));
                 if (potion == null) { warn(entry); continue; }
-                if (potion.getRegistryName().toString().equals("nanonaitors_arsenal:stunned") && stunImmune(target)) continue;
                 target.addPotionEffect(new PotionEffect(potion, spec.ticks, spec.amplifier, false, true));
             } catch (RuntimeException exception) { warn(entry); }
         }
+    }
+
+    /** Returns localized effect names so tooltips follow the live config instead of hardcoded defaults. */
+    public static String displayNames(String[] entries) {
+        Set<String> names = new LinkedHashSet<>();
+        if (entries == null) return "";
+        for (String entry : entries) {
+            if (entry == null || entry.trim().isEmpty()) continue;
+            String id = entry.trim().split("@", 2)[0];
+            try {
+                Potion potion = ForgeRegistries.POTIONS.getValue(new ResourceLocation(id));
+                if (potion != null) names.add(net.minecraft.util.text.translation.I18n.translateToLocal(potion.getName()));
+            } catch (RuntimeException ignored) {
+                // Invalid entries are reported by apply(); tooltips simply omit them.
+            }
+        }
+        return String.join(", ", names);
     }
     private static void warn(String entry) {
         if (WARNED.add(entry)) NanonaitorsArsenal.LOGGER.warn("Skipping invalid/unavailable configured effect: {}", entry);

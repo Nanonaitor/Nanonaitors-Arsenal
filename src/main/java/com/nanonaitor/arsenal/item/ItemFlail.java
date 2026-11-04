@@ -30,7 +30,7 @@ public final class ItemFlail extends ItemArsenalWeapon {
                                ITooltipFlag flag) {
         if (!ArsenalTooltip.begin(tooltip, TextFormatting.GOLD,
                 "Hold left-click to swing continuously.")) return;
-        tooltip.add(TextFormatting.GRAY + "Hits all visible enemies within 4 base blocks.");
-        tooltip.add(TextFormatting.DARK_GRAY + "Reach and attack-speed modifiers apply.");
+        tooltip.add(TextFormatting.GRAY + "Hits visible enemies within "
+            + com.nanonaitor.arsenal.config.ArsenalConfig.reach.flailRadius + " base blocks.");
     }
 }

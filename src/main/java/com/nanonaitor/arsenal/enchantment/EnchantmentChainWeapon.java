@@ -18,12 +18,18 @@ abstract class EnchantmentChainWeapon extends Enchantment {
 
     @Override
     public boolean canApply(ItemStack stack) {
-        return stack.getItem() instanceof ItemFlail
-            || stack.getItem() instanceof ItemBallAndChain;
+        return com.nanonaitor.arsenal.config.ContentSwitches.enchantmentEnabled(this)
+            && (stack.getItem() instanceof ItemFlail
+            || stack.getItem() instanceof ItemBallAndChain);
     }
 
     @Override
     public boolean canApplyAtEnchantingTable(ItemStack stack) {
         return canApply(stack);
+    }
+
+    @Override
+    public boolean isAllowedOnBooks() {
+        return com.nanonaitor.arsenal.config.ContentSwitches.enchantmentEnabled(this);
     }
 }

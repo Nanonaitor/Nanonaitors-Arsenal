@@ -16,9 +16,7 @@ public final class ArsenalTooltip {
                                 String summary) {
         tooltip.add(color + summary);
         boolean expanded = GuiScreen.isShiftKeyDown();
-        if (expanded) {
-            tooltip.add(TextFormatting.DARK_GRAY + "Showing details");
-        } else {
+        if (!expanded) {
             tooltip.add(TextFormatting.DARK_GRAY + "Hold " + TextFormatting.AQUA
                 + "SHIFT" + TextFormatting.DARK_GRAY + " for details");
         }

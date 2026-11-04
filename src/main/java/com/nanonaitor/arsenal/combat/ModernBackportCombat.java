@@ -108,7 +108,8 @@ public final class ModernBackportCombat {
     }
 
     private static int chargeTicks(ItemStack stack) {
-        int luna=ModContent.LUNA==null?0:EnchantmentHelper.getEnchantmentLevel(ModContent.LUNA,stack);
+        int luna=com.nanonaitor.arsenal.config.ContentSwitches
+            .enabledEnchantmentLevel(ModContent.LUNA,stack);
         return Math.max(1, (int)Math.ceil(ArsenalConfig.morningStar.fullChargeSeconds * 20.0D*(1.0D-.25D*luna)));
     }
 
@@ -163,7 +164,8 @@ public final class ModernBackportCombat {
         boolean full = quarters >= 4;
         float multiplier = 1.0F + quarters * 0.10F;
         double reach = player.getEntityAttribute(EntityPlayer.REACH_DISTANCE).getAttributeValue();
-        int luna=ModContent.LUNA==null?0:EnchantmentHelper.getEnchantmentLevel(ModContent.LUNA,stack);
+        int luna=com.nanonaitor.arsenal.config.ContentSwitches
+            .enabledEnchantmentLevel(ModContent.LUNA,stack);
         double halfWidth = 2.0D * quarters / 4.0D * (1.0D+.25D*luna);
         Vec3d eye = player.getPositionEyes(1.0F);
         Vec3d look = player.getLookVec().normalize();

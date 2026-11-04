@@ -49,11 +49,8 @@ public final class ItemBatteringRam extends ItemArsenalWeapon {
                                ITooltipFlag flag) {
         if (!ArsenalTooltip.begin(tooltip, TextFormatting.GOLD,
                 "Hold right-click to charge forward.")) return;
-        tooltip.add(TextFormatting.GRAY + "Left-click: normal attack with extra knockback.");
-        tooltip.add(TextFormatting.RED + "Two-Handed");
         tooltip.add(TextFormatting.GRAY + getBreakDescription());
-        tooltip.add(TextFormatting.GRAY + "Costs 1 durability per block or enemy hit.");
-        tooltip.add(TextFormatting.DARK_GRAY + "Charging requires an empty offhand.");
+        tooltip.add(TextFormatting.RED + "Two-Handed");
     }
 
     private String getBreakDescription() {

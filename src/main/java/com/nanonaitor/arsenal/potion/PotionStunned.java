@@ -44,9 +44,7 @@ public final class PotionStunned extends Potion {
         if (living.world.isRemote || !(living instanceof EntityLiving)) return;
         EntityLiving mob = (EntityLiving) living;
         NBTTagCompound data = mob.getEntityData();
-        boolean immune = com.nanonaitor.arsenal.config.ConfiguredEffects.stunImmune(mob);
-        if (immune && ModContent.STUNNED != null) mob.removePotionEffect(ModContent.STUNNED);
-        boolean stunned = !immune && ModContent.STUNNED != null && mob.isPotionActive(ModContent.STUNNED);
+        boolean stunned = ModContent.STUNNED != null && mob.isPotionActive(ModContent.STUNNED);
         if (stunned) {
             if (!data.getBoolean(MANAGED)) {
                 data.setBoolean(PREVIOUS, mob.isAIDisabled());

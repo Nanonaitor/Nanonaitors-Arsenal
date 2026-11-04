@@ -36,9 +36,10 @@ public final class ScimitarShieldCompat {
         player.resetActiveHand();
     }
     private static int endureLevel(EntityPlayer player) {
-        if(com.nanonaitor.arsenal.registry.ModContent.ENDURE==null)return 0;
-        return Math.min(2,EnchantmentHelper.getEnchantmentLevel(com.nanonaitor.arsenal.registry.ModContent.ENDURE,player.getHeldItemMainhand())
-            + EnchantmentHelper.getEnchantmentLevel(com.nanonaitor.arsenal.registry.ModContent.ENDURE,player.getHeldItemOffhand()));
+        return Math.min(2,com.nanonaitor.arsenal.config.ContentSwitches.enabledEnchantmentLevel(
+            com.nanonaitor.arsenal.registry.ModContent.ENDURE,player.getHeldItemMainhand())
+            + com.nanonaitor.arsenal.config.ContentSwitches.enabledEnchantmentLevel(
+                com.nanonaitor.arsenal.registry.ModContent.ENDURE,player.getHeldItemOffhand()));
     }
     public static int bashCooldown() {
         if (!Loader.isModLoaded("spartanshields")) return 30;

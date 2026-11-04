@@ -4,7 +4,6 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import com.nanonaitor.arsenal.NanonaitorsArsenal;
 import com.nanonaitor.arsenal.compat.ArsenalCompatManager;
-import com.nanonaitor.arsenal.compat.DistinctDamageCompat;
 import com.nanonaitor.arsenal.enchantment.EnchantmentLongChain;
 import com.nanonaitor.arsenal.enchantment.EnchantmentRotationForce;
 import java.util.Collections;
@@ -49,12 +48,6 @@ public abstract class ItemArsenalWeapon extends ItemSword {
 
     public final double getDisplayedAttackSpeed() {
         return 4.0D + attackSpeedModifier;
-    }
-
-    @Override
-    public void onUpdate(ItemStack stack, World world, Entity entity, int slot, boolean selected) {
-        super.onUpdate(stack, world, entity, slot, selected);
-        DistinctDamageCompat.apply(stack, this);
     }
 
     /**

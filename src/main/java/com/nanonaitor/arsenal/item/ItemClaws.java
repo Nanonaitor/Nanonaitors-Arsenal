@@ -55,9 +55,8 @@ public final class ItemClaws extends ItemArsenalWeapon {
     public void addInformation(ItemStack stack, World world, List<String> tooltip, ITooltipFlag flag) {
         if (!ArsenalTooltip.begin(tooltip, TextFormatting.GOLD,
                 "Automatically equips its paired offhand claw.")) return;
-        tooltip.add(TextFormatting.GRAY + "Hold left/right click to auto-attack with each claw.");
-        tooltip.add(TextFormatting.GRAY + "Fully charged paired hits pierce i-frames, at most once per 4 ticks per target.");
-        tooltip.add(TextFormatting.DARK_GRAY + "A different offhand item disables all paired abilities.");
+        tooltip.add(TextFormatting.GRAY + "Hold attack to alternate strikes between both claws.");
+        tooltip.add(TextFormatting.RED + "A different offhand item disables paired abilities.");
     }
 
 }

@@ -181,7 +181,8 @@ public final class DoubleBladedScimitarCombat {
         net.minecraft.item.Item staffItem=weapon.getItem();
         ItemDoubleBladedScimitar staff=(ItemDoubleBladedScimitar)weapon.getItem();
         float returnedDamage=reflectionDamage(defender,staff.getTier(),(EntityLivingBase)source,event.getAmount());
-        boolean reverso=ModContent.REVERSO!=null && EnchantmentHelper.getEnchantmentLevel(ModContent.REVERSO,weapon)>0;
+        boolean reverso=com.nanonaitor.arsenal.config.ContentSwitches
+            .enabledEnchantmentLevel(ModContent.REVERSO,weapon)>0;
         RETURNING.set(Boolean.TRUE);
         try {
             hit = reverso ? returnedDamage>0.0F : source.attackEntityFrom(new EntityDamageSource(

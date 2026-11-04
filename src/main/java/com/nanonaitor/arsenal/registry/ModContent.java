@@ -183,23 +183,17 @@ public final class ModContent {
 
     @SubscribeEvent
     public static void registerEnchantments(RegistryEvent.Register<Enchantment> event) {
-        if (!com.nanonaitor.arsenal.config.ArsenalConfig.enchantments.enableAll) return;
-        if (com.nanonaitor.arsenal.config.ArsenalConfig.enchantments.enableLongChain)
-            event.getRegistry().register(LONG_CHAIN = new EnchantmentLongChain());
-        if (com.nanonaitor.arsenal.config.ArsenalConfig.enchantments.enableRotationForce)
-            event.getRegistry().register(ROTATION_FORCE = new EnchantmentRotationForce());
-        if (com.nanonaitor.arsenal.config.ArsenalConfig.enchantments.enableRecovery)
-            event.getRegistry().register(RECOVERY = new EnchantmentRecovery());
-        if (com.nanonaitor.arsenal.config.ArsenalConfig.enchantments.enableBreeched)
-            event.getRegistry().register(BREECHED = new EnchantmentBreeched());
-        if (com.nanonaitor.arsenal.config.ArsenalConfig.enchantments.enableReverso)
-            event.getRegistry().register(REVERSO = exclusive("reverso",1,com.nanonaitor.arsenal.item.ItemDoubleBladedScimitar.class));
-        if (com.nanonaitor.arsenal.config.ArsenalConfig.enchantments.enableLuna)
-            event.getRegistry().register(LUNA = exclusive("luna",2,com.nanonaitor.arsenal.item.ItemMorningStar.class));
-        if (com.nanonaitor.arsenal.config.ArsenalConfig.enchantments.enableMagicLog)
-            event.getRegistry().register(MAGIC_LOG = exclusive("magic_log",1,com.nanonaitor.arsenal.item.ItemBatteringRam.class));
-        if (com.nanonaitor.arsenal.config.ArsenalConfig.enchantments.enableEndure)
-            event.getRegistry().register(ENDURE = exclusive("endure",1,com.nanonaitor.arsenal.item.ItemScimitar.class));
+        // Always register stable IDs. Configuration disables acquisition and
+        // behavior instead, so existing worlds never report missing entries.
+        event.getRegistry().registerAll(
+            LONG_CHAIN = new EnchantmentLongChain(),
+            ROTATION_FORCE = new EnchantmentRotationForce(),
+            RECOVERY = new EnchantmentRecovery(),
+            BREECHED = new EnchantmentBreeched(),
+            REVERSO = exclusive("reverso",1,com.nanonaitor.arsenal.item.ItemDoubleBladedScimitar.class),
+            LUNA = exclusive("luna",2,com.nanonaitor.arsenal.item.ItemMorningStar.class),
+            MAGIC_LOG = exclusive("magic_log",1,com.nanonaitor.arsenal.item.ItemBatteringRam.class),
+            ENDURE = exclusive("endure",1,com.nanonaitor.arsenal.item.ItemScimitar.class));
     }
 
     private static Enchantment exclusive(String id,int max,Class<? extends Item> type) {

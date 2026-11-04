@@ -87,13 +87,8 @@ public final class ItemSunWarBulwark extends ItemArsenalShield {
     }
 
     @Override protected void appendShieldDetails(List<String> tooltip) {
-        line(tooltip, TextFormatting.YELLOW, "Guard Strain: 25 blocked hits force 3 seconds of recovery");
-        line(tooltip, TextFormatting.YELLOW, "Guard Strain recovers by 1 point each second");
-        line(tooltip, TextFormatting.AQUA, "15% passive damage reduction when ready");
-        line(tooltip, TextFormatting.BLUE, "Can shield all directed attacks from any direction");
-        line(tooltip, TextFormatting.RED, "Damage: 1 + total armor points");
-        line(tooltip, TextFormatting.DARK_GRAY, "Guard and attack for a 4-block area bash");
-        line(tooltip, TextFormatting.GRAY, "40% slower while carried; 75% slower while guarding");
-        line(tooltip, TextFormatting.DARK_RED, "Needs both hands free to guard; passive always works");
+        line(tooltip, TextFormatting.GRAY, "Blocks from every direction; attack while guarding to bash.");
+        line(tooltip, TextFormatting.GRAY, "Guard strain can force a short recovery.");
+        line(tooltip, TextFormatting.RED, "Two-Handed");
     }
 }

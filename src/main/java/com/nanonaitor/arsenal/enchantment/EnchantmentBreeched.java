@@ -18,8 +18,13 @@ public final class EnchantmentBreeched extends Enchantment {
     }
 
     @Override public boolean canApply(ItemStack stack) {
-        return com.nanonaitor.arsenal.config.ArsenalConfig.shields.allowShieldEnchantments
+        return com.nanonaitor.arsenal.config.ContentSwitches.enchantmentEnabled(this)
+            && com.nanonaitor.arsenal.config.ArsenalConfig.shields.allowShieldEnchantments
             && stack.getItem() instanceof ItemArsenalShield;
+    }
+
+    @Override public boolean isAllowedOnBooks() {
+        return com.nanonaitor.arsenal.config.ContentSwitches.enchantmentEnabled(this);
     }
 
     @Override public boolean canApplyAtEnchantingTable(ItemStack stack) {

@@ -2,6 +2,8 @@ package com.nanonaitor.arsenal.item;
 
 import com.nanonaitor.arsenal.combat.ScimitarCombat;
 import com.nanonaitor.arsenal.client.ArsenalTooltip;
+import com.nanonaitor.arsenal.config.ArsenalConfig;
+import com.nanonaitor.arsenal.config.ConfiguredEffects;
 import java.util.List;
 import net.minecraft.client.util.ITooltipFlag;
 import net.minecraft.entity.EntityLivingBase;
@@ -13,7 +15,6 @@ import net.minecraft.util.EnumActionResult;
 import net.minecraft.util.EnumHand;
 import net.minecraft.util.text.TextFormatting;
 import net.minecraft.world.World;
-import net.minecraftforge.fml.common.Loader;
 
 public final class ItemScimitar extends ItemArsenalWeapon {
     public ItemScimitar(WeaponTier tier) {
@@ -81,20 +82,9 @@ public final class ItemScimitar extends ItemArsenalWeapon {
     @Override
     public void addInformation(ItemStack stack, World world, List<String> tooltip, ITooltipFlag flag) {
         if (!ArsenalTooltip.begin(tooltip, TextFormatting.GOLD,
-                "Fast blade that weakens enemies on hit.")) return;
-        tooltip.add(TextFormatting.GOLD + "Dual wield to alternate attacks and cross-guard.");
-        if ((getTier() == WeaponTier.GOLD || getTier() == WeaponTier.SILVER) && Loader.isModLoaded("setbonus")) {
-            tooltip.add(TextFormatting.DARK_PURPLE
-                + "Default: Weakness I; II with the matching RLCraft armor-set bonus.");
-        } else if (getTier() == WeaponTier.SENTIENT) {
-            tooltip.add(TextFormatting.DARK_PURPLE
-                + "Hits inflict Weakness III for 10 secs.");
-        } else if (ScimitarCombat.getBaseWeaknessAmplifier(getTier()) == 1) {
-            tooltip.add(TextFormatting.DARK_PURPLE
-                + "Hits inflict Weakness II for 10 secs.");
-        } else {
-            tooltip.add(TextFormatting.DARK_PURPLE
-                + "Hits inflict Weakness I for 10 secs.");
-        }
+                "Dual wield to alternate attacks and cross-guard.")) return;
+        tooltip.add(TextFormatting.GRAY + "Attack while guarding to shield bash.");
+        String effects = ConfiguredEffects.displayNames(ArsenalConfig.effects.scimitarHit);
+        if (!effects.isEmpty()) tooltip.add(TextFormatting.GRAY + "Hits apply: " + effects + ".");
     }
 }

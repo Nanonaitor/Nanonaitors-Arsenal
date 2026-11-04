@@ -87,6 +87,7 @@ public abstract class ItemArsenalShield extends ItemShield {
                 && enchantment == Enchantments.THORNS
             || com.nanonaitor.arsenal.config.ArsenalConfig.shields.allowShieldEnchantments
                 && (enchantment == ModContent.RECOVERY
+                    && com.nanonaitor.arsenal.config.ContentSwitches.enchantmentEnabled(enchantment)
                     || enchantment.type != null
                         && enchantment.type != net.minecraft.enchantment.EnumEnchantmentType.BREAKABLE
                         && enchantment.type != net.minecraft.enchantment.EnumEnchantmentType.ALL

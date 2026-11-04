@@ -34,6 +34,22 @@
 - Arsenal shields now support Thorns when shield enchantments are enabled.
 - Added the new weapon effects to configuration and recipe/content registration.
 
+## Configuration and modpack integration
+
+- Added a working in-game configuration-change listener. Runtime-safe combat, reach and effect settings now update after saving the config; content and enchantment registration switches still require a restart.
+- Expanded the per-family content switches. Disabled families are hidden from the Arsenal creative tab and excluded from Arsenal's generated recipes and loot while existing items remain registered for world safety.
+- Tooltips that list configured effects now follow the active effect configuration instead of describing hardcoded defaults.
+- Removed automatic insertion of pack-specific DDD profiles, Reskillable requirements, race affinities and SetBonus equipment entries. Modpacks can now keep those rules in their own configuration files alongside equivalent weapon-mod rules.
+- Arsenal still respects externally configured Reskillable locks when its custom weapon abilities are used.
+- Simplified the Stunned immunity check so immunity is decided when the effect is applied instead of being checked again every tick.
+
+## Tooltip cleanup
+
+- Shortened weapon tooltips into a concise summary with additional details available while holding Shift.
+- Added the **Two-Handed** restriction to Blade Staff and Ball & Chain details.
+- Removed duplicate Arsenal enchantment explanations when another tooltip provider displays the same description.
+- Fixed Luna's percentage symbols producing a localization format error.
+
 ## Notes
 
 - Replace the previous Arsenal JAR; do not keep multiple Arsenal versions installed.

@@ -2,7 +2,6 @@ package com.nanonaitor.arsenal.combat;
 
 import com.nanonaitor.arsenal.NanonaitorsArsenal;
 import com.nanonaitor.arsenal.compat.ArsenalCompatManager;
-import com.nanonaitor.arsenal.compat.RaceWeaponAffinityCompat;
 import com.nanonaitor.arsenal.item.ItemArsenalShield;
 import com.nanonaitor.arsenal.item.ItemSunWarBulwark;
 import com.nanonaitor.arsenal.item.ItemBallAndChain;
@@ -299,13 +298,8 @@ public final class ShieldCombat {
         float damage = armorScaledDamage(player);
         for (EntityLivingBase target : targets) {
             if (player.getDistanceSq(target) > 16.0D || !CombatTargetRules.canHit(player,target)) continue;
-            boolean hit;
-            RaceWeaponAffinityCompat.beginAttack(bulwark);
-            try {
-                hit = target.attackEntityFrom(new EntityDamageSource("arsenal_bulwark_bash",player), damage);
-            } finally {
-                RaceWeaponAffinityCompat.endAttack();
-            }
+            boolean hit = target.attackEntityFrom(
+                new EntityDamageSource("arsenal_bulwark_bash", player), damage);
             if (hit) {
                 findEquipped(player, ItemSunWarBulwark.class).damageItem(1, player);
                 target.knockBack(player, 1.4F, player.posX - target.posX, player.posZ - target.posZ);
@@ -331,12 +325,12 @@ public final class ShieldCombat {
 
     private static int shieldCooldown(ItemStack shield, int baseTicks) {
         int ticks = baseTicks;
-        if (ModContent.RECOVERY != null
-            && EnchantmentHelper.getEnchantmentLevel(ModContent.RECOVERY, shield) > 0) {
+        if (com.nanonaitor.arsenal.config.ContentSwitches
+            .enabledEnchantmentLevel(ModContent.RECOVERY, shield) > 0) {
             ticks = Math.max(1, ticks / 2);
         }
-        if (ModContent.BREECHED != null
-            && EnchantmentHelper.getEnchantmentLevel(ModContent.BREECHED, shield) > 0) {
+        if (com.nanonaitor.arsenal.config.ContentSwitches
+            .enabledEnchantmentLevel(ModContent.BREECHED, shield) > 0) {
             ticks *= 2;
         }
         return ticks;
