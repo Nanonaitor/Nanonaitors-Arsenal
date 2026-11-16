@@ -11,7 +11,6 @@ import org.apache.logging.log4j.Logger;
 
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
-import net.minecraftforge.fml.common.event.FMLInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLPostInitializationEvent;
 import net.minecraftforge.fml.common.event.FMLServerStartedEvent;
 
@@ -38,12 +37,11 @@ public final class NanonaitorsArsenal {
     }
 
     @Mod.EventHandler
-    public void init(FMLInitializationEvent event) {
-        ModSmeltingRecipes.register();
-    }
-
-    @Mod.EventHandler
     public void postInit(FMLPostInitializationEvent event) {
+        // Both read the ore dictionary, which some mods (HBM's steel) only
+        // fill during their own init. By post-init every mod's init has run.
+        com.nanonaitor.arsenal.recipe.ModRecipes.registerLateOreRecipes();
+        ModSmeltingRecipes.register();
         com.nanonaitor.arsenal.compat.ParasiteDurabilityCompat.register();
         DragonForgeCompat.register();
     }

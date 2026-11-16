@@ -10,6 +10,8 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.item.crafting.IRecipe;
 import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.event.RegistryEvent;
+import net.minecraftforge.fml.common.registry.ForgeRegistries;
+import net.minecraftforge.registries.IForgeRegistry;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.oredict.ShapedOreRecipe;
@@ -17,29 +19,51 @@ import net.minecraft.init.Items;
 
 @Mod.EventBusSubscriber(modid = NanonaitorsArsenal.MOD_ID)
 public final class ModRecipes {
+    /** Tiers whose material comes from other mods through the ore dictionary. */
+    private static final WeaponTier[] ORE_TIERS = {WeaponTier.SILVER, WeaponTier.BRONZE, WeaponTier.STEEL};
+    /** False during the recipe registry event, true for the pass after every mod's init. */
+    private static boolean finalPass;
+
     private ModRecipes() {}
     @SubscribeEvent public static void register(RegistryEvent.Register<IRecipe> event) {
+        IForgeRegistry<IRecipe> registry = event.getRegistry();
         ShapedOreRecipe tartsy = new ShapedOreRecipe(
             new ResourceLocation(NanonaitorsArsenal.MOD_ID, "equipment"),
             new ItemStack(ModContent.TARTSY_SHIELD),
             " P ", "PBP", " L ", 'P', "plankWood",
             'B', net.minecraft.init.Blocks.IRON_BLOCK, 'L', Items.LEATHER);
         tartsy.setRegistryName(NanonaitorsArsenal.MOD_ID, "tartsy_shield");
-        if (com.nanonaitor.arsenal.config.ContentSwitches.enabled("tartsy_shield")) event.getRegistry().register(tartsy);
+        if (com.nanonaitor.arsenal.config.ContentSwitches.enabled("tartsy_shield")) registry.register(tartsy);
         WeaponTier[] base = {WeaponTier.SILVER, WeaponTier.BRONZE, WeaponTier.STEEL,
             WeaponTier.UMBRIUM, WeaponTier.DRAGONBONE, WeaponTier.DESERT_MYRMEX,
             WeaponTier.JUNGLE_MYRMEX};
-        for (WeaponTier tier : base) registerFamily(event, tier, false);
-        registerFamily(event, WeaponTier.DESERT_VENOM, true);
-        registerFamily(event, WeaponTier.JUNGLE_VENOM, true);
-        registerLiving(event);
+        for (WeaponTier tier : base) registerFamily(registry, tier, false);
+        registerFamily(registry, WeaponTier.DESERT_VENOM, true);
+        registerFamily(registry, WeaponTier.JUNGLE_VENOM, true);
+        registerLiving(registry);
         if (!ArsenalCompatManager.hasDragonForge()) {
-            upgrades(event, WeaponTier.FLAMED_DRAGONBONE, "iceandfire:fire_dragon_blood");
-            upgrades(event, WeaponTier.ICED_DRAGONBONE, "iceandfire:ice_dragon_blood");
-            upgrades(event, WeaponTier.ELECTRIC_DRAGONBONE, "iceandfire:lightning_dragon_blood");
+            upgrades(registry, WeaponTier.FLAMED_DRAGONBONE, "iceandfire:fire_dragon_blood");
+            upgrades(registry, WeaponTier.ICED_DRAGONBONE, "iceandfire:ice_dragon_blood");
+            upgrades(registry, WeaponTier.ELECTRIC_DRAGONBONE, "iceandfire:lightning_dragon_blood");
         }
     }
-    private static void registerFamily(RegistryEvent.Register<IRecipe> e, WeaponTier t, boolean venom) {
+
+    /**
+     * Second pass, run from post-initialization. Forge fires the recipe
+     * registry event before any mod's init, and some mods (HBM's Nuclear Tech
+     * steel, for one) only add their ingots and blocks to the ore dictionary
+     * during init. Those tiers had no recipes at all; anything still missing
+     * is registered now, and recipes that already exist are left alone.
+     */
+    public static void registerLateOreRecipes() {
+        finalPass = true;
+        for (WeaponTier tier : ORE_TIERS) registerFamily(ForgeRegistries.RECIPES, tier, false);
+    }
+
+    private static void registerOnce(IForgeRegistry<IRecipe> registry, IRecipe recipe) {
+        if (!registry.containsKey(recipe.getRegistryName())) registry.register(recipe);
+    }
+    private static void registerFamily(IForgeRegistry<IRecipe> e, WeaponTier t, boolean venom) {
         if (!ArsenalCompatManager.isTierAvailable(t)) return;
         Object m = ingredient(t.getRepairIngredient());
         if (m == null) return;
@@ -58,8 +82,9 @@ public final class ModRecipes {
             'C', "chainIron");
         // Heavy weapons cost a full block, like the vanilla tiers. Bronze falls
         // back to a single ingot only in packs that register no bronze block.
+        // The ingot fallback waits for the final pass, when a late block is known to be absent.
         Object heavyMaterial = blockIngredient(t);
-        if (heavyMaterial == null && t == WeaponTier.BRONZE) heavyMaterial = m;
+        if (heavyMaterial == null && t == WeaponTier.BRONZE && finalPass) heavyMaterial = m;
         if (heavyMaterial != null) {
             recipe(e, "battering_ram", t, ModContent.BATTERING_RAMS, venom?" VM":"  M", "LLL", " S ", 'M', heavyMaterial, 'V', v, 'L', "logWood");
             recipe(e, "ball_and_chain", t, ModContent.BALLS_AND_CHAINS,
@@ -94,7 +119,7 @@ public final class ModRecipes {
         String ore = "block" + Character.toUpperCase(id.charAt(0)) + id.substring(1);
         return ArsenalCompatManager.hasOre(ore) ? ore : null;
     }
-    private static void registerLiving(RegistryEvent.Register<IRecipe> e) {
+    private static void registerLiving(IForgeRegistry<IRecipe> e) {
         WeaponTier t = WeaponTier.LIVING;
         if (!ArsenalCompatManager.isTierAvailable(t)
             || !ArsenalCompatManager.hasItem("srparasites:infectious_blade_fragment")
@@ -122,7 +147,7 @@ public final class ModRecipes {
                 'T', tendon);
         }
     }
-    private static void living(RegistryEvent.Register<IRecipe> e, String family,
+    private static void living(IForgeRegistry<IRecipe> e, String family,
                                ItemArsenalWeapon out, String a,String b,String c,
                                Object f,Object core,Object handle,Object... extraKeys) {
         if (!com.nanonaitor.arsenal.config.ContentSwitches.enabled(family)) return;
@@ -136,7 +161,7 @@ public final class ModRecipes {
         }
         ShapedOreRecipe r = new ShapedOreRecipe(new ResourceLocation(NanonaitorsArsenal.MOD_ID,"compat"),
             new ItemStack(out), args.toArray());
-        r.setRegistryName(NanonaitorsArsenal.MOD_ID, family + "_living"); e.getRegistry().register(r);
+        r.setRegistryName(NanonaitorsArsenal.MOD_ID, family + "_living"); registerOnce(e, r);
     }
     private static void addLivingIngredient(java.util.List<Object> args,
                                             String a,String b,String c,char symbol,Object ingredient) {
@@ -144,7 +169,7 @@ public final class ModRecipes {
         args.add(symbol);
         args.add(ingredient);
     }
-    private static void upgrades(RegistryEvent.Register<IRecipe> e, WeaponTier target, String blood) {
+    private static void upgrades(IForgeRegistry<IRecipe> e, WeaponTier target, String blood) {
         if (!ArsenalCompatManager.isTierAvailable(target)) return;
         upgrade(e,"morning_star",ModContent.MORNING_STARS,target,blood);
         upgrade(e,"scimitar",ModContent.SCIMITARS,target,blood);
@@ -154,13 +179,13 @@ public final class ModRecipes {
         upgrade(e,"ball_and_chain",ModContent.BALLS_AND_CHAINS,target,blood);
         upgrade(e,"blade_staff",ModContent.DOUBLE_BLADED_SCIMITARS,target,blood);
     }
-    private static <T extends ItemArsenalWeapon> void upgrade(RegistryEvent.Register<IRecipe> e,
+    private static <T extends ItemArsenalWeapon> void upgrade(IForgeRegistry<IRecipe> e,
             String family, Map<WeaponTier,T> map, WeaponTier target, String blood) {
         if (!com.nanonaitor.arsenal.config.ContentSwitches.enabled(family)) return;
         ArsenalUpgradeRecipe r = new ArsenalUpgradeRecipe(map.get(WeaponTier.DRAGONBONE), map.get(target), blood);
-        r.setRegistryName(NanonaitorsArsenal.MOD_ID, family + "_" + target.getId()); e.getRegistry().register(r);
+        r.setRegistryName(NanonaitorsArsenal.MOD_ID, family + "_" + target.getId()); registerOnce(e, r);
     }
-    private static <T extends ItemArsenalWeapon> void recipe(RegistryEvent.Register<IRecipe> e,
+    private static <T extends ItemArsenalWeapon> void recipe(IForgeRegistry<IRecipe> e,
             String family, WeaponTier t, Map<WeaponTier,T> map, String a,String b,String c,Object... keys) {
         if (!com.nanonaitor.arsenal.config.ContentSwitches.enabled(family)) return;
         java.util.List<Object> args = new java.util.ArrayList<>();
@@ -174,7 +199,7 @@ public final class ModRecipes {
         }
         ShapedOreRecipe r = new ShapedOreRecipe(new ResourceLocation(NanonaitorsArsenal.MOD_ID,"compat"),
             new ItemStack(map.get(t)), args.toArray());
-        r.setRegistryName(NanonaitorsArsenal.MOD_ID, family + "_" + t.getId()); e.getRegistry().register(r);
+        r.setRegistryName(NanonaitorsArsenal.MOD_ID, family + "_" + t.getId()); registerOnce(e, r);
     }
     private static Object handleIngredient(WeaponTier tier) {
         if (tier.isMyrmex()) {
