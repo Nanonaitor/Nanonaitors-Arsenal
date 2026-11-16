@@ -1,8 +1,6 @@
 package com.nanonaitor.arsenal.client;
 
 import com.nanonaitor.arsenal.item.ItemScimitar;
-import com.nanonaitor.arsenal.item.WeaponTier;
-import com.nanonaitor.arsenal.registry.ModContent;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.GlStateManager;
@@ -61,19 +59,6 @@ public final class WeaponPartRenderer {
         GlStateManager.depthMask(true);
         GlStateManager.alphaFunc(GL11.GL_GREATER, 0.1F);
         GlStateManager.disableBlend();
-    }
-
-    /** Draws the tier ball as a large first-person guard and no held sprite. */
-    public static void renderShieldBall(ItemStack held, EnumHand hand) {
-        double side = hand == EnumHand.MAIN_HAND ? 1.0D : -1.0D;
-        GlStateManager.pushMatrix();
-        GlStateManager.translate(side * 0.16D, -0.78D, -0.72D);
-        GlStateManager.rotate(18.0F, 1.0F, 0.0F, 0.0F);
-        GlStateManager.rotate((float)(side * -8.0D), 0.0F, 1.0F, 0.0F);
-        GlStateManager.scale(1.10D, 1.10D, 1.10D);
-        Minecraft.getMinecraft().getRenderItem().renderItem(
-            animationPart(held, BALL), ItemCameraTransforms.TransformType.NONE);
-        GlStateManager.popMatrix();
     }
 
     public static void renderCarryOnShieldBall(ItemStack held) {
@@ -135,29 +120,6 @@ public final class WeaponPartRenderer {
         // Every recolor uses the exact same 16x16 silhouette and compact model.
         // Treat every tier identically in the custom blocking renderer as well.
         return held.getItem() instanceof ItemScimitar;
-    }
-
-    public static void renderWorldHeldItem(ItemStack held, double x, double y,
-                                           double z, double scale, float yaw,
-                                           float pitch, float roll) {
-        renderPart(held, x, y, z, scale, yaw, pitch, roll);
-    }
-
-    /** Repeats the standalone chain item along a straight visual tether. */
-    public static void renderItemChain(double startX,double startY,double startZ,
-                                       double endX,double endY,double endZ,double scale) {
-        if (ModContent.IRON_CHAIN_ITEM==null) return;
-        double dx=endX-startX,dy=endY-startY,dz=endZ-startZ;
-        double length=Math.sqrt(dx*dx+dy*dy+dz*dz);
-        int links=Math.max(1,(int)Math.ceil(length/0.24D));
-        float yaw=(float)Math.toDegrees(Math.atan2(dx,dz));
-        float pitch=(float)Math.toDegrees(Math.atan2(Math.sqrt(dx*dx+dz*dz),dy));
-        ItemStack link=new ItemStack(ModContent.IRON_CHAIN_ITEM);
-        for (int i=1;i<links;i++) {
-            double t=i/(double)links;
-            renderPart(link,startX+dx*t,startY+dy*t,startZ+dz*t,
-                scale,yaw,pitch,0.0F);
-        }
     }
 
     private static void renderChainAndBall(ItemStack held,

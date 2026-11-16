@@ -11,9 +11,7 @@ import com.nanonaitor.arsenal.registry.ModContent;
 import com.nanonaitor.arsenal.registry.ModSounds;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
-import java.util.WeakHashMap;
 import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.SharedMonsterAttributes;
@@ -33,7 +31,6 @@ import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.RayTraceResult;
 import net.minecraft.util.math.Vec3d;
 import net.minecraftforge.event.entity.player.AttackEntityEvent;
-import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.eventhandler.EventPriority;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
@@ -42,20 +39,33 @@ import net.minecraftforge.fml.common.network.NetworkRegistry;
 
 @Mod.EventBusSubscriber(modid = NanonaitorsArsenal.MOD_ID)
 public final class BallAndChainCombat {
-    public static final int SWING_INTERVAL_TICKS = 25;
     public static final int RELEASE_ANIMATION_TICKS = 16;
     public static final double WINDUP_REACH = 3.0D;
-    public static final double THROW_REACH_PER_CHARGE = 4.0D;
     private static final double LINE_RADIUS = 0.55D;
     private static final float[] RELEASE_DAMAGE_MULTIPLIER = {0.0F, 1.0F, 1.5F, 2.0F};
-    private static final Map<EntityPlayer, SwingState> SWINGS = new WeakHashMap<>();
-    private static final Map<EntityPlayer, ThrowState> THROWS = new WeakHashMap<>();
+    // cancelAbility can run on the client thread (item use), so keep sides apart.
+    private static final SidedPlayerMap<SwingState> SWINGS = new SidedPlayerMap<>();
+    private static final SidedPlayerMap<ThrowState> THROWS = new SidedPlayerMap<>();
+
+    /** How close (in blocks, plus half the projectile's width) the ball must pass to smash a projectile. */
+    private static final double PROJECTILE_SMASH_RADIUS = 0.9D;
 
     private BallAndChainCombat() {}
+
+    /** Server: winding up (rotating) and not yet released. */
+    public static boolean isWindingUp(EntityPlayer player) {
+        return SWINGS.containsKey(player) && !THROWS.containsKey(player);
+    }
+
+    /** Server: the ball is out on a throw or on its way back. */
+    public static boolean isThrowing(EntityPlayer player) {
+        return THROWS.containsKey(player);
+    }
+
     public static void cancelAbility(EntityPlayer player){
         SWINGS.remove(player);THROWS.remove(player);
-        player.getEntityData().setBoolean("ArsenalBallAndChainActive",false);
-        player.getEntityData().setBoolean("ArsenalBallWindBoost",false);
+        com.nanonaitor.arsenal.data.TransientData.of(player).setBoolean("ArsenalBallAndChainActive",false);
+        com.nanonaitor.arsenal.data.TransientData.of(player).setBoolean("ArsenalBallWindBoost",false);
         if(player.isHandActive()&&player.getActiveItemStack().getItem() instanceof ItemBallAndChain)player.resetActiveHand();
     }
 
@@ -64,16 +74,6 @@ public final class BallAndChainCombat {
         if (event.getEntityPlayer().getHeldItemMainhand().getItem()
             instanceof ItemBallAndChain) {
             event.setCanceled(true);
-        }
-    }
-
-    @SubscribeEvent(priority = EventPriority.HIGHEST)
-    public static void preventBlockBreaking(PlayerInteractEvent.LeftClickBlock event) {
-        if (event.getEntityPlayer().getHeldItemMainhand().getItem()
-            instanceof ItemBallAndChain) {
-            event.setCanceled(true);
-            event.setUseBlock(net.minecraftforge.fml.common.eventhandler.Event.Result.DENY);
-            event.setUseItem(net.minecraftforge.fml.common.eventhandler.Event.Result.DENY);
         }
     }
 
@@ -166,6 +166,7 @@ public final class BallAndChainCombat {
             return false;
         }
         long age = player.world.getTotalWorldTime() - state.startTick;
+        smashProjectiles(player, state, age);
         if (!state.returnHitDone && age >= state.durationTicks / 2) {
             state.returnHitDone = true;
             performThrowPass(player, state, true);
@@ -328,16 +329,8 @@ public final class BallAndChainCombat {
             if (antimall != null && previousAntimall == null) target.removePotionEffect(antimall);
             if (!damaged && ignoreCurrentIFrames) target.hurtResistantTime = previousResistance;
         }
-        if (!damaged) {
-            if (ignoreCurrentIFrames) {
-                target.hurtResistantTime = previousResistance;
-            }
-            return false;
-        }
-        int fireAspect = EnchantmentHelper.getFireAspectModifier(player);
-        if (fireAspect > 0) {
-            target.setFire(fireAspect * 4);
-        }
+        if (!damaged) return false;
+        WeaponHits.applyFireAspect(player, target);
         float totalKnockback = knockback
             + EnchantmentHelper.getKnockbackModifier(player) * 0.35F;
         if (totalKnockback > 0.0F) {
@@ -345,11 +338,65 @@ public final class BallAndChainCombat {
             target.motionY += direction.y * totalKnockback * 0.35D;
             target.velocityChanged = true;
         }
-        EnchantmentHelper.applyThornEnchantments(target, player);
-        EnchantmentHelper.applyArthropodEnchantments(player, target);
+        WeaponHits.applyHitEnchantments(player, target);
         weapon.damageItem(1, player);
         player.addExhaustion(0.1F);
         return true;
+    }
+
+    /** Where the ball is on its way out and back; matches the client's sine-shaped release animation. */
+    private static Vec3d ballPosition(ThrowState state, long age) {
+        double progress = Math.max(0.0D, Math.min(1.0D, age / (double) Math.max(1, state.durationTicks)));
+        double out = Math.sin(progress * Math.PI);
+        return state.start.add(state.end.subtract(state.start).scale(out));
+    }
+
+    /**
+     * Destroys projectiles the thrown ball runs into, outbound or returning.
+     * Each tick compares the ball's path this tick with each projectile's path
+     * this tick, so fast arrows cannot slip between two ticks.
+     */
+    private static void smashProjectiles(EntityPlayerMP player, ThrowState state, long age) {
+        Vec3d from = state.lastBallPosition;
+        Vec3d to = ballPosition(state, age);
+        state.lastBallPosition = to;
+        // Grown generously: an arrow can move about 3 blocks in one tick.
+        AxisAlignedBB search = sweptBox(from, to, 4.0D, 4.0D);
+        for (net.minecraft.entity.Entity projectile : player.world.getEntitiesInAABBexcluding(
+                player, search, entity -> isSmashableProjectile(player, entity))) {
+            double centerY = projectile.height * 0.5D;
+            Vec3d previous = new Vec3d(projectile.prevPosX, projectile.prevPosY + centerY, projectile.prevPosZ);
+            Vec3d current = new Vec3d(projectile.posX, projectile.posY + centerY, projectile.posZ);
+            double reach = PROJECTILE_SMASH_RADIUS + projectile.width * 0.5D;
+            if (SegmentMath.distanceSq(from, to, previous, current) > reach * reach) continue;
+            projectile.setDead();
+            player.getServerWorld().spawnParticle(net.minecraft.util.EnumParticleTypes.CRIT,
+                current.x, current.y, current.z, 10, 0.15D, 0.15D, 0.15D, 0.25D);
+            player.world.playSound(null, current.x, current.y, current.z,
+                SoundEvents.ENTITY_ITEM_BREAK, player.getSoundCategory(), 0.9F, 0.75F);
+        }
+    }
+
+    /** A moving projectile not fired by the wielder (stuck arrows have no motion). */
+    private static boolean isSmashableProjectile(EntityPlayer player, net.minecraft.entity.Entity entity) {
+        if (entity.isDead || !(entity instanceof net.minecraft.entity.IProjectile
+            || entity instanceof net.minecraft.entity.projectile.EntityFireball
+            || entity instanceof net.minecraft.entity.projectile.EntityShulkerBullet)) return false;
+        double speedSq = entity.motionX * entity.motionX + entity.motionY * entity.motionY
+            + entity.motionZ * entity.motionZ;
+        return speedSq > 0.0025D && projectileOwner(entity) != player;
+    }
+
+    private static net.minecraft.entity.Entity projectileOwner(net.minecraft.entity.Entity projectile) {
+        if (projectile instanceof net.minecraft.entity.projectile.EntityArrow)
+            return ((net.minecraft.entity.projectile.EntityArrow) projectile).shootingEntity;
+        if (projectile instanceof net.minecraft.entity.projectile.EntityThrowable)
+            return ((net.minecraft.entity.projectile.EntityThrowable) projectile).getThrower();
+        if (projectile instanceof net.minecraft.entity.projectile.EntityFireball)
+            return ((net.minecraft.entity.projectile.EntityFireball) projectile).shootingEntity;
+        if (projectile instanceof net.minecraft.entity.projectile.EntityLlamaSpit)
+            return ((net.minecraft.entity.projectile.EntityLlamaSpit) projectile).owner;
+        return null;
     }
 
     private static boolean isValidTarget(EntityPlayerMP player,
@@ -505,6 +552,7 @@ public final class BallAndChainCombat {
         private final Vec3d direction;
         private final float baseDamage;
         private boolean returnHitDone;
+        private Vec3d lastBallPosition;
 
         private ThrowState(long startTick, int durationTicks, ItemStack weapon, WeaponTier tier,
                            int charge, Vec3d start, Vec3d end, Vec3d direction,
@@ -518,6 +566,7 @@ public final class BallAndChainCombat {
             this.end = end;
             this.direction = direction;
             this.baseDamage = baseDamage;
+            this.lastBallPosition = start;
         }
     }
 }

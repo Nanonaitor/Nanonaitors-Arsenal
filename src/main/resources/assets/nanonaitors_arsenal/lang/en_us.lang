@@ -38,11 +38,11 @@ itemGroup.nanonaitors_arsenal=Nanonaitor's Arsenal
 enchantment.nanonaitors_arsenal.long_chain=Long Chain
 enchantment.nanonaitors_arsenal.rotation_force=Rotation Force
 enchantment.nanonaitors_arsenal.recovery=Recovery
-enchantment.nanonaitors_arsenal.breeched=Breeched
+enchantment.nanonaitors_arsenal.breeched=Breached
 enchantment.nanonaitors_arsenal.long_chain.desc=+1 block of flail and ball-and-chain reach per level.
 enchantment.nanonaitors_arsenal.rotation_force.desc=+0.2 flail and ball-and-chain attack speed per level.
-enchantment.nanonaitors_arsenal.recovery.desc=Arsenal shields only: halves Tartsy Shield and Sun-War Bulwark disable cooldowns.
-enchantment.nanonaitors_arsenal.breeched.desc=Arsenal shields only: doubles Tartsy Shield and Sun-War Bulwark disable cooldowns.
+enchantment.nanonaitors_arsenal.recovery.desc=Arsenal shields only: halves the Tartsy Shield disable cooldown and the Sun-War Bulwark bash cooldown.
+enchantment.nanonaitors_arsenal.breeched.desc=Arsenal shields only: doubles the Tartsy Shield disable cooldown and the Sun-War Bulwark bash cooldown.
 item.nanonaitors_arsenal.sun_war_bulwark.name=Sun-War Bulwark
 item.nanonaitors_arsenal.tartsy_shield.name=Tartsy Shield
 

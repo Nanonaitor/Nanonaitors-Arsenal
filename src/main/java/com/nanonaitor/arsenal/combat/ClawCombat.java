@@ -46,6 +46,9 @@ public final class ClawCombat {
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onLivingAttack(LivingAttackEvent event) {
+        // Pending attacks are server state. In singleplayer the client thread
+        // would otherwise read the server's WeakHashMap concurrently.
+        if (event.getEntityLiving().world.isRemote) return;
         if (!(event.getSource().getTrueSource() instanceof EntityPlayer)) {
             return;
         }

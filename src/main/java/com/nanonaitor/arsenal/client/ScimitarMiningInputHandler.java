@@ -4,7 +4,6 @@ import com.nanonaitor.arsenal.NanonaitorsArsenal;
 import com.nanonaitor.arsenal.compat.ScimitarShieldCompat;
 import com.nanonaitor.arsenal.item.ItemScimitar;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.settings.KeyBinding;
 import net.minecraft.item.Item;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -30,10 +29,8 @@ public final class ScimitarMiningInputHandler {
         boolean switched=item!=previousItem || mc.player.inventory.currentItem!=previousSlot || pair!=wasPair;
         if((item instanceof ItemScimitar && switched) || pair) {
             mc.playerController.resetBlockRemoving();
-            // The cancelled MouseEvent cannot deliver vanilla's key-up. Clear its latch
-            // and queued presses; the paired attack controller reads physical input.
-            KeyBinding.setKeyBindState(mc.gameSettings.keyBindAttack.getKeyCode(),false);
-            while(mc.gameSettings.keyBindAttack.isPressed()) { /* drain old tool clicks */ }
+            // The paired attack controller reads physical input instead.
+            ClientInput.clearAttackKey(mc);
         }
         previousItem=item;
         previousSlot=mc.player.inventory.currentItem;
@@ -41,10 +38,7 @@ public final class ScimitarMiningInputHandler {
     }
     @SubscribeEvent(priority=EventPriority.HIGHEST)
     public static void mining(PlayerInteractEvent.LeftClickBlock event) {
-        if(ScimitarShieldCompat.isPair(event.getEntityPlayer())) {
-            event.setCanceled(true);
-            event.setUseBlock(net.minecraftforge.fml.common.eventhandler.Event.Result.DENY);
-            event.setUseItem(net.minecraftforge.fml.common.eventhandler.Event.Result.DENY);
-        }
+        if(ScimitarShieldCompat.isPair(event.getEntityPlayer()))
+            com.nanonaitor.arsenal.combat.WeaponHits.denyBlockClick(event);
     }
 }

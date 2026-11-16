@@ -22,7 +22,8 @@ public final class ParasiteDurabilityCompat {
         int durability = reference.getMaxDamage();
         for (Item item : ForgeRegistries.ITEMS.getValuesCollection()) {
             if (item instanceof ItemArsenalWeapon
-                && ((ItemArsenalWeapon) item).getTier() == tier) item.setMaxDamage(durability);
+                && ((ItemArsenalWeapon) item).getTier() == tier)
+                ((ItemArsenalWeapon) item).setBaseDurability(durability);
         }
         NanonaitorsArsenal.LOGGER.info("Matched Arsenal {} weapon durability to {}: {}",
             tier.getId(), referenceId, durability);

@@ -56,11 +56,12 @@ public final class ModRecipes {
         recipe(e, "flail", t, ModContent.FLAILS, venom?"VM ":"MM ",
             " C ", " S ", 'M', m, 'V', v,
             'C', "chainIron");
-        Object heavyMaterial = t == WeaponTier.BRONZE ? m : blockIngredient(t);
+        // Heavy weapons cost a full block, like the vanilla tiers. Bronze falls
+        // back to a single ingot only in packs that register no bronze block.
+        Object heavyMaterial = blockIngredient(t);
+        if (heavyMaterial == null && t == WeaponTier.BRONZE) heavyMaterial = m;
         if (heavyMaterial != null) {
             recipe(e, "battering_ram", t, ModContent.BATTERING_RAMS, venom?" VM":"  M", "LLL", " S ", 'M', heavyMaterial, 'V', v, 'L', "logWood");
-        }
-        if (heavyMaterial != null) {
             recipe(e, "ball_and_chain", t, ModContent.BALLS_AND_CHAINS,
                 "  B", " C ", "C  ", 'B', heavyMaterial,
                 'C', "chainIron");

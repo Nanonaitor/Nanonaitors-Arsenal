@@ -12,7 +12,7 @@ public enum WeaponTier {
 
     SILVER("silver", material("ARSENAL_SILVER", 2, 460, 7F, 1.5F, 16), 4,
         Family.SPARTAN, "ore:ingotSilver", 2),
-    BRONZE("bronze", material("ARSENAL_BRONZE", 2, 200, 6F, 2F, 12), 4,
+    BRONZE("bronze", material("ARSENAL_BRONZE", 2, 350, 6F, 2F, 12), 4,
         Family.SPARTAN, "ore:ingotBronze", 2),
     STEEL("steel", material("ARSENAL_STEEL", 3, 480, 8F, 2.5F, 14), 5,
         Family.SPARTAN, "ore:ingotSteel", 3),

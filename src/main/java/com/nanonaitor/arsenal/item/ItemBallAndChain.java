@@ -18,14 +18,15 @@ import net.minecraft.world.World;
 
 public final class ItemBallAndChain extends ItemArsenalWeapon {
     public ItemBallAndChain(WeaponTier tier) {
-        super(tier, "ball_and_chain", 3.0D + tier.getMaterial().getAttackDamage(), -3.5D);
+        super(tier, "ball_and_chain", 3.0D + tier.getMaterial().getAttackDamage(), -3.5D,
+            HEAVY_DURABILITY_SCALE);
         addPropertyOverride(new ResourceLocation(NanonaitorsArsenal.MOD_ID, "swinging"),
             (stack, world, entity) -> isActivelySwinging(stack, entity) ? 1.0F : 0.0F);
         addPropertyOverride(new ResourceLocation(NanonaitorsArsenal.MOD_ID,"guarding"),
             (stack,world,entity) -> entity instanceof EntityPlayer
                 && entity.getHeldItemMainhand().getItem()==this && entity.getHeldItemOffhand().isEmpty()
                 && entity.isHandActive() && entity.getActiveHand()==EnumHand.MAIN_HAND
-                && !entity.getEntityData().getBoolean("ArsenalBallAndChainActive") ? 1.0F:0.0F);
+                && !com.nanonaitor.arsenal.data.TransientData.of(entity).getBoolean("ArsenalBallAndChainActive") ? 1.0F:0.0F);
         addPropertyOverride(new ResourceLocation(NanonaitorsArsenal.MOD_ID, "animation_part"),
             (stack, world, entity) -> stack.hasTagCompound()
                 ? stack.getTagCompound().getInteger("ArsenalAnimationPart") : 0.0F);
@@ -34,7 +35,7 @@ public final class ItemBallAndChain extends ItemArsenalWeapon {
     private static boolean isActivelySwinging(ItemStack stack, EntityLivingBase entity) {
         return entity != null
             && entity.getHeldItemMainhand().getItem() == stack.getItem()
-            && entity.getEntityData().getBoolean("ArsenalBallAndChainActive");
+            && com.nanonaitor.arsenal.data.TransientData.of(entity).getBoolean("ArsenalBallAndChainActive");
     }
 
     @Override
@@ -49,7 +50,7 @@ public final class ItemBallAndChain extends ItemArsenalWeapon {
         ItemStack held = player.getHeldItem(hand);
         if(player.getCooldownTracker().hasCooldown(this))return new ActionResult<>(EnumActionResult.PASS,held);
         if (hand != EnumHand.MAIN_HAND || !player.getHeldItemOffhand().isEmpty()
-            || player.getEntityData().getBoolean("ArsenalBallAndChainActive"))
+            || com.nanonaitor.arsenal.data.TransientData.of(player).getBoolean("ArsenalBallAndChainActive"))
             return new ActionResult<>(EnumActionResult.PASS, held);
         player.setActiveHand(hand);
         return new ActionResult<>(EnumActionResult.SUCCESS, held);
@@ -66,7 +67,8 @@ public final class ItemBallAndChain extends ItemArsenalWeapon {
         if (!ArsenalTooltip.begin(tooltip, TextFormatting.GOLD,
                 "Hold attack to swing; release to throw.")) return;
         tooltip.add(TextFormatting.GRAY + "Higher rotations increase throw reach and damage.");
-        tooltip.add(TextFormatting.GRAY + "An empty offhand allows guarding.");
+        tooltip.add(TextFormatting.GRAY + "With an empty offhand, guarding and winding up block every attack.");
+        tooltip.add(TextFormatting.GRAY + "A thrown ball smashes projectiles in its path.");
         tooltip.add(TextFormatting.RED + "Two-Handed");
     }
 

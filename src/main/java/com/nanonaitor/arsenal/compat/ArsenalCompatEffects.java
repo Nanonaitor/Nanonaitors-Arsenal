@@ -18,7 +18,6 @@ import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.EnumCreatureAttribute;
 import net.minecraft.entity.effect.EntityLightningBolt;
 import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.init.MobEffects;
 import net.minecraft.init.SoundEvents;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
@@ -96,8 +95,8 @@ public final class ArsenalCompatEffects {
             knockBack(target,player);
         } else if (tier == WeaponTier.ELECTRIC_DRAGONBONE) {
             long now=player.world.getTotalWorldTime();
-            if (player.getEntityData().getLong(LIGHTNING_TICK)!=now) {
-                player.getEntityData().setLong(LIGHTNING_TICK,now); createChainLightning(target,player);
+            if (com.nanonaitor.arsenal.data.TransientData.of(player).getLong(LIGHTNING_TICK)!=now) {
+                com.nanonaitor.arsenal.data.TransientData.of(player).setLong(LIGHTNING_TICK,now); createChainLightning(target,player);
             }
             knockBack(target,player);
         }
@@ -114,11 +113,15 @@ public final class ArsenalCompatEffects {
         Potion rage = ArsenalCompatManager.potion("rage");
         if (srpRam && rage != null) {
             int amplifier = weapon.getTier() == WeaponTier.SENTIENT ? 1 : 0;
-            player.addPotionEffect(new PotionEffect(rage, 10, amplifier, false, false));
-            player.getEntityData().setBoolean(RAGE_MARKER, true);
-        } else if (player.getEntityData().getBoolean(RAGE_MARKER)) {
+            // Refresh shortly before it runs out instead of every tick; each
+            // re-application sends a potion packet to the player.
+            PotionEffect current = player.getActivePotionEffect(rage);
+            if (current == null || current.getDuration() <= 5 || current.getAmplifier() != amplifier)
+                player.addPotionEffect(new PotionEffect(rage, 25, amplifier, false, false));
+            com.nanonaitor.arsenal.data.TransientData.of(player).setBoolean(RAGE_MARKER, true);
+        } else if (com.nanonaitor.arsenal.data.TransientData.of(player).getBoolean(RAGE_MARKER)) {
             if (rage != null) player.removePotionEffect(rage);
-            player.getEntityData().removeTag(RAGE_MARKER);
+            com.nanonaitor.arsenal.data.TransientData.of(player).removeTag(RAGE_MARKER);
         }
 
         ItemDoubleBladedScimitar bladeStaff = heldBladeStaff(player);
@@ -127,7 +130,7 @@ public final class ArsenalCompatEffects {
             || staffTier == WeaponTier.SENTIENT;
         long now = player.world.getTotalWorldTime();
         if (cleansingStaff
-            && now >= player.getEntityData().getLong(BLADE_STAFF_CLEANSE_REFRESH)) {
+            && now >= com.nanonaitor.arsenal.data.TransientData.of(player).getLong(BLADE_STAFF_CLEANSE_REFRESH)) {
                 // SRP's Call of the Hive effect is registered as srparasites:coth.
                 // Use the registry lookup so Arsenal remains safe without SRP.
                 Potion callOfTheHive = ArsenalCompatManager.potion("coth");
@@ -141,17 +144,17 @@ public final class ArsenalCompatEffects {
                             target.removePotionEffect(callOfTheHive);
                     }
                 }
-                player.getEntityData().setLong(BLADE_STAFF_CLEANSE_REFRESH,
+                com.nanonaitor.arsenal.data.TransientData.of(player).setLong(BLADE_STAFF_CLEANSE_REFRESH,
                     now + BLADE_STAFF_CLEANSE_INTERVAL);
         } else if (!cleansingStaff
-            && player.getEntityData().hasKey(BLADE_STAFF_CLEANSE_REFRESH)) {
-            player.getEntityData().removeTag(BLADE_STAFF_CLEANSE_REFRESH);
+            && com.nanonaitor.arsenal.data.TransientData.of(player).hasKey(BLADE_STAFF_CLEANSE_REFRESH)) {
+            com.nanonaitor.arsenal.data.TransientData.of(player).removeTag(BLADE_STAFF_CLEANSE_REFRESH);
         }
 
         // Native sentient SRP tools occasionally mark their wielder as Prey.
         if (weapon != null && weapon.getTier() == WeaponTier.SENTIENT
-            && ArsenalCompatManager.isSrpScentEnabled()
-            && player.ticksExisted % 40 == 0 && player.getRNG().nextInt(100) == 0) {
+            && player.ticksExisted % 40 == 0 && player.getRNG().nextInt(100) == 0
+            && ArsenalCompatManager.isSrpScentEnabled()) {
             addPotion(player, "prey", 1200, 0);
         }
     }

@@ -9,7 +9,6 @@ import com.nanonaitor.arsenal.network.TartsyBashMessage;
 import com.nanonaitor.arsenal.network.ModNetwork;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.entity.EntityPlayerSP;
-import net.minecraft.util.EnumHand;
 import net.minecraftforge.client.event.MouseEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
@@ -63,8 +62,7 @@ public final class ShieldInputHandler {
         if (!tartsy && !bulwark) return false;
         handledAttack = event;
         event.setCanceled(true);
-        net.minecraft.client.settings.KeyBinding.setKeyBindState(attackKey, false);
-        while (mc.gameSettings.keyBindAttack.isPressed()) { /* discard weapon/mining clicks */ }
+        ClientInput.clearAttackKey(mc);
         if (!event.isButtonstate()) return true;
         bashOwnsAttack = true;
         if (tartsy) {

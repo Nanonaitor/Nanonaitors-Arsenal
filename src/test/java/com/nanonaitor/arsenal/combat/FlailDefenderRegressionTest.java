@@ -26,8 +26,29 @@ public final class FlailDefenderRegressionTest {
             ItemArsenalWeapon[] weapons = {new ItemMorningStar(tier), new ItemScimitar(tier),
                 new ItemDoubleBladedScimitar(tier), new ItemClaws(tier), new ItemFlail(tier),
                 new ItemBallAndChain(tier), new ItemBatteringRam(tier), new ItemLinkedClaw(tier)};
-            for (ItemArsenalWeapon weapon : weapons) check(weapon.getMaxDamage() == 1000);
+            for (ItemArsenalWeapon weapon : weapons) {
+                // Heavy (block-cost) families last 50% longer than the tier's base.
+                boolean heavy = weapon instanceof ItemBallAndChain || weapon instanceof ItemBatteringRam;
+                check(weapon.getMaxDamage() == (heavy ? 1500 : 1000));
+                weapon.setBaseDurability(2000);
+                check(weapon.getMaxDamage() == (heavy ? 3000 : 2000));
+            }
         }
+        check(new ItemFlail(WeaponTier.BRONZE).getMaxDamage() == 350);
+        // Thrown-ball projectile smashing: segment distance between the ball's
+        // and a projectile's per-tick paths.
+        net.minecraft.util.math.Vec3d o = new net.minecraft.util.math.Vec3d(0, 0, 0);
+        check(SegmentMath.distanceSq(o, new net.minecraft.util.math.Vec3d(2, 0, 0),
+            new net.minecraft.util.math.Vec3d(1, -1, 0), new net.minecraft.util.math.Vec3d(1, 1, 0)) < 1.0E-9);
+        check(Math.abs(SegmentMath.distanceSq(o, new net.minecraft.util.math.Vec3d(2, 0, 0),
+            new net.minecraft.util.math.Vec3d(0, 1, 0), new net.minecraft.util.math.Vec3d(2, 1, 0)) - 1.0D) < 1.0E-9);
+        // A fast arrow crossing the ball's short path between two ticks still counts.
+        check(SegmentMath.distanceSq(o, new net.minecraft.util.math.Vec3d(0, 0, 1),
+            new net.minecraft.util.math.Vec3d(-3, 0, 0.5), new net.minecraft.util.math.Vec3d(3, 0, 0.5)) < 1.0E-9);
+        // Stationary ball versus a projectile passing 2 blocks away.
+        check(Math.abs(SegmentMath.distanceSq(o, o,
+            new net.minecraft.util.math.Vec3d(-3, 2, 0), new net.minecraft.util.math.Vec3d(3, 2, 0)) - 4.0D) < 1.0E-9);
+        check(new ItemBatteringRam(WeaponTier.IRON).getMaxDamage() == 375);
         // The tick and direct-click paths share this gate. Guard against accidentally
         // reverting the client to the general shield-priority gate again.
         String input = new String(Files.readAllBytes(Paths.get(

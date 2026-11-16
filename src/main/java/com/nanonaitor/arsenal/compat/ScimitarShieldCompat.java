@@ -26,13 +26,16 @@ public final class ScimitarShieldCompat {
         return isPair(player) && !disabled(player) && player.isHandActive()
             && player.getActiveItemStack().getItem() instanceof com.nanonaitor.arsenal.item.ItemScimitar;
     }
+    /** Guard break: Endure may resist it outright and shortens it when it lands. */
     public static void disable(EntityPlayer player, int ticks) {
         int endure=endureLevel(player);
         if(endure>0 && player.getRNG().nextFloat()<.25F*endure)return;
-        ticks=Math.max(1,Math.round(ticks*(1.0F-.25F*endure)));
+        startCooldown(player, Math.max(1,Math.round(ticks*(1.0F-.25F*endure))));
+    }
+    /** Puts both scimitars on cooldown and drops the guard, with no Endure roll. */
+    public static void startCooldown(EntityPlayer player, int ticks) {
         player.getCooldownTracker().setCooldown(player.getHeldItemMainhand().getItem(), ticks);
         player.getCooldownTracker().setCooldown(player.getHeldItemOffhand().getItem(), ticks);
-        player.getEntityData().setBoolean("ArsenalScimitarGuard", false);
         player.resetActiveHand();
     }
     private static int endureLevel(EntityPlayer player) {
@@ -51,15 +54,38 @@ public final class ScimitarShieldCompat {
         try { return !Class.forName("com.oblivioussp.spartanshields.util.ConfigHandler").getField("disableShieldBash").getBoolean(null); }
         catch (ReflectiveOperationException e) { return true; }
     }
+    // ShieldBreak's config object is read through reflection, resolved once.
+    // If its API differs, the scimitar guard keeps working on Arsenal's own
+    // defaults instead of crashing the attack handler.
+    private static java.lang.reflect.Field shieldBreakServer;
+    private static boolean shieldBreakUnavailable;
+    private static final java.util.Map<String, java.lang.reflect.Field> SETTING_FIELDS =
+        new java.util.concurrent.ConcurrentHashMap<>();
     private static Object settings() {
-        if (!Loader.isModLoaded("shieldbreak")) return null;
-        try { return Class.forName("shieldbreak.handlers.ModConfig").getField("server").get(null); }
-        catch (ReflectiveOperationException e) { throw new IllegalStateException("ShieldBreak configuration API changed", e); }
+        if (shieldBreakUnavailable || !Loader.isModLoaded("shieldbreak")) return null;
+        try {
+            if (shieldBreakServer == null)
+                shieldBreakServer = Class.forName("shieldbreak.handlers.ModConfig").getField("server");
+            return shieldBreakServer.get(null);
+        } catch (ReflectiveOperationException | LinkageError e) {
+            shieldBreakUnavailable = true;
+            CompatLog.warnOnce("shieldbreak-config", "ShieldBreak's configuration API is not the expected one.", e);
+            return null;
+        }
     }
     private static double number(Object config, String field, double fallback) {
         if (config == null) return fallback;
-        try { return ((Number)config.getClass().getField(field).get(config)).doubleValue(); }
-        catch (ReflectiveOperationException e) { throw new IllegalStateException(e); }
+        try {
+            java.lang.reflect.Field resolved = SETTING_FIELDS.get(field);
+            if (resolved == null) {
+                resolved = config.getClass().getField(field);
+                SETTING_FIELDS.put(field, resolved);
+            }
+            return ((Number)resolved.get(config)).doubleValue();
+        } catch (ReflectiveOperationException | ClassCastException e) {
+            CompatLog.warnOnce("shieldbreak-" + field, "ShieldBreak setting " + field + " could not be read.", e);
+            return fallback;
+        }
     }
     public static int raiseDelay() { return (int)number(settings(), "shieldRaiseTickDelay", 2); }
     public static ItemStack referenceShield(com.nanonaitor.arsenal.item.WeaponTier tier) {
@@ -130,6 +156,8 @@ public final class ScimitarShieldCompat {
                     (who.equals("Attacker")?attacker:defender).addPotionEffect(new net.minecraft.potion.PotionEffect(potion,duration,amp));
                 }
             }
-        } catch(ReflectiveOperationException e) { throw new IllegalStateException(e); }
+        } catch(ReflectiveOperationException | ClassCastException e) {
+            CompatLog.warnOnce("shieldbreak-effects", "ShieldBreak parry/break effects could not be read.", e);
+        }
     }
 }

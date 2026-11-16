@@ -26,7 +26,6 @@ import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent;
 import net.minecraftforge.fml.relauncher.Side;
 import org.lwjgl.input.Mouse;
-import net.minecraft.client.renderer.GlStateManager;
 
 /** Client controls and lightweight poses for the modern-mechanics backport. */
 @Mod.EventBusSubscriber(modid = NanonaitorsArsenal.MOD_ID, value = Side.CLIENT)
@@ -39,8 +38,7 @@ public final class ModernWeaponInputHandler {
     private static boolean cancelNativeMainhandSweep;
     private static boolean scimitarBashOwnsAttack;
     private static boolean temporaryScimitarUse;
-    private static EntityPlayerSP rlCombatScimitarPlayer;
-    private static ItemStack rlCombatHiddenScimitar = ItemStack.EMPTY;
+    private static final ClientInput.HiddenOffhand HIDDEN_SCIMITAR = new ClientInput.HiddenOffhand();
 
     private ModernWeaponInputHandler() {}
 
@@ -71,10 +69,7 @@ public final class ModernWeaponInputHandler {
             // or using a block/entity. Hide only the client-side offhand for its
             // NORMAL-priority mouse listener, then restore it at LOWEST before
             // vanilla handles the actual right-click interaction.
-            restoreRlCombatScimitar();
-            rlCombatScimitarPlayer=player;
-            rlCombatHiddenScimitar=player.getHeldItemOffhand();
-            player.inventory.offHandInventory.set(0,ItemStack.EMPTY);
+            HIDDEN_SCIMITAR.hide(player);
         }
         if (event.getButton() == 0 && player.getHeldItemMainhand().getItem() instanceof ItemScimitar
             && player.getHeldItemOffhand().getItem() instanceof ItemScimitar) {
@@ -147,7 +142,7 @@ public final class ModernWeaponInputHandler {
 
     @SubscribeEvent(priority = EventPriority.LOWEST, receiveCanceled = true)
     public static void afterBetterCombatMouse(MouseEvent event) {
-        if (event.isButtonstate()) restoreRlCombatScimitar();
+        if (event.isButtonstate()) HIDDEN_SCIMITAR.restore();
         if (temporaryScimitarUse && event.isButtonstate()) {
             EntityPlayerSP player=Minecraft.getMinecraft().player;
             if(player!=null && player.isHandActive()
@@ -208,10 +203,10 @@ public final class ModernWeaponInputHandler {
             && player.getHeldItemOffhand().isEmpty()
             && BallAndChainInputHandler.isSwinging()
             && !BallAndChainInputHandler.isGuardingInput()
-            && player.getEntityData().getBoolean("ArsenalBallAndChainActive");
+            && com.nanonaitor.arsenal.data.TransientData.of(player).getBoolean("ArsenalBallAndChainActive");
         // The world renderer runs client-side, so mirror the authoritative flag
         // locally as well as sending it to the server combat calculation.
-        player.getEntityData().setBoolean("ArsenalBallWindBoost", boost);
+        com.nanonaitor.arsenal.data.TransientData.of(player).setBoolean("ArsenalBallWindBoost", boost);
         if (boost != ballBoost) {
             ballBoost = boost;
             ModNetwork.CHANNEL.sendToServer(new ModernWeaponControlMessage(
@@ -227,8 +222,6 @@ public final class ModernWeaponInputHandler {
                 ModNetwork.CHANNEL.sendToServer(new ModernWeaponControlMessage(
                     ModernWeaponControlMessage.MORNING_STAR, true));
             }
-            if (morning) player.getEntityData().setFloat("ArsenalMorningChargeVisual",
-                morningCharge(player));
             if (morning && !attack) releaseMorning(player);
         } else if (morning) {
             cancelMorningCharge(player);
@@ -242,7 +235,6 @@ public final class ModernWeaponInputHandler {
         boolean disabled = com.nanonaitor.arsenal.compat.ScimitarShieldCompat.disabled(player);
         if (disabled && player.isHandActive()) player.resetActiveHand();
         boolean guard = dualScimitars && !disabled && (player.isHandActive() || offhandButton);
-        player.getEntityData().setBoolean("ArsenalScimitarGuard", guard);
         if (mc.currentScreen == null && guard && attack && !attackWasDown
             && com.nanonaitor.arsenal.compat.ScimitarShieldCompat.isGuarding(player)) {
             scimitarBashOwnsAttack=true;
@@ -260,11 +252,11 @@ public final class ModernWeaponInputHandler {
 
         boolean shouldMenuGuard = mc.currentScreen != null && hasFreeHandBulwark(player);
         if (shouldMenuGuard) {
-            player.getEntityData().setBoolean("ArsenalBulwarkMenuGuard", true);
+            com.nanonaitor.arsenal.combat.ShieldCombat.setMenuGuard(player, true);
         }
         if (shouldMenuGuard != menuGuard) {
             menuGuard = shouldMenuGuard;
-            if (!menuGuard) player.getEntityData().setBoolean("ArsenalBulwarkMenuGuard", false);
+            if (!menuGuard) com.nanonaitor.arsenal.combat.ShieldCombat.setMenuGuard(player, false);
             ModNetwork.CHANNEL.sendToServer(new ModernWeaponControlMessage(
                 ModernWeaponControlMessage.BULWARK_MENU_GUARD, menuGuard));
         }
@@ -306,10 +298,7 @@ public final class ModernWeaponInputHandler {
 
     private static boolean hasFreeHandBulwark(EntityPlayerSP player) {
         return com.nanonaitor.arsenal.combat.ShieldCombat.isBulwarkOffCooldown(player)
-            && (player.getHeldItemMainhand().getItem() instanceof ItemSunWarBulwark
-            && player.getHeldItemOffhand().isEmpty()
-            || player.getHeldItemOffhand().getItem() instanceof ItemSunWarBulwark
-            && player.getHeldItemMainhand().isEmpty());
+            && com.nanonaitor.arsenal.combat.ShieldCombat.isBulwarkReady(player);
     }
 
     private static void automaticScimitar(EntityPlayerSP player, boolean offhand) {
@@ -341,7 +330,7 @@ public final class ModernWeaponInputHandler {
         morningStarted = player.world.getTotalWorldTime();
         heartbeat = morningStarted;
         player.setActiveHand(EnumHand.MAIN_HAND);
-        player.getEntityData().setBoolean("ArsenalMorningCharging", true);
+        com.nanonaitor.arsenal.data.TransientData.of(player).setBoolean("ArsenalMorningCharging", true);
         ModNetwork.CHANNEL.sendToServer(new ModernWeaponControlMessage(
             ModernWeaponControlMessage.MORNING_STAR, true));
     }
@@ -349,8 +338,7 @@ public final class ModernWeaponInputHandler {
     private static void releaseMorning(EntityPlayerSP player) {
         if (!morning) return;
         morning = false;
-        player.getEntityData().setBoolean("ArsenalMorningCharging", false);
-        player.getEntityData().setFloat("ArsenalMorningChargeVisual", 0.0F);
+        com.nanonaitor.arsenal.data.TransientData.of(player).setBoolean("ArsenalMorningCharging", false);
         ModNetwork.CHANNEL.sendToServer(new ModernWeaponControlMessage(
             ModernWeaponControlMessage.MORNING_STAR, false));
         player.swingArm(EnumHand.MAIN_HAND);
@@ -361,8 +349,7 @@ public final class ModernWeaponInputHandler {
         if (!morning) return;
         morning = false;
         morningStarted = heartbeat = Long.MIN_VALUE;
-        player.getEntityData().setBoolean("ArsenalMorningCharging", false);
-        player.getEntityData().setFloat("ArsenalMorningChargeVisual", 0.0F);
+        com.nanonaitor.arsenal.data.TransientData.of(player).setBoolean("ArsenalMorningCharging", false);
         if (player.isHandActive()
             && player.getActiveItemStack().getItem() instanceof ItemMorningStar)
             player.resetActiveHand();
@@ -404,14 +391,7 @@ public final class ModernWeaponInputHandler {
         nextScimitarOffhand=scimitarPressedThisTick=cancelNativeMainhandSweep=false;
         scimitarBashOwnsAttack=false;
         temporaryScimitarUse=false;
-        restoreRlCombatScimitar();
-    }
-
-    private static void restoreRlCombatScimitar() {
-        if(rlCombatScimitarPlayer!=null && !rlCombatHiddenScimitar.isEmpty())
-            rlCombatScimitarPlayer.inventory.offHandInventory.set(0,rlCombatHiddenScimitar);
-        rlCombatScimitarPlayer=null;
-        rlCombatHiddenScimitar=ItemStack.EMPTY;
+        HIDDEN_SCIMITAR.restore();
     }
 
     private static Boolean attackNextReadyScimitar(EntityPlayerSP player,long now) {

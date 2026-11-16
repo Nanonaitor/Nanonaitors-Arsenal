@@ -40,8 +40,10 @@ public final class ScimitarAttackBridge {
                 offhandDamage=null;
             }
             initialized=true;
-        } catch (ReflectiveOperationException ex) {
-            throw new IllegalStateException("Unsupported RLCombat API: cannot safely resolve scimitar attacks", ex);
+        } catch (ReflectiveOperationException | LinkageError ex) {
+            // Fall back to the vanilla attack path rather than crashing every tick.
+            attack=null;clear=null;add=null;offhandDamage=null;initialized=true;
+            CompatLog.warnOnce("rlcombat-attack","RLCombat's attack API is not the expected one; scimitars use vanilla attacks.",ex);
         }
     }
 
@@ -55,7 +57,10 @@ public final class ScimitarAttackBridge {
                 player.getAttributeMap().removeAttributeModifiers(from.getAttributeModifiers(EntityEquipmentSlot.MAINHAND));
                 player.getAttributeMap().applyAttributeModifiers(to.getAttributeModifiers(EntityEquipmentSlot.MAINHAND));
             }
-        } catch (ReflectiveOperationException ex) { throw new IllegalStateException(ex); }
+        } catch (ReflectiveOperationException ex) {
+            clear=null;add=null;
+            CompatLog.warnOnce("rlcombat-modifiers","RLCombat's attribute exchange failed; using vanilla attribute swaps.",ex);
+        }
     }
 
     public static double cooldown(EntityPlayer player, boolean offhand) {
@@ -78,8 +83,9 @@ public final class ScimitarAttackBridge {
             if(state==null)return 1.0F;
             int ticks=((Number)state.getClass().getMethod("getTicksSinceLastSwing").invoke(state)).intValue();
             return net.minecraft.util.math.MathHelper.clamp((float)((ticks+0.5D)/cooldown(player,true)),0.0F,1.0F);
-        } catch(ReflectiveOperationException ex) {
-            throw new IllegalStateException("Unable to read RLCombat offhand charge",ex);
+        } catch(ReflectiveOperationException | ClassCastException ex) {
+            CompatLog.warnOnce("rlcombat-charge","Unable to read RLCombat's offhand charge.",ex);
+            return player.getCooledAttackStrength(0.5F);
         }
     }
 
@@ -106,11 +112,16 @@ public final class ScimitarAttackBridge {
             Object packet=(offhand?offPacket:mainPacket).newInstance(targetId,
                 player.motionX,player.motionY,player.motionZ);
             ((SimpleNetworkWrapper)packetChannel.get(null)).sendToServer((IMessage)packet);
-            consumeClientCooldown(player,offhand);
-            return true;
-        } catch(ReflectiveOperationException ex) {
-            throw new IllegalStateException("Unable to send RLCombat's native scimitar attack",ex);
+        } catch(ReflectiveOperationException | ClassCastException ex) {
+            CompatLog.warnOnce("rlcombat-packet","Unable to send RLCombat's native scimitar attack.",ex);
+            return false;
         }
+        // The packet is already sent; a failure here must not report a second attack.
+        try { consumeClientCooldown(player,offhand); }
+        catch(ReflectiveOperationException ex) {
+            CompatLog.warnOnce("rlcombat-cooldown","Unable to reset RLCombat's client cooldown.",ex);
+        }
+        return true;
     }
 
     private static void consumeClientCooldown(EntityPlayer player,boolean offhand)
@@ -150,8 +161,8 @@ public final class ScimitarAttackBridge {
                 offhandCooldownTicks.setAccessible(true);
             }
             offhandCooldownTicks.setInt(state,readyTicks);
-        } catch(ReflectiveOperationException ex) {
-            throw new IllegalStateException("Unable to prepare a full-strength scheduled scimitar strike",ex);
+        } catch(ReflectiveOperationException | RuntimeException ex) {
+            CompatLog.warnOnce("rlcombat-schedule","Unable to prepare a full-strength scheduled scimitar strike.",ex);
         }
     }
 
@@ -191,7 +202,7 @@ public final class ScimitarAttackBridge {
             }
         } catch (ReflectiveOperationException ex) {
             // A failed attack must never be retried, which could apply damage twice.
-            throw new IllegalStateException("RLCombat scimitar attack failed", ex);
+            CompatLog.warnOnce("rlcombat-strike","RLCombat scimitar attack failed.",ex);
         } finally {
             ATTACK.remove();
             OFFHAND.remove();
@@ -233,8 +244,10 @@ public final class ScimitarAttackBridge {
                 .getAttributeValue();
         try {
             return ((Number)offhandDamage.invoke(null,player)).doubleValue();
-        } catch(ReflectiveOperationException ex) {
-            throw new IllegalStateException("Unable to calculate RLCombat offhand bash damage",ex);
+        } catch(ReflectiveOperationException | ClassCastException ex) {
+            CompatLog.warnOnce("rlcombat-offhand-damage","Unable to calculate RLCombat offhand bash damage.",ex);
+            return player.getEntityAttribute(net.minecraft.entity.SharedMonsterAttributes.ATTACK_DAMAGE)
+                .getAttributeValue();
         }
     }
 
@@ -259,7 +272,10 @@ public final class ScimitarAttackBridge {
                     hand.setBoolean(null,true);
                     net.minecraft.enchantment.EnchantmentHelper.applyArthropodEnchantments(player,target);
                 } finally {hand.setBoolean(null,previousHand);strength.setFloat(null,previousStrength);}
-            } catch(ReflectiveOperationException ex) {throw new IllegalStateException("Unable to resolve bash enchantment context",ex);}
+            } catch(ReflectiveOperationException ex) {
+                CompatLog.warnOnce("rlcombat-bash-enchant","Unable to resolve RLCombat's bash enchantment context.",ex);
+                net.minecraft.enchantment.EnchantmentHelper.applyArthropodEnchantments(player,target);
+            }
         } else {
             net.minecraft.enchantment.EnchantmentHelper.applyArthropodEnchantments(player,target);
             ItemStack main=player.getHeldItemMainhand(),off=player.getHeldItemOffhand();

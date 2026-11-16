@@ -9,16 +9,13 @@ import com.nanonaitor.arsenal.enchantment.EnchantmentRotationForce;
 import java.util.Collections;
 import java.util.Set;
 import net.minecraft.enchantment.Enchantment;
-import net.minecraft.enchantment.EnumEnchantmentType;
 import net.minecraft.init.Enchantments;
 import net.minecraft.entity.SharedMonsterAttributes;
 import net.minecraft.entity.ai.attributes.AttributeModifier;
 import net.minecraft.inventory.EntityEquipmentSlot;
-import net.minecraft.entity.Entity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.ItemSword;
 import net.minecraft.util.ResourceLocation;
-import net.minecraft.world.World;
 
 public abstract class ItemArsenalWeapon extends ItemSword {
     private static final ThreadLocal<Set<Enchantment>> CHECKING_ENCHANTMENTS =
@@ -26,13 +23,28 @@ public abstract class ItemArsenalWeapon extends ItemSword {
     private final WeaponTier tier;
     private final double attackDamageModifier;
     private final double attackSpeedModifier;
+    private final float durabilityScale;
+    /** Battering Rams and Balls and Chains cost a block of material; they last 50% longer. */
+    protected static final float HEAVY_DURABILITY_SCALE = 1.5F;
 
     protected ItemArsenalWeapon(WeaponTier tier, String family,
                                 double attackDamageModifier, double attackSpeedModifier) {
+        this(tier, family, attackDamageModifier, attackSpeedModifier, 1.0F);
+    }
+
+    /**
+     * @param durabilityScale multiplier on the tier's durability, for families
+     *                        whose recipes cost a full block of material
+     */
+    protected ItemArsenalWeapon(WeaponTier tier, String family,
+                                double attackDamageModifier, double attackSpeedModifier,
+                                float durabilityScale) {
         super(tier.getMaterial());
         this.tier = tier;
         this.attackDamageModifier = attackDamageModifier;
         this.attackSpeedModifier = attackSpeedModifier;
+        this.durabilityScale = durabilityScale;
+        setBaseDurability(tier.getMaterial().getMaxUses());
         setRegistryName(NanonaitorsArsenal.MOD_ID, family + "_" + tier.getId());
         setUnlocalizedName(NanonaitorsArsenal.MOD_ID + "." + family + "_" + tier.getId());
         setCreativeTab(NanonaitorsArsenal.CREATIVE_TAB);
@@ -40,6 +52,11 @@ public abstract class ItemArsenalWeapon extends ItemSword {
 
     public final WeaponTier getTier() {
         return tier;
+    }
+
+    /** Sets durability from a tier-level value, keeping this family's scale. */
+    public final void setBaseDurability(int uses) {
+        setMaxDamage(Math.max(1, Math.round(uses * durabilityScale)));
     }
 
     public final double getDisplayedAttackDamage() {

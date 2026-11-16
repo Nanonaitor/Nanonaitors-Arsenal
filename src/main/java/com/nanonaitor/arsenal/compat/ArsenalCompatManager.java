@@ -79,14 +79,23 @@ public final class ArsenalCompatManager {
         } catch (ReflectiveOperationException | LinkageError ignored) {}
         return 1000;
     }
+    private static Class<?> srpParasiteBase;
+    private static boolean srpParasiteBaseResolved;
+
     public static boolean isSrpParasite(EntityLivingBase entity) {
         if (entity == null || !Loader.isModLoaded("srparasites")) return false;
-        try {
-            return Class.forName("com.dhanantry.scapeandrunparasites.entity.ai.misc.EntityParasiteBase").isInstance(entity);
-        } catch (ReflectiveOperationException | LinkageError ignored) {
-            ResourceLocation id = EntityList.getKey(entity);
-            return id != null && "srparasites".equals(id.getResourceDomain());
+        if (!srpParasiteBaseResolved) {
+            try {
+                srpParasiteBase = Class.forName(
+                    "com.dhanantry.scapeandrunparasites.entity.ai.misc.EntityParasiteBase");
+            } catch (ReflectiveOperationException | LinkageError ignored) {
+                srpParasiteBase = null;
+            }
+            srpParasiteBaseResolved = true;
         }
+        if (srpParasiteBase != null) return srpParasiteBase.isInstance(entity);
+        ResourceLocation id = EntityList.getKey(entity);
+        return id != null && "srparasites".equals(id.getResourceDomain());
     }
 
     /**

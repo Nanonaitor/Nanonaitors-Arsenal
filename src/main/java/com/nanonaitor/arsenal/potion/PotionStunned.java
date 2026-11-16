@@ -43,8 +43,11 @@ public final class PotionStunned extends Potion {
         EntityLivingBase living = event.getEntityLiving();
         if (living.world.isRemote || !(living instanceof EntityLiving)) return;
         EntityLiving mob = (EntityLiving) living;
-        NBTTagCompound data = mob.getEntityData();
         boolean stunned = ModContent.STUNNED != null && mob.isPotionActive(ModContent.STUNNED);
+        // A mob Arsenal manages is either stunned or still AI-disabled; skip the
+        // rest so the saved ForgeData compound is not created on every mob.
+        if (!stunned && !mob.isAIDisabled()) return;
+        NBTTagCompound data = mob.getEntityData();
         if (stunned) {
             if (!data.getBoolean(MANAGED)) {
                 data.setBoolean(PREVIOUS, mob.isAIDisabled());

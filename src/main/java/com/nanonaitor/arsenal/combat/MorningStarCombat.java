@@ -2,8 +2,6 @@ package com.nanonaitor.arsenal.combat;
 
 import com.nanonaitor.arsenal.item.ItemMorningStar;
 import com.nanonaitor.arsenal.registry.ModContent;
-import java.util.Map;
-import java.util.WeakHashMap;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.potion.PotionEffect;
@@ -11,7 +9,8 @@ import net.minecraft.potion.PotionEffect;
 public final class MorningStarCombat {
     private static final int MOB_DURATION_TICKS = 30 * 20;
     private static final int PLAYER_DURATION_TICKS = 10 * 20;
-    private static final Map<EntityPlayer, PendingAttack> PENDING_ATTACKS = new WeakHashMap<>();
+    // Server-side only: set from onLeftClickEntity and consumed by hitEntity.
+    private static final SidedPlayerMap<PendingAttack> PENDING_ATTACKS = new SidedPlayerMap<>();
 
     private MorningStarCombat() {}
 
@@ -21,16 +20,24 @@ public final class MorningStarCombat {
             new PendingAttack(target.getEntityId(), player.world.getTotalWorldTime(), item, fullyCharged));
     }
 
+    /**
+     * Fracture from a fully charged hit that went through the vanilla attack
+     * path. The charged sweep applies fracture itself via {@link #applyFracture}.
+     */
     public static void applyConfirmedHit(EntityPlayer player, EntityLivingBase target,
                                          ItemMorningStar item) {
         PendingAttack pending = PENDING_ATTACKS.remove(player);
         if (pending == null || !pending.fullyCharged || pending.item != item
             || pending.targetId != target.getEntityId()
-            || player.world.getTotalWorldTime() - pending.worldTime > 1L
-            || ModContent.ARMOR_FRACTURE == null) {
+            || player.world.getTotalWorldTime() - pending.worldTime > 1L) {
             return;
         }
+        applyFracture(target, item);
+    }
 
+    /** Adds one Armor Fracture level, up to the tier's cap: 10 s on players, 30 s on mobs. */
+    public static void applyFracture(EntityLivingBase target, ItemMorningStar item) {
+        if (ModContent.ARMOR_FRACTURE == null) return;
         PotionEffect current = target.getActivePotionEffect(ModContent.ARMOR_FRACTURE);
         int currentLevel = current == null ? 0 : current.getAmplifier() + 1;
         int newLevel = Math.min(currentLevel + 1, item.getTier().getMorningStarFractureCap());

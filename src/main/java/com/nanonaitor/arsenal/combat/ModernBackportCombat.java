@@ -2,7 +2,6 @@ package com.nanonaitor.arsenal.combat;
 
 import com.nanonaitor.arsenal.NanonaitorsArsenal;
 import com.nanonaitor.arsenal.config.ArsenalConfig;
-import com.nanonaitor.arsenal.item.ItemArsenalWeapon;
 import com.nanonaitor.arsenal.item.ItemMorningStar;
 import com.nanonaitor.arsenal.item.ItemScimitar;
 import com.nanonaitor.arsenal.item.ItemSunWarBulwark;
@@ -17,14 +16,11 @@ import java.util.WeakHashMap;
 import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.SharedMonsterAttributes;
-import net.minecraft.entity.ai.attributes.AttributeModifier;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
-import net.minecraft.inventory.EntityEquipmentSlot;
 import net.minecraft.init.SoundEvents;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.ItemShield;
-import net.minecraft.potion.PotionEffect;
 import net.minecraft.util.DamageSource;
 import net.minecraft.util.EnumHand;
 import net.minecraft.util.EnumParticleTypes;
@@ -32,7 +28,6 @@ import net.minecraft.util.SoundCategory;
 import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.Vec3d;
 import net.minecraftforge.event.entity.player.AttackEntityEvent;
-import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.eventhandler.EventPriority;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
@@ -47,12 +42,19 @@ public final class ModernBackportCombat {
 
     private ModernBackportCombat() {}
 
+    @SubscribeEvent
+    public static void onLogout(net.minecraftforge.fml.common.gameevent.PlayerEvent.PlayerLoggedOutEvent event) {
+        UUID id = event.player.getUniqueID();
+        NEXT_SCIMITAR_TURN.remove(id);
+        LAST_AUXILIARY_SCIMITAR.remove(id);
+    }
+
     public static void handleControl(EntityPlayerMP player,byte action,boolean active,int targetId) {
         if (action == ModernWeaponControlMessage.SHIELD_TAKEOVER) {
             if (AbilityUseRules.shield(player, player.getHeldItemOffhand())) {
                 cancelMorning(player);
                 BallAndChainCombat.cancelAbility(player);
-                player.getEntityData().setLong("ArsenalShieldAttackLock", player.world.getTotalWorldTime() + 4);
+                AbilityUseRules.lockWeaponAttacks(player, 4);
             }
             return;
         }
@@ -62,7 +64,7 @@ public final class ModernBackportCombat {
         else if (action == ModernWeaponControlMessage.SCIMITAR_ATTACK) scimitar(player,active,targetId);
         else if (action == ModernWeaponControlMessage.BULWARK_MENU_GUARD) menuGuard(player, active);
         else if (action == ModernWeaponControlMessage.BALL_WIND_BOOST)
-            player.getEntityData().setBoolean("ArsenalBallWindBoost", active
+            com.nanonaitor.arsenal.data.TransientData.of(player).setBoolean("ArsenalBallWindBoost", active
                 && player.getHeldItemMainhand().getItem()
                     instanceof com.nanonaitor.arsenal.item.ItemBallAndChain
                 && player.getHeldItemOffhand().isEmpty());
@@ -74,15 +76,6 @@ public final class ModernBackportCombat {
         if (com.nanonaitor.arsenal.compat.ScimitarAttackBridge.isControlledOffhandAttack()) return;
         if (event.getEntityPlayer().getHeldItemMainhand().getItem() instanceof ItemMorningStar)
             event.setCanceled(true);
-    }
-
-    @SubscribeEvent(priority = EventPriority.HIGHEST)
-    public static void cancelMorningMining(PlayerInteractEvent.LeftClickBlock event) {
-        if (event.getEntityPlayer().getHeldItemMainhand().getItem() instanceof ItemMorningStar) {
-            event.setCanceled(true);
-            event.setUseBlock(net.minecraftforge.fml.common.eventhandler.Event.Result.DENY);
-            event.setUseItem(net.minecraftforge.fml.common.eventhandler.Event.Result.DENY);
-        }
     }
 
     @SubscribeEvent
@@ -185,7 +178,7 @@ public final class ModernBackportCombat {
                 reach + 2.0D, 1.5D, reach + 2.0D);
             for (EntityLivingBase target : player.world.getEntitiesWithinAABB(
                     EntityLivingBase.class, query,
-                    e -> e != player && !e.isDead && !player.isOnSameTeam(e))) {
+                    e -> CombatTargetRules.canHit(player, e))) {
                 Vec3d rel = target.getEntityBoundingBox().getCenter().subtract(eye);
                 double forward = rel.dotProduct(horizontal);
                 double lateral = rel.dotProduct(right);
@@ -204,19 +197,10 @@ public final class ModernBackportCombat {
                 target.getCreatureAttribute())) * multiplier;
             if (target.attackEntityFrom(DamageSource.causePlayerDamage(player), damage)) {
                 hit = true;
-                EnchantmentHelper.applyThornEnchantments(target,player);
-                EnchantmentHelper.applyArthropodEnchantments(player,target);
-                int fireAspect=EnchantmentHelper.getFireAspectModifier(player);
-                if(fireAspect>0)target.setFire(fireAspect*4);
+                WeaponHits.applyHitEnchantments(player, target);
+                WeaponHits.applyFireAspect(player, target);
                 item.hitEntity(stack, target, player);
-                if (full && ModContent.ARMOR_FRACTURE != null) {
-                    PotionEffect old = target.getActivePotionEffect(ModContent.ARMOR_FRACTURE);
-                    int level = old == null ? 1 : old.getAmplifier() + 2;
-                    level = Math.min(level, item.getTier().getMorningStarFractureCap());
-                    int duration = target instanceof EntityPlayer ? 200 : 600;
-                    com.nanonaitor.arsenal.config.ConfiguredEffects.apply(target,
-                        com.nanonaitor.arsenal.config.ArsenalConfig.effects.morningStarFracture, duration, level - 1);
-                }
+                if (full) MorningStarCombat.applyFracture(target, item);
                 if (full && ModContent.STUNNED != null && player.getRNG().nextFloat() < 0.20F)
                     com.nanonaitor.arsenal.config.ConfiguredEffects.apply(target,
                         com.nanonaitor.arsenal.config.ArsenalConfig.effects.morningStarStun, 60, 0);
@@ -269,7 +253,9 @@ public final class ModernBackportCombat {
                 if(fire>0)target.setFire(fire*4);
             }
         }
-        com.nanonaitor.arsenal.compat.ScimitarShieldCompat.disable(player,
+        // The bash cooldown always applies. Endure only resists guard breaks,
+        // so it must not roll here (a skipped roll left bash with no cooldown).
+        com.nanonaitor.arsenal.compat.ScimitarShieldCompat.startCooldown(player,
             com.nanonaitor.arsenal.compat.ScimitarShieldCompat.bashCooldown());
         player.world.playSound(null,player.posX,player.posY,player.posZ,
             com.nanonaitor.arsenal.registry.ModSounds.SCIMITAR_BASH,SoundCategory.PLAYERS,1.0F,1.0F);
@@ -370,36 +356,13 @@ public final class ModernBackportCombat {
         return player.getEntityAttribute(EntityPlayer.REACH_DISTANCE).getAttributeValue();
     }
 
-    private static double mainHandDamageBonus(ItemStack stack) {
-        double result = 0.0D;
-        for (AttributeModifier modifier : stack.getAttributeModifiers(
-            EntityEquipmentSlot.MAINHAND).get(SharedMonsterAttributes.ATTACK_DAMAGE.getName())) {
-            if (modifier.getOperation() == 0) result += modifier.getAmount();
-        }
-        return result;
-    }
-
-    public static double offhandScimitarAttackSpeed(EntityPlayer player,
-                                                     ItemStack offhand) {
-        return 20.0D / com.nanonaitor.arsenal.compat.ScimitarAttackBridge.cooldown(player, true);
-    }
-
-    private static double mainHandAttributeBonus(ItemStack stack, String attribute) {
-        double result = 0.0D;
-        for (AttributeModifier modifier : stack.getAttributeModifiers(
-            EntityEquipmentSlot.MAINHAND).get(attribute)) {
-            if (modifier.getOperation() == 0) result += modifier.getAmount();
-        }
-        return result;
-    }
-
     private static EntityLivingBase aimedTarget(EntityPlayer player, double reach) {
         Vec3d eye = player.getPositionEyes(1.0F), look = player.getLookVec().normalize();
         EntityLivingBase best = null; double bestAlong = Double.MAX_VALUE;
         AxisAlignedBB box = player.getEntityBoundingBox().expand(look.x * reach, look.y * reach,
             look.z * reach).grow(1.0D);
         for (EntityLivingBase target : player.world.getEntitiesWithinAABB(EntityLivingBase.class, box,
-                e -> e != player && !e.isDead && !player.isOnSameTeam(e))) {
+                e -> CombatTargetRules.canHit(player, e))) {
             Vec3d rel = target.getEntityBoundingBox().getCenter().subtract(eye);
             double along = rel.dotProduct(look);
             if (along < 0 || along > reach) continue;
@@ -410,27 +373,26 @@ public final class ModernBackportCombat {
         return best;
     }
 
+    /**
+     * The client can only request a menu guard. The server grants it only for
+     * a ready, off-cooldown bulwark, and clears it again on any bulwark attack
+     * or bash, when the bulwark leaves the hands, and on logout.
+     */
     private static void menuGuard(EntityPlayerMP player, boolean active) {
-        boolean valid = active && ShieldCombat.isBulwarkOffCooldown(player)
-            && (player.getHeldItemMainhand().getItem()
-            instanceof ItemSunWarBulwark && player.getHeldItemOffhand().isEmpty()
-            || player.getHeldItemOffhand().getItem() instanceof ItemSunWarBulwark
-                && player.getHeldItemMainhand().isEmpty());
-        player.getEntityData().setBoolean("ArsenalBulwarkMenuGuard", valid);
+        ShieldCombat.setMenuGuard(player, active && ShieldCombat.isBulwarkReady(player)
+            && ShieldCombat.isBulwarkOffCooldown(player));
     }
 
     private static void bulwarkAttack(EntityPlayerMP player) {
         ItemStack stack = player.getHeldItemOffhand();
+        ShieldCombat.setMenuGuard(player, false);
         if(AbilityUseRules.cooling(player,stack))return;
         if (!(stack.getItem() instanceof ItemSunWarBulwark) || !player.getHeldItemMainhand().isEmpty()
             || player.getCooledAttackStrength(0.5F) < 0.95F) return;
         EntityLivingBase target = aimedTarget(player, reach(player));
         player.swingArm(EnumHand.OFF_HAND);
         if (target != null) {
-            float armor = (float)Math.max(0.0D, player.getEntityAttribute(
-                SharedMonsterAttributes.ARMOR).getAttributeValue());
-            float strength = player.getCooledAttackStrength(0.5F);
-            float damage = (1.0F + armor) * (0.2F + strength * strength * 0.8F);
+            float damage = ShieldCombat.armorScaledDamage(player) * WeaponHits.chargeMultiplier(player);
             if (target.attackEntityFrom(DamageSource.causePlayerDamage(player), damage))
                 stack.damageItem(1, player);
         }

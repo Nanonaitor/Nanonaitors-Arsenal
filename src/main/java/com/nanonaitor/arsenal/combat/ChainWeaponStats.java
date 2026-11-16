@@ -2,7 +2,6 @@ package com.nanonaitor.arsenal.combat;
 
 import com.nanonaitor.arsenal.registry.ModContent;
 import com.nanonaitor.arsenal.item.ItemArsenalWeapon;
-import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.entity.SharedMonsterAttributes;
 import net.minecraft.entity.ai.attributes.IAttributeInstance;
 import net.minecraft.entity.player.EntityPlayer;
@@ -73,7 +72,7 @@ public final class ChainWeaponStats {
         if (stack.getItem() instanceof com.nanonaitor.arsenal.item.ItemBallAndChain) {
             if (!player.getHeldItemOffhand().isEmpty()) speed *= 0.50D;
             if (player.getHeldItemOffhand().isEmpty()
-                && player.getEntityData().getBoolean("ArsenalBallWindBoost")) speed += 0.30D;
+                && com.nanonaitor.arsenal.data.TransientData.of(player).getBoolean("ArsenalBallWindBoost")) speed += 0.30D;
         }
         return Math.max(MIN_ATTACK_SPEED, speed);
     }

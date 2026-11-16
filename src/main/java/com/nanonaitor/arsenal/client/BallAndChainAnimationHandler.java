@@ -3,7 +3,6 @@ package com.nanonaitor.arsenal.client;
 import com.nanonaitor.arsenal.NanonaitorsArsenal;
 import com.nanonaitor.arsenal.combat.BallAndChainCombat;
 import com.nanonaitor.arsenal.combat.ChainWeaponStats;
-import com.nanonaitor.arsenal.compat.ArsenalCompatManager;
 import com.nanonaitor.arsenal.item.ItemBallAndChain;
 import java.util.Iterator;
 import java.util.Map;
@@ -29,7 +28,7 @@ public final class BallAndChainAnimationHandler {
     public static void cancelForShield(EntityPlayer player) {
         WINDUPS.remove(player);
         RELEASES.remove(player);
-        player.getEntityData().setBoolean("ArsenalBallAndChainActive",false);
+        com.nanonaitor.arsenal.data.TransientData.of(player).setBoolean("ArsenalBallAndChainActive",false);
     }
 
     public static void receiveWindup(int entityId) {
@@ -43,7 +42,7 @@ public final class BallAndChainAnimationHandler {
         WindupState state=WINDUPS.get(player);
         if(state==null){state=new WindupState(now);WINDUPS.put(player,state);}
         state.endTick=now+6;
-        player.getEntityData().setBoolean("ArsenalBallAndChainActive",true);
+        com.nanonaitor.arsenal.data.TransientData.of(player).setBoolean("ArsenalBallAndChainActive",true);
     }
 
     public static void startReleaseAnimation(int entityId, int charge, float distance,
@@ -63,7 +62,7 @@ public final class BallAndChainAnimationHandler {
             return;
         }
         WINDUPS.remove(player);
-        player.getEntityData().setBoolean("ArsenalBallAndChainActive", true);
+        com.nanonaitor.arsenal.data.TransientData.of(player).setBoolean("ArsenalBallAndChainActive", true);
         RELEASES.put(player, new ReleaseState(minecraft.world.getTotalWorldTime(),
             Math.max(1, Math.min(3, charge)), Math.max(0.0F, distance), yaw, pitch,
             Math.max(3, durationTicks)));
@@ -107,7 +106,7 @@ public final class BallAndChainAnimationHandler {
             }
             ItemStack held = player.getHeldItemMainhand();
             if (!(held.getItem() instanceof ItemBallAndChain)) {
-                player.getEntityData().setBoolean("ArsenalBallAndChainActive", false);
+                com.nanonaitor.arsenal.data.TransientData.of(player).setBoolean("ArsenalBallAndChainActive", false);
                 WINDUPS.remove(player);
                 RELEASES.remove(player);
                 continue;
@@ -122,11 +121,11 @@ public final class BallAndChainAnimationHandler {
             if (player==minecraft.player && BallAndChainInputHandler.isGuardingInput()
                 && !RELEASES.containsKey(player)) {
                 WINDUPS.remove(player);
-                player.getEntityData().setBoolean("ArsenalBallAndChainActive",false);
+                com.nanonaitor.arsenal.data.TransientData.of(player).setBoolean("ArsenalBallAndChainActive",false);
                 continue;
             }
             if (localInput) {
-                player.getEntityData().setBoolean("ArsenalBallAndChainActive", true);
+                com.nanonaitor.arsenal.data.TransientData.of(player).setBoolean("ArsenalBallAndChainActive", true);
                 if (state == null) {
                     state = new WindupState(now);
                     WINDUPS.put(player, state);
@@ -142,7 +141,7 @@ public final class BallAndChainAnimationHandler {
                 EntityPlayer player = entry.getKey();
                 windupIterator.remove();
                 if (!RELEASES.containsKey(player))
-                    player.getEntityData().setBoolean("ArsenalBallAndChainActive", false);
+                    com.nanonaitor.arsenal.data.TransientData.of(player).setBoolean("ArsenalBallAndChainActive", false);
             }
         }
         Iterator<Map.Entry<EntityPlayer, ReleaseState>> releaseIterator =
@@ -159,7 +158,7 @@ public final class BallAndChainAnimationHandler {
                     player.resetActiveHand();
                 }
                 if (!WINDUPS.containsKey(player)) {
-                    player.getEntityData().setBoolean("ArsenalBallAndChainActive", false);
+                    com.nanonaitor.arsenal.data.TransientData.of(player).setBoolean("ArsenalBallAndChainActive", false);
                 }
             }
         }

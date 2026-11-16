@@ -48,7 +48,7 @@ public final class FlailAnimationHandler {
             ACTIVE.put(player, state);
         }
         state.endTick = now + animationTicks;
-        player.getEntityData().setBoolean("ArsenalFlailActive", true);
+        com.nanonaitor.arsenal.data.TransientData.of(player).setBoolean("ArsenalFlailActive", true);
     }
 
     @SubscribeEvent
@@ -65,12 +65,12 @@ public final class FlailAnimationHandler {
         for (EntityPlayer player : minecraft.world.playerEntities) {
             ItemStack held = player.getHeldItemMainhand();
             if (!(held.getItem() instanceof ItemFlail)) {
-                player.getEntityData().setBoolean("ArsenalFlailActive", false);
+                com.nanonaitor.arsenal.data.TransientData.of(player).setBoolean("ArsenalFlailActive", false);
                 ACTIVE.remove(player);
                 continue;
             }
             if (FlailCombat.isBlockingConventionalShield(player)) {
-                player.getEntityData().setBoolean("ArsenalFlailActive", false);
+                com.nanonaitor.arsenal.data.TransientData.of(player).setBoolean("ArsenalFlailActive", false);
                 ACTIVE.remove(player);
                 continue;
             }
@@ -86,9 +86,9 @@ public final class FlailAnimationHandler {
                 state.endTick = now + 2L;
             }
             if (state != null && state.endTick >= now) {
-                player.getEntityData().setBoolean("ArsenalFlailActive", true);
+                com.nanonaitor.arsenal.data.TransientData.of(player).setBoolean("ArsenalFlailActive", true);
             } else {
-                player.getEntityData().setBoolean("ArsenalFlailActive", false);
+                com.nanonaitor.arsenal.data.TransientData.of(player).setBoolean("ArsenalFlailActive", false);
             }
         }
         Iterator<Map.Entry<EntityPlayer, AnimationState>> iterator = ACTIVE.entrySet().iterator();
@@ -98,7 +98,7 @@ public final class FlailAnimationHandler {
                 EntityPlayer player = entry.getKey();
                 if (!player.isDead && player.getHeldItemMainhand().getItem()
                     instanceof ItemFlail) {
-                    player.getEntityData().setBoolean("ArsenalFlailActive", false);
+                    com.nanonaitor.arsenal.data.TransientData.of(player).setBoolean("ArsenalFlailActive", false);
                 }
                 iterator.remove();
             }

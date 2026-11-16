@@ -1,7 +1,6 @@
 package com.nanonaitor.arsenal.client;
 
 import com.nanonaitor.arsenal.NanonaitorsArsenal;
-import com.nanonaitor.arsenal.compat.ArsenalCompatManager;
 import com.nanonaitor.arsenal.item.ItemBallAndChain;
 import com.nanonaitor.arsenal.network.BallAndChainSwingMessage;
 import com.nanonaitor.arsenal.network.ModNetwork;
@@ -81,9 +80,7 @@ public final class BallAndChainInputHandler {
     }
 
     private static void clearVanillaAttack(Minecraft mc) {
-        net.minecraft.client.settings.KeyBinding.setKeyBindState(
-            mc.gameSettings.keyBindAttack.getKeyCode(), false);
-        while (mc.gameSettings.keyBindAttack.isPressed()) { /* drain queued clicks */ }
+        ClientInput.clearAttackKey(mc);
     }
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
@@ -136,7 +133,7 @@ public final class BallAndChainInputHandler {
             && minecraft.currentScreen == null
             && isAttackPhysicallyDown();
         updateUseSpeed(player, canSwing || retrieving);
-        player.getEntityData().setBoolean("ArsenalBallAndChainActive",
+        com.nanonaitor.arsenal.data.TransientData.of(player).setBoolean("ArsenalBallAndChainActive",
             holdingWeapon && (canSwing || retrieving));
         if (!canSwing) {
             if (wasSwinging) {

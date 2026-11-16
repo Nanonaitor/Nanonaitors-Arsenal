@@ -7,13 +7,11 @@ import com.nanonaitor.arsenal.registry.ModContent;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-import java.util.WeakHashMap;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.SharedMonsterAttributes;
 import net.minecraft.entity.ai.attributes.AttributeModifier;
 import net.minecraft.entity.ai.attributes.IAttributeInstance;
-import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.init.SoundEvents;
 import net.minecraft.item.ItemStack;
@@ -37,14 +35,14 @@ public final class DoubleBladedScimitarCombat {
     public static final int REFLECTION_TICKS = 20;
     public static final int NORMAL_COOLDOWN_TICKS = 60;
     public static final int SUCCESS_COOLDOWN_TICKS = 10;
-    private static final String ACTIVE = "ArsenalDoubleBladeReflecting";
     private static final UUID OCCUPIED_OFFHAND_SPEED = UUID.fromString(
         "a14d7f20-5d8d-4eef-9b81-c24ce5d48c77");
     private static final AttributeModifier HALF_SPEED = new AttributeModifier(
         OCCUPIED_OFFHAND_SPEED, "Double blade occupied offhand penalty", -0.5D, 2)
         .setSaved(false);
-    private static final Map<EntityPlayer, Long> REFLECTION_END = new WeakHashMap<>();
-    private static final Map<EntityPlayer,Object> OWN_COOLDOWN = new WeakHashMap<>();
+    // Reflection runs on both the client and the server thread; keep their state apart.
+    private static final SidedPlayerMap<Long> REFLECTION_END = new SidedPlayerMap<>();
+    private static final SidedPlayerMap<Object> OWN_COOLDOWN = new SidedPlayerMap<>();
     private static final java.lang.reflect.Field COOLDOWNS = net.minecraftforge.fml.relauncher.ReflectionHelper.findField(net.minecraft.util.CooldownTracker.class,"cooldowns","field_185147_a");
     private static Object cooldownEntry(EntityPlayer p){try{return ((Map<?,?>)COOLDOWNS.get(p.getCooldownTracker())).get(p.getHeldItemMainhand().getItem());}catch(IllegalAccessException ex){throw new IllegalStateException(ex);}}
     private static boolean externalCooldown(EntityPlayer p){
@@ -55,10 +53,10 @@ public final class DoubleBladedScimitarCombat {
             p.getCooldownTracker().hasCooldown(p.getHeldItemMainhand().getItem()),
             cooldownEntry(p)==OWN_COOLDOWN.get(p));
     }
-    private static final Map<EntityPlayer, Map<Potion, PotionEffect>> REFLECTION_EFFECT_BASELINE =
-        new WeakHashMap<>();
-    private static final Map<EntityPlayer, PendingEffectReflection> PENDING_EFFECT_REFLECTION =
-        new WeakHashMap<>();
+    private static final SidedPlayerMap<Map<Potion, PotionEffect>> REFLECTION_EFFECT_BASELINE =
+        new SidedPlayerMap<>();
+    private static final SidedPlayerMap<PendingEffectReflection> PENDING_EFFECT_REFLECTION =
+        new SidedPlayerMap<>();
     private static final ThreadLocal<Boolean> RETURNING = new ThreadLocal<Boolean>() {
         @Override protected Boolean initialValue() { return Boolean.FALSE; }
     };
@@ -76,7 +74,6 @@ public final class DoubleBladedScimitarCombat {
         long end = player.world.getTotalWorldTime() + REFLECTION_TICKS;
         REFLECTION_END.put(player, end);
         REFLECTION_EFFECT_BASELINE.put(player, harmfulEffects(player));
-        player.getEntityData().setBoolean(ACTIVE, true);
         player.setActiveHand(EnumHand.MAIN_HAND);
         player.getCooldownTracker().setCooldown(stack.getItem(), NORMAL_COOLDOWN_TICKS);
         OWN_COOLDOWN.put(player,cooldownEntry(player));
@@ -92,7 +89,6 @@ public final class DoubleBladedScimitarCombat {
         OWN_COOLDOWN.remove(player);
         REFLECTION_END.remove(player);
         REFLECTION_EFFECT_BASELINE.remove(player);
-        player.getEntityData().removeTag(ACTIVE);
         if(player.isHandActive() && player.getActiveItemStack().getItem() instanceof ItemDoubleBladedScimitar)
             player.resetActiveHand();
         if(active)syncReflection(player,0);
@@ -111,7 +107,6 @@ public final class DoubleBladedScimitarCombat {
         if(!player.world.isRemote)return;
         if(ticks<=0){cancelReflection(player);return;}
         REFLECTION_END.put(player,player.world.getTotalWorldTime()+Math.min(ticks,REFLECTION_TICKS));
-        player.getEntityData().setBoolean(ACTIVE,true);
     }
 
     public static boolean isReflecting(EntityPlayer player) {
@@ -141,7 +136,6 @@ public final class DoubleBladedScimitarCombat {
         if (expired) {
             cancelReflection(player);
         } else {
-            player.getEntityData().setBoolean(ACTIVE, true);
             if (!player.isHandActive()) player.setActiveHand(EnumHand.MAIN_HAND);
             if (!PENDING_EFFECT_REFLECTION.containsKey(player)) {
                 REFLECTION_EFFECT_BASELINE.put(player, harmfulEffects(player));
@@ -266,10 +260,9 @@ public final class DoubleBladedScimitarCombat {
         try {
             for (EntityLivingBase nearby : attacker.world.getEntitiesWithinAABB(
                     EntityLivingBase.class, primary.getEntityBoundingBox().grow(radius),
-                    entity -> entity != attacker && entity != primary && entity.isEntityAlive()
+                    entity -> entity != primary && entity.isEntityAlive()
                         && entity.getDistanceSq(primary) <= radius * radius
-                        && (!(entity instanceof EntityPlayer)
-                            || attacker.canAttackPlayer((EntityPlayer) entity)))) {
+                        && CombatTargetRules.canSplash(attacker, entity))) {
                 nearby.attackEntityFrom(DamageSource.causePlayerDamage(attacker), event.getAmount());
             }
         } finally {

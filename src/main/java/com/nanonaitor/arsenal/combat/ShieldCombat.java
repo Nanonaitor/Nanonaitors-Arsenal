@@ -1,7 +1,6 @@
 package com.nanonaitor.arsenal.combat;
 
 import com.nanonaitor.arsenal.NanonaitorsArsenal;
-import com.nanonaitor.arsenal.compat.ArsenalCompatManager;
 import com.nanonaitor.arsenal.item.ItemArsenalShield;
 import com.nanonaitor.arsenal.item.ItemSunWarBulwark;
 import com.nanonaitor.arsenal.item.ItemBallAndChain;
@@ -40,6 +39,7 @@ import net.minecraftforge.fml.common.gameevent.TickEvent;
 @Mod.EventBusSubscriber(modid = NanonaitorsArsenal.MOD_ID)
 public final class ShieldCombat {
     private static final String BASH_READY = "ArsenalBulwarkBashReady";
+    private static final String MENU_GUARD = "ArsenalBulwarkMenuGuard";
     private static final UUID MOVEMENT_UUID = UUID.fromString("f223d9ba-b0ca-4ed4-bb87-58709fd6ea1e");
     private static final UUID OCCUPIED_ATTACK_UUID = UUID.fromString("82993c2a-aee0-44d2-a09e-19ba6d18df72");
     private static final UUID BALL_WIND_MOVEMENT_UUID = UUID.fromString("6b5c8592-c187-4a84-908f-54bea8445b03");
@@ -60,7 +60,45 @@ public final class ShieldCombat {
         return player.isHandActive() && type.isInstance(player.getActiveItemStack().getItem())
             || type == ItemSunWarBulwark.class && isBulwarkReady(player)
                 && isBulwarkOffCooldown(player)
-                && player.getEntityData().getBoolean("ArsenalBulwarkMenuGuard");
+                && com.nanonaitor.arsenal.data.TransientData.of(player).getBoolean(MENU_GUARD);
+    }
+
+    /** Guard held by the bulwark while a menu is open (the use key cannot be held there). */
+    public static boolean isMenuGuarding(net.minecraft.entity.Entity player) {
+        return com.nanonaitor.arsenal.data.TransientData.of(player).getBoolean(MENU_GUARD);
+    }
+
+    public static void setMenuGuard(EntityPlayer player, boolean guarding) {
+        com.nanonaitor.arsenal.data.TransientData.of(player).setBoolean(MENU_GUARD, guarding);
+    }
+
+    /**
+     * Ball and chain guard: holding use to guard, or the whole wind-up. Never
+     * while the ball is out on a throw or coming back.
+     *
+     * The wind-up is read from the server's swing state, not the active hand.
+     * During wind-up the client sends a stop-using packet every tick (the use
+     * key is not held), and the server handles it before mobs attack, so the
+     * active hand is briefly off exactly when hits land.
+     */
+    public static boolean isBallAndChainGuarding(EntityPlayer player) {
+        if (!(player.getHeldItemMainhand().getItem() instanceof ItemBallAndChain)
+            || !player.getHeldItemOffhand().isEmpty()
+            || BallAndChainCombat.isThrowing(player)) return false;
+        return BallAndChainCombat.isWindingUp(player)
+            || player.isHandActive() && player.getActiveHand() == EnumHand.MAIN_HAND
+                && player.getActiveItemStack().getItem() instanceof ItemBallAndChain;
+    }
+
+    /**
+     * Damage dealt by something (a mob, player, projectile, explosion or
+     * lightning strike), fire attacks included; not a status effect or the world.
+     */
+    private static boolean isAttackHit(DamageSource source) {
+        return !isEnvironmentDamage(source)
+            && (source.getTrueSource() != null || source.getImmediateSource() != null
+                || source.isProjectile() || source.isExplosion()
+                || "lightningBolt".equals(source.damageType));
     }
 
     public static boolean isBulwarkReady(EntityPlayer player) {
@@ -81,7 +119,7 @@ public final class ShieldCombat {
         EntityPlayer player = (EntityPlayer) event.getEntityLiving();
         DamageSource source = event.getSource();
 
-        if (player.getEntityData().getLong(TARTSY_INVULNERABLE_UNTIL)
+        if (com.nanonaitor.arsenal.data.TransientData.of(player).getLong(TARTSY_INVULNERABLE_UNTIL)
             >= player.world.getTotalWorldTime()) {
             event.setCanceled(true);
             return;
@@ -103,13 +141,17 @@ public final class ShieldCombat {
             return;
         }
 
-        if (player.isHandActive() && player.getActiveItemStack().getItem() instanceof ItemBallAndChain
-            && player.getHeldItemOffhand().isEmpty() && isFrontDamage(player, source)) {
+        // The ball and chain guard stops every attack from any direction and
+        // cannot be broken. Every block wears the weapon like the scimitar
+        // cross-guard does and rings out a metal clang.
+        if (isBallAndChainGuarding(player) && isAttackHit(source)) {
             event.setCanceled(true);
-            findEquipped(player, ItemSunWarBulwark.class).damageItem(1, player);
-            triggerThorns(player,findEquipped(player, ItemSunWarBulwark.class),source);
-            player.world.playSound(null, player.posX, player.posY, player.posZ,
-                SoundEvents.BLOCK_METAL_PLACE, SoundCategory.PLAYERS, 1.125F, 0.90F);
+            if (!player.world.isRemote) {
+                ItemStack ball = player.getHeldItemMainhand();
+                triggerThorns(player, ball, source);
+                ball.damageItem(GuardRules.scimitarWear(event.getAmount()), player);
+                playBallGuardClang(player);
+            }
             return;
         }
 
@@ -156,22 +198,29 @@ public final class ShieldCombat {
         EntityPlayer player = event.getEntityPlayer();
         if (!(player.getHeldItemMainhand().getItem() instanceof ItemSunWarBulwark)) return;
         if (!player.world.isRemote && event.getTarget() instanceof EntityLivingBase) {
+            // Attacking means no menu is open, so a menu guard cannot still apply.
+            setMenuGuard(player, false);
             PENDING_ATTACKS.put(player, new PendingBulwarkAttack(
                 event.getTarget().getEntityId(), player.world.getTotalWorldTime(),
-                attackChargeMultiplier(player)));
+                WeaponHits.chargeMultiplier(player)));
         }
+    }
+
+    /** A player's own melee swing, as opposed to Thorns, projectiles or ability damage. */
+    private static boolean isDirectPlayerMelee(DamageSource source) {
+        return source.getTrueSource() instanceof EntityPlayer
+            && source.getImmediateSource() == source.getTrueSource()
+            && "player".equals(source.damageType);
     }
 
     @SubscribeEvent(priority = EventPriority.LOW)
     public static void onHurt(LivingHurtEvent event) {
         DamageSource source = event.getSource();
-        if (source.getTrueSource() instanceof EntityPlayer
-            && source.getImmediateSource() == source.getTrueSource()
-            && !"tartsy_dash".equals(source.damageType)) {
+        if (isDirectPlayerMelee(source)) {
             EntityPlayer attacker = (EntityPlayer) source.getTrueSource();
-            if (attacker.getEntityData().getBoolean(TARTSY_CRITICAL_READY)) {
-                attacker.getEntityData().setBoolean(TARTSY_CRITICAL_READY, false);
-                if (!isVanillaCritical(attacker)) event.setAmount(event.getAmount() * 1.5F);
+            if (com.nanonaitor.arsenal.data.TransientData.of(attacker).getBoolean(TARTSY_CRITICAL_READY)) {
+                com.nanonaitor.arsenal.data.TransientData.of(attacker).setBoolean(TARTSY_CRITICAL_READY, false);
+                if (!WeaponHits.isVanillaCritical(attacker)) event.setAmount(event.getAmount() * 1.5F);
                 attacker.onCriticalHit(event.getEntityLiving());
                 attacker.world.playSound(null, attacker.posX, attacker.posY, attacker.posZ,
                     SoundEvents.ENTITY_PLAYER_ATTACK_CRIT, SoundCategory.PLAYERS, 1.0F, 1.0F);
@@ -184,15 +233,16 @@ public final class ShieldCombat {
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void bulwarkBaseDamage(LivingHurtEvent event) {
         DamageSource source = event.getSource();
-        if ("arsenal_bulwark_bash".equals(source.damageType)) return;
-        if (source.getTrueSource() instanceof EntityPlayer) {
+        // Only the bulwark's own swing is armor-scaled; Thorns and other
+        // secondary damage the holder causes keeps its normal amount.
+        if (isDirectPlayerMelee(source)) {
             EntityPlayer attacker = (EntityPlayer) source.getTrueSource();
             if (isBulwarkReady(attacker)) {
                 PendingBulwarkAttack pending = PENDING_ATTACKS.remove(attacker);
                 float multiplier = pending != null
                     && pending.targetId == event.getEntityLiving().getEntityId()
                     && attacker.world.getTotalWorldTime() - pending.worldTime <= 1L
-                    ? pending.chargeMultiplier : attackChargeMultiplier(attacker);
+                    ? pending.chargeMultiplier : WeaponHits.chargeMultiplier(attacker);
                 event.setAmount(armorScaledDamage(attacker) * multiplier);
             }
         }
@@ -203,7 +253,7 @@ public final class ShieldCombat {
         DamageSource source = event.getSource();
         if (!(event.getEntityLiving() instanceof EntityPlayer)) return;
         EntityPlayer player = (EntityPlayer) event.getEntityLiving();
-        if (findEquipped(player, ItemSunWarBulwark.class) != ItemStack.EMPTY && !isVoid(source)) {
+        if (!findEquipped(player, ItemSunWarBulwark.class).isEmpty() && !isVoid(source)) {
             event.setAmount(event.getAmount() * (float)(1.0D - BULWARK_PASSIVE_REDUCTION));
         }
     }
@@ -212,9 +262,14 @@ public final class ShieldCombat {
     public static void onPlayerTick(TickEvent.PlayerTickEvent event) {
         EntityPlayer player = event.player;
         if (event.phase == TickEvent.Phase.START) {
+            // A menu guard ends for good once the bulwark is no longer ready,
+            // so re-equipping it later cannot revive a stale guard.
+            if (!player.world.isRemote && isMenuGuarding(player)
+                && (!isBulwarkReady(player) || !isBulwarkOffCooldown(player))) {
+                setMenuGuard(player, false);
+            }
             if (com.nanonaitor.arsenal.compat.ScimitarShieldCompat.disabled(player)
                 && player.isHandActive()) {
-                player.getEntityData().setBoolean("ArsenalScimitarGuard",false);
                 player.resetActiveHand();
             }
             updateBulwarkMovement(player);
@@ -230,7 +285,7 @@ public final class ShieldCombat {
         if (shield.isEmpty() || player.getCooldownTracker().hasCooldown(shield.getItem())) return;
         BallAndChainCombat.cancelAbility(player);
         ModernBackportCombat.cancelMorning(player);
-        player.getEntityData().setLong("ArsenalShieldAttackLock", player.world.getTotalWorldTime() + 20L);
+        AbilityUseRules.lockWeaponAttacks(player, 20);
         net.minecraft.util.math.Vec3d look = player.getLookVec();
         double horizontal = Math.sqrt(look.x * look.x + look.z * look.z);
         if (horizontal < 0.001D) return;
@@ -238,7 +293,7 @@ public final class ShieldCombat {
         player.motionY = Math.max(player.motionY, 0.12D);
         player.motionZ = look.z / horizontal * 1.0125D;
         player.velocityChanged = true;
-        player.getEntityData().setLong(TARTSY_INVULNERABLE_UNTIL,
+        com.nanonaitor.arsenal.data.TransientData.of(player).setLong(TARTSY_INVULNERABLE_UNTIL,
             player.world.getTotalWorldTime() + 19L);
         TARTSY_DASHES.put(player, new TartsyDash(player.world.getTotalWorldTime() + 19L));
         player.getCooldownTracker().setCooldown(shield.getItem(),
@@ -259,31 +314,24 @@ public final class ShieldCombat {
         }
         AxisAlignedBB area = player.getEntityBoundingBox().grow(0.65D, 0.35D, 0.65D);
         for (EntityLivingBase target : player.world.getEntitiesWithinAABB(
-                EntityLivingBase.class, area,
-                e -> e != player && !e.isDead && !player.isOnSameTeam(e))) {
+                EntityLivingBase.class, area, e -> CombatTargetRules.canHit(player, e))) {
             if (!dash.hit.add(target.getEntityId())) continue;
             if (target.attackEntityFrom(new EntityDamageSource("tartsy_dash", player), 2.0F)) {
                 if (ModContent.STUNNED != null)
                     com.nanonaitor.arsenal.config.ConfiguredEffects.apply(target,
                         com.nanonaitor.arsenal.config.ArsenalConfig.effects.tartsyDash, 20, 0);
-                player.getEntityData().setBoolean(TARTSY_CRITICAL_READY, true);
+                com.nanonaitor.arsenal.data.TransientData.of(player).setBoolean(TARTSY_CRITICAL_READY, true);
                 target.knockBack(player, 0.55F, player.posX - target.posX,
                     player.posZ - target.posZ);
             }
         }
     }
 
-    private static boolean isVanillaCritical(EntityPlayer player) {
-        return player.fallDistance > 0.0F && !player.onGround && !player.isOnLadder()
-            && !player.isInWater() && !player.isPotionActive(net.minecraft.init.MobEffects.BLINDNESS)
-            && !player.isRiding() && !player.isSprinting();
-    }
-
     public static void bash(EntityPlayer player) {
         if (player.world.isRemote || !isBulwarkReady(player) || !isBulwarkOffCooldown(player)
             || !isGuarding(player, ItemSunWarBulwark.class)) return;
         long now = player.world.getTotalWorldTime();
-        NBTTagCompound data = player.getEntityData();
+        NBTTagCompound data = com.nanonaitor.arsenal.data.TransientData.of(player);
         if (now < data.getLong(BASH_READY)) return;
         ItemStack bulwark = findEquipped(player, ItemSunWarBulwark.class);
         if(AbilityUseRules.cooling(player,bulwark))return;
@@ -291,13 +339,13 @@ public final class ShieldCombat {
         data.setLong(BASH_READY, now + cooldown);
 
         AxisAlignedBB area = player.getEntityBoundingBox().grow(4.0D);
+        // canHit checks isDead rather than isEntityAlive(): MmmMmmMmmMmm's dummy
+        // reports itself as not alive while still being a valid damage target.
         List<EntityLivingBase> targets = player.world.getEntitiesWithinAABB(EntityLivingBase.class, area,
-            // MmmMmmMmmMmm's dummy reports isEntityAlive() as false while it
-            // is still a valid damage target. Match the proven Ram behavior.
-            target -> target != player && !target.isDead && !player.isOnSameTeam(target));
+            target -> CombatTargetRules.canHit(player, target));
         float damage = armorScaledDamage(player);
         for (EntityLivingBase target : targets) {
-            if (player.getDistanceSq(target) > 16.0D || !CombatTargetRules.canHit(player,target)) continue;
+            if (player.getDistanceSq(target) > 16.0D) continue;
             boolean hit = target.attackEntityFrom(
                 new EntityDamageSource("arsenal_bulwark_bash", player), damage);
             if (hit) {
@@ -305,8 +353,8 @@ public final class ShieldCombat {
                 target.knockBack(player, 1.4F, player.posX - target.posX, player.posZ - target.posZ);
             }
         }
-        player.getCooldownTracker().setCooldown(bulwark.getItem(), cooldown);
-        player.resetActiveHand();
+        // The guard is unbreakable: a bash only starts its own bash cooldown
+        // (BASH_READY) and leaves the bulwark raised and able to block.
         player.swingArm(player.getHeldItemMainhand() == bulwark ? EnumHand.MAIN_HAND : EnumHand.OFF_HAND);
         player.world.playSound(null, player.posX, player.posY, player.posZ,
             SoundEvents.ITEM_SHIELD_BLOCK, SoundCategory.PLAYERS, 1.2F, 0.65F);
@@ -315,7 +363,8 @@ public final class ShieldCombat {
         player.resetCooldown();
     }
 
-    private static float armorScaledDamage(EntityPlayer player) {
+    /** Sun-War Bulwark damage: one plus the wielder's live armor value. */
+    public static float armorScaledDamage(EntityPlayer player) {
         IAttributeInstance armor = player.getEntityAttribute(SharedMonsterAttributes.ARMOR);
         // The live attribute includes armor items, potion modifiers, Baubles and
         // quality-system modifiers rather than only counting worn armor pieces.
@@ -334,11 +383,6 @@ public final class ShieldCombat {
             ticks *= 2;
         }
         return ticks;
-    }
-
-    private static float attackChargeMultiplier(EntityPlayer player) {
-        float strength = player.getCooledAttackStrength(0.5F);
-        return 0.2F + strength * strength * 0.8F;
     }
 
     private static void updateBulwarkMovement(EntityPlayer player) {
@@ -366,22 +410,28 @@ public final class ShieldCombat {
 
     private static void updateOccupiedAttackSpeed(EntityPlayer player) {
         IAttributeInstance speed = player.getEntityAttribute(SharedMonsterAttributes.ATTACK_SPEED);
-        AttributeModifier old = speed.getModifier(OCCUPIED_ATTACK_UUID);
-        if (old != null) speed.removeModifier(old);
         boolean occupiedBulwark = player.getHeldItemMainhand().getItem() instanceof ItemSunWarBulwark
             && !player.getHeldItemOffhand().isEmpty()
             || player.getHeldItemOffhand().getItem() instanceof ItemSunWarBulwark
             && !player.getHeldItemMainhand().isEmpty();
-        if (occupiedBulwark) speed.applyModifier(new AttributeModifier(OCCUPIED_ATTACK_UUID,
+        // Only touch the attribute when the state changes; re-applying every
+        // tick marks it dirty and resends attribute packets to trackers.
+        boolean present = speed.getModifier(OCCUPIED_ATTACK_UUID) != null;
+        if (occupiedBulwark == present) return;
+        if (present) speed.removeModifier(OCCUPIED_ATTACK_UUID);
+        else speed.applyModifier(new AttributeModifier(OCCUPIED_ATTACK_UUID,
             "Occupied Sun-War Bulwark attack penalty", -0.50D, 2).setSaved(false));
     }
 
     private static void updateBallWindMovement(EntityPlayer player) {
         IAttributeInstance speed = player.getEntityAttribute(SharedMonsterAttributes.MOVEMENT_SPEED);
-        AttributeModifier old = speed.getModifier(BALL_WIND_MOVEMENT_UUID);
-        if (old != null) speed.removeModifier(old);
-        if (player.getHeldItemMainhand().getItem() instanceof ItemBallAndChain
-            && player.getEntityData().getBoolean("ArsenalBallWindBoost")) {
+        boolean winding = player.getHeldItemMainhand().getItem() instanceof ItemBallAndChain
+            && com.nanonaitor.arsenal.data.TransientData.of(player).getBoolean("ArsenalBallWindBoost");
+        boolean present = speed.getModifier(BALL_WIND_MOVEMENT_UUID) != null;
+        if (winding == present) return;
+        if (present) {
+            speed.removeModifier(BALL_WIND_MOVEMENT_UUID);
+        } else {
             speed.applyModifier(new AttributeModifier(BALL_WIND_MOVEMENT_UUID,
                 "Ball and Chain fast winding movement", -0.20D, 2).setSaved(false));
         }
@@ -416,13 +466,32 @@ public final class ShieldCombat {
             SoundEvents.ITEM_SHIELD_BLOCK, SoundCategory.PLAYERS, 1.0F, pitch);
     }
 
+    /** Shield-block confirmation layered with a high anvil ring, heard by everyone nearby. */
+    private static void playBallGuardClang(EntityPlayer player) {
+        playBlock(player, 0.9F);
+        player.world.playSound(null, player.posX, player.posY, player.posZ,
+            SoundEvents.BLOCK_ANVIL_LAND, SoundCategory.PLAYERS, 0.45F,
+            1.55F + player.getRNG().nextFloat() * 0.15F);
+    }
+
+    /** The Sun-War Bulwark stops every attack and, as before, magic damage too. */
     private static boolean isBulwarkCombatDamage(DamageSource source) {
-        if (isVoid(source) || source.isFireDamage()) return false;
+        return isAttackHit(source) || !isEnvironmentDamage(source) && source.isMagicDamage();
+    }
+
+    /**
+     * World and status damage that no Arsenal guard stops. Fire only counts
+     * here when nothing dealt it (burning, lava, fire blocks): fireballs and
+     * fire breath have an attacker and are blocked like any other attack.
+     */
+    private static boolean isEnvironmentDamage(DamageSource source) {
+        if (isVoid(source)) return true;
         String type = source.damageType.toLowerCase(Locale.ROOT);
         if ("fall".equals(type) || "drown".equals(type) || "starve".equals(type)
-            || "cactus".equals(type) || "inwall".equals(type) || "hotfloor".equals(type)) return false;
-        return source.getTrueSource() != null || source.getImmediateSource() != null
-            || source.isProjectile() || source.isExplosion() || source.isMagicDamage();
+            || "cactus".equals(type) || "inwall".equals(type) || "hotfloor".equals(type)
+            || "flyintowall".equals(type) || "cramming".equals(type)) return true;
+        return source.isFireDamage() && source.getTrueSource() == null
+            && source.getImmediateSource() == null;
     }
 
     private static boolean isVoid(DamageSource source) {

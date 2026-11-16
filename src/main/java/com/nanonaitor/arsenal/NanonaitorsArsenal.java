@@ -26,13 +26,14 @@ import net.minecraftforge.fml.common.event.FMLServerStartedEvent;
 public final class NanonaitorsArsenal {
     public static final String MOD_ID = "nanonaitors_arsenal";
     public static final String NAME = "Nanonaitor's Arsenal";
-    public static final String VERSION = "2.0.18";
+    public static final String VERSION = "2.0.20";
     public static final Logger LOGGER = LogManager.getLogger(NAME);
     public static final CreativeTabs CREATIVE_TAB = new ArsenalCreativeTab();
 
     @Mod.EventHandler
     public void preInit(FMLPreInitializationEvent event) {
         ModNetwork.init();
+        com.nanonaitor.arsenal.data.TransientData.register();
         LOGGER.info("Loading {} {} for Minecraft 1.12.2", NAME, VERSION);
     }
 

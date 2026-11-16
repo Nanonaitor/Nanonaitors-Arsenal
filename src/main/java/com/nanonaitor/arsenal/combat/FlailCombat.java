@@ -13,7 +13,6 @@ import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.SharedMonsterAttributes;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
-import net.minecraft.init.MobEffects;
 import net.minecraft.init.SoundEvents;
 import net.minecraft.item.EnumAction;
 import net.minecraft.item.ItemStack;
@@ -25,7 +24,6 @@ import net.minecraft.util.math.AxisAlignedBB;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraftforge.event.entity.player.AttackEntityEvent;
-import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.eventhandler.EventPriority;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
@@ -33,8 +31,6 @@ import net.minecraftforge.fml.common.network.NetworkRegistry;
 
 @Mod.EventBusSubscriber(modid = NanonaitorsArsenal.MOD_ID)
 public final class FlailCombat {
-    public static final double RADIUS = 4.0D;
-    public static final int SWING_INTERVAL_TICKS = 25;
     private static final Map<EntityPlayer, Long> LAST_SWING_TICK = new WeakHashMap<>();
 
     private FlailCombat() {}
@@ -44,15 +40,6 @@ public final class FlailCombat {
         if (com.nanonaitor.arsenal.compat.ScimitarAttackBridge.isControlledOffhandAttack()) return;
         if (event.getEntityPlayer().getHeldItemMainhand().getItem() instanceof ItemFlail) {
             event.setCanceled(true);
-        }
-    }
-
-    @SubscribeEvent(priority = EventPriority.HIGHEST)
-    public static void preventBlockBreaking(PlayerInteractEvent.LeftClickBlock event) {
-        if (event.getEntityPlayer().getHeldItemMainhand().getItem() instanceof ItemFlail) {
-            event.setCanceled(true);
-            event.setUseBlock(net.minecraftforge.fml.common.eventhandler.Event.Result.DENY);
-            event.setUseItem(net.minecraftforge.fml.common.eventhandler.Event.Result.DENY);
         }
     }
 
@@ -76,24 +63,19 @@ public final class FlailCombat {
 
         List<EntityLivingBase> targets = player.world.getEntitiesWithinAABB(
             EntityLivingBase.class, player.getEntityBoundingBox().grow(radius),
-            target -> target != player && !target.isDead
+            target -> CombatTargetRules.canHit(player, target)
                 && isHitboxWithinRange(player, target, radius, verticalRadius)
-                && !player.isOnSameTeam(target) && canSeeHitbox(player, target));
+                && canSeeHitbox(player, target));
 
         float baseDamage = (float) player.getEntityAttribute(
             SharedMonsterAttributes.ATTACK_DAMAGE).getAttributeValue();
-        boolean critical = player.fallDistance > 0.0F && !player.onGround
-            && !player.isOnLadder() && !player.isInWater()
-            && !player.isPotionActive(MobEffects.BLINDNESS) && !player.isRiding();
+        boolean critical = WeaponHits.isVanillaCritical(player);
         if (critical) {
             baseDamage *= 1.5F;
         }
 
         boolean hitAnything = false;
-        int fireAspect = EnchantmentHelper.getFireAspectModifier(player);
-        int knockback = EnchantmentHelper.getKnockbackModifier(player);
         for (EntityLivingBase target : targets) {
-            if (!CombatTargetRules.canHit(player, target)) continue;
             float enchantmentDamage = EnchantmentHelper.getModifierForCreature(
                 weapon, target.getCreatureAttribute());
             if (!target.attackEntityFrom(DamageSource.causePlayerDamage(player),
@@ -101,22 +83,13 @@ public final class FlailCombat {
                 continue;
             }
             hitAnything = true;
-            if (fireAspect > 0) {
-                target.setFire(fireAspect * 4);
-            }
-            if (knockback > 0) {
-                target.knockBack(player, knockback * 0.5F,
-                    MathHelper.sin(player.rotationYaw * 0.017453292F),
-                    -MathHelper.cos(player.rotationYaw * 0.017453292F));
-            }
             if (critical) {
                 player.onCriticalHit(target);
             }
             if (enchantmentDamage > 0.0F) {
                 player.onEnchantmentCritical(target);
             }
-            EnchantmentHelper.applyThornEnchantments(target, player);
-            EnchantmentHelper.applyArthropodEnchantments(player, target);
+            WeaponHits.applyPostHitEffects(player, target, 0.5F);
         }
 
         player.resetCooldown();

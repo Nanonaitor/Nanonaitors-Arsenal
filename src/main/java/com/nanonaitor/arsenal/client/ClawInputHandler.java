@@ -24,8 +24,7 @@ import org.lwjgl.input.Mouse;
 /** Gives paired Claws deterministic controls without requiring RLCombat. */
 @Mod.EventBusSubscriber(modid = NanonaitorsArsenal.MOD_ID, value = Side.CLIENT)
 public final class ClawInputHandler {
-    private static EntityPlayerSP rlCombatPlayer;
-    private static ItemStack rlCombatHiddenLinkedClaw = ItemStack.EMPTY;
+    private static final ClientInput.HiddenOffhand HIDDEN_LINKED_CLAW = new ClientInput.HiddenOffhand();
     private static long lastMainhandAutoAttackTick = Long.MIN_VALUE;
     private static long lastOffhandAutoAttackTick = Long.MIN_VALUE;
     private static long pendingOffhandAnimationTick = Long.MIN_VALUE;
@@ -76,10 +75,7 @@ public final class ClawInputHandler {
         // mouse event; Arsenal's custom packet still resolves against the real
         // server-side pair and the claw is restored at LOWEST priority below.
         if (Loader.isModLoaded("bettercombatmod")) {
-            restoreRlCombatOffhand();
-            rlCombatPlayer = player;
-            rlCombatHiddenLinkedClaw = player.getHeldItemOffhand();
-            player.inventory.offHandInventory.set(0, ItemStack.EMPTY);
+            HIDDEN_LINKED_CLAW.hide(player);
         }
         hit = minecraft.objectMouseOver;
         if (hit != null && hit.typeOfHit == RayTraceResult.Type.ENTITY
@@ -98,7 +94,7 @@ public final class ClawInputHandler {
     @SubscribeEvent(priority = EventPriority.LOWEST, receiveCanceled = true)
     public static void afterMouse(MouseEvent event) {
         if (event.getButton() == 1 && event.isButtonstate()) {
-            restoreRlCombatOffhand();
+            HIDDEN_LINKED_CLAW.restore();
         }
     }
 
@@ -110,7 +106,7 @@ public final class ClawInputHandler {
      */
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void onClientTickStart(TickEvent.ClientTickEvent event) {
-        restoreRlCombatOffhand();
+        HIDDEN_LINKED_CLAW.restore();
         Minecraft minecraft = Minecraft.getMinecraft();
         EntityPlayerSP player = minecraft.player;
         if (player == null || minecraft.currentScreen != null) return;
@@ -171,15 +167,13 @@ public final class ClawInputHandler {
         // weaker-offhand hit beside Arsenal's packet. Keep the item visible when
         // idle so synchronization does not cause first-person jitter.
         if (Loader.isModLoaded("everythingnunchaku") && offhandHeld) {
-            rlCombatPlayer = player;
-            rlCombatHiddenLinkedClaw = player.getHeldItemOffhand();
-            player.inventory.offHandInventory.set(0, ItemStack.EMPTY);
+            HIDDEN_LINKED_CLAW.hide(player);
         }
     }
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onClientTickEnd(TickEvent.ClientTickEvent event) {
-        restoreRlCombatOffhand();
+        HIDDEN_LINKED_CLAW.restore();
     }
 
     private static boolean isMainhandAttackHeld(Minecraft minecraft) {
@@ -198,26 +192,9 @@ public final class ClawInputHandler {
         // the RLCombat + Everything Nunchaku input path even while the physical
         // button remains held. Read a mouse-bound use key directly as a fallback;
         // keyboard/remapped bindings continue to use Minecraft's normal state.
-        if (!isPhysicalUseHeld(minecraft)) interactingWithEntity = false;
-        if (interactingWithEntity || isBlockInteractionTarget(minecraft)) {
-            return false;
-        }
-        if (minecraft.gameSettings.keyBindUseItem.isKeyDown()) {
-            return true;
-        }
-        int keyCode = minecraft.gameSettings.keyBindUseItem.getKeyCode();
-        int mouseButton = keyCode + 100;
-        return keyCode < 0 && mouseButton >= 0
-            && mouseButton < Mouse.getButtonCount()
-            && Mouse.isButtonDown(mouseButton);
-    }
-
-    private static boolean isPhysicalUseHeld(Minecraft minecraft) {
-        if (minecraft.gameSettings.keyBindUseItem.isKeyDown()) return true;
-        int keyCode = minecraft.gameSettings.keyBindUseItem.getKeyCode();
-        int mouseButton = keyCode + 100;
-        return keyCode < 0 && mouseButton >= 0
-            && mouseButton < Mouse.getButtonCount() && Mouse.isButtonDown(mouseButton);
+        boolean held = ClientInput.isUseKeyPhysicallyDown(minecraft);
+        if (!held) interactingWithEntity = false;
+        return held && !interactingWithEntity && !isBlockInteractionTarget(minecraft);
     }
 
     private static boolean isBlockInteractionTarget(Minecraft minecraft) {
@@ -240,13 +217,5 @@ public final class ClawInputHandler {
         player.swingingHand = EnumHand.OFF_HAND;
         player.swingProgressInt = -1;
         player.isSwingInProgress = true;
-    }
-
-    private static void restoreRlCombatOffhand() {
-        if (rlCombatPlayer != null && !rlCombatHiddenLinkedClaw.isEmpty()) {
-            rlCombatPlayer.inventory.offHandInventory.set(0, rlCombatHiddenLinkedClaw);
-        }
-        rlCombatPlayer = null;
-        rlCombatHiddenLinkedClaw = ItemStack.EMPTY;
     }
 }

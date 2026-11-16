@@ -2,7 +2,6 @@ package com.nanonaitor.arsenal.client;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.item.ItemShield;
 
 /** Prevent weapon abilities from competing with shields, without intercepting use.
  * Minecraft must try entity/block interactions before falling back to shield use.

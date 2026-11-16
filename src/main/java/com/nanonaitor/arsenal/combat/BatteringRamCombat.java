@@ -43,6 +43,9 @@ public final class BatteringRamCombat {
     private static final float BLOCK_BREAK_EXHAUSTION = 0.15F;
     private static final float ENTITY_HIT_EXHAUSTION = 0.30F;
     private static final Map<EntityPlayer, ChargeState> CHARGES = new WeakHashMap<>();
+    /** Block state -> lowest ram break level that can break it (NOT_BREAKABLE if none). */
+    private static final Map<IBlockState, Integer> BREAK_LEVELS = new java.util.HashMap<>();
+    private static final int NOT_BREAKABLE = Integer.MAX_VALUE;
 
     private BatteringRamCombat() {}
 
@@ -57,10 +60,8 @@ public final class BatteringRamCombat {
         }
         ChargeState state = CHARGES.get(player);
         if (state == null) {
-            float strength = player.getCooledAttackStrength(0.5F);
-            float damageMultiplier = 0.2F + strength * strength * 0.8F;
             state = new ChargeState(player.rotationYaw, player.rotationPitch,
-                damageMultiplier);
+                WeaponHits.chargeMultiplier(player));
             CHARGES.put(player, state);
             player.resetCooldown();
         }
@@ -139,8 +140,17 @@ public final class BatteringRamCombat {
             for (int vertical = 0; vertical <= 2 && !stack.isEmpty(); vertical++) {
                 BlockPos pos = column.up(vertical);
                 IBlockState blockState = player.world.getBlockState(pos);
-                if (!isBreakableRamBlock(blockState, tier) || blockState.getBlockHardness(
+                if (blockState.getMaterial() == Material.AIR
+                    || !isBreakableRamBlock(blockState, tier) || blockState.getBlockHardness(
                     player.world, pos) < 0.0F || !player.canPlayerEdit(pos, facing, stack)) {
+                    continue;
+                }
+                // Let claim and protection mods veto the break like a normal mining
+                // action. Posted directly: ForgeHooks.onBlockBreakEvent pre-cancels
+                // every break by a creative player holding a sword-class item.
+                if (net.minecraftforge.common.MinecraftForge.EVENT_BUS.post(
+                    new net.minecraftforge.event.world.BlockEvent.BreakEvent(
+                        player.world, pos, blockState, player))) {
                     continue;
                 }
                 if (player.world.destroyBlock(pos, true)) {
@@ -161,21 +171,31 @@ public final class BatteringRamCombat {
     }
 
     private static boolean isBreakableRamBlock(IBlockState state, WeaponTier tier) {
+        Integer level = BREAK_LEVELS.get(state);
+        if (level == null) {
+            level = requiredBreakLevel(state);
+            BREAK_LEVELS.put(state, level);
+        }
+        return level <= tier.getRamBreakLevel();
+    }
+
+    /** The ram break level a block needs; checked once per block state, then cached. */
+    private static int requiredBreakLevel(IBlockState state) {
         Block block = state.getBlock();
         if (block.hasTileEntity(state)) {
-            return false;
+            return NOT_BREAKABLE;
         }
         Material material = state.getMaterial();
         boolean softSoil = material == Material.GROUND || material == Material.GRASS
             || material == Material.SAND;
         if (softSoil) {
-            return true;
+            return 0;
         }
         boolean glass = material == Material.GLASS || block == Blocks.GLASS
             || block == Blocks.GLASS_PANE || block == Blocks.STAINED_GLASS
             || block == Blocks.STAINED_GLASS_PANE;
         if (glass) {
-            return true;
+            return 0;
         }
         String path = registryPath(block);
         boolean firedClay = material == Material.CLAY || block == Blocks.HARDENED_CLAY
@@ -184,16 +204,13 @@ public final class BatteringRamCombat {
         boolean log = isOreDictionaryMatch(state, "logWood")
             || registryPath(block).contains("log");
         boolean craftedWood = material == Material.WOOD && !log;
-        if (tier.getRamBreakLevel() >= 1 && craftedWood) {
-            return true;
+        if (craftedWood) {
+            return 1;
         }
-        if (tier.getRamBreakLevel() >= 2 && log) {
-            return true;
+        if (log || isCobblestoneDerivative(state) || firedClay) {
+            return 2;
         }
-        if (tier.getRamBreakLevel() >= 2 && (isCobblestoneDerivative(state) || firedClay)) {
-            return true;
-        }
-        return tier.getRamBreakLevel() >= 3 && isOrdinaryStoneDerivative(state);
+        return isOrdinaryStoneDerivative(state) ? 3 : NOT_BREAKABLE;
     }
 
     private static boolean isCobblestoneDerivative(IBlockState state) {
@@ -265,16 +282,13 @@ public final class BatteringRamCombat {
             EntityLivingBase.class,
             player.getEntityBoundingBox().offset(forwardX * 0.8D, 0.0D, forwardZ * 0.8D)
                 .grow(0.7D, 0.4D, 0.7D),
-            // MmmMmmMmmMmm's training dummy intentionally returns false from
-            // isEntityAlive() even though it accepts player damage. Match the
-            // flail's target rule so usable nonstandard living targets are hit.
-            target -> target != player && !target.isDead
-                && !player.isOnSameTeam(target)
+            // canHit checks isDead, not isEntityAlive(): MmmMmmMmmMmm's training
+            // dummy reports itself as not alive even though it accepts damage.
+            target -> CombatTargetRules.canHit(player, target)
                 && !state.hitEntities.contains(target.getEntityId()));
         float baseDamage = (float) player.getEntityAttribute(
             SharedMonsterAttributes.ATTACK_DAMAGE).getAttributeValue();
         for (EntityLivingBase target : targets) {
-            if (!CombatTargetRules.canHit(player, target)) continue;
             float enchantmentDamage = EnchantmentHelper.getModifierForCreature(
                 stack, target.getCreatureAttribute());
             boolean magic=com.nanonaitor.arsenal.config.ContentSwitches
@@ -296,7 +310,8 @@ public final class BatteringRamCombat {
             .enabledEnchantmentLevel(ModContent.MAGIC_LOG,stack)>0 ? 0.5F : 1.0F;
     }
 
-    private static boolean hasChargeEnergy(EntityPlayer player) {
+    /** Charging needs more than 6 food points unless the player is in creative. */
+    public static boolean hasChargeEnergy(EntityPlayer player) {
         return player.capabilities.isCreativeMode
             || player.getFoodStats().getFoodLevel() > MINIMUM_FOOD_TO_CHARGE;
     }

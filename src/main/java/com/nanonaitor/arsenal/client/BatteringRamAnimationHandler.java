@@ -5,7 +5,6 @@ import com.nanonaitor.arsenal.compat.ArsenalCompatManager;
 import com.nanonaitor.arsenal.item.ItemBatteringRam;
 import com.nanonaitor.arsenal.item.ItemSunWarBulwark;
 import com.nanonaitor.arsenal.item.ItemMorningStar;
-import com.nanonaitor.arsenal.item.ItemScimitar;
 import com.nanonaitor.arsenal.item.ItemBallAndChain;
 import java.util.Map;
 import java.util.WeakHashMap;
@@ -31,18 +30,18 @@ public final class BatteringRamAnimationHandler {
         boolean bulwark = player.getHeldItemMainhand().getItem() instanceof ItemSunWarBulwark
             || player.getHeldItemOffhand().getItem() instanceof ItemSunWarBulwark;
         boolean morning = player.getHeldItemMainhand().getItem() instanceof ItemMorningStar
-            && player.getEntityData().getBoolean("ArsenalMorningCharging");
+            && com.nanonaitor.arsenal.data.TransientData.of(player).getBoolean("ArsenalMorningCharging");
         boolean scimitars = com.nanonaitor.arsenal.compat.ScimitarShieldCompat.isGuarding(player);
         boolean ballGuard = player.getHeldItemMainhand().getItem() instanceof ItemBallAndChain
             && player.isHandActive() && player.getActiveItemStack() == player.getHeldItemMainhand()
-            && !player.getEntityData().getBoolean("ArsenalBallAndChainActive");
+            && !com.nanonaitor.arsenal.data.TransientData.of(player).getBoolean("ArsenalBallAndChainActive");
         if (!ram && !bulwark && !morning && !scimitars && !ballGuard) return;
         if (ram && !ArsenalCompatManager.canUseTwoHanded(player)) return;
         ModelPlayer model = event.getRenderer().getMainModel();
         PREVIOUS.put(player, new PreviousPose(model));
         boolean active = ram ? BatteringRamInputHandler.isCharging(player)
             : player.isHandActive()
-                || bulwark && player.getEntityData().getBoolean("ArsenalBulwarkMenuGuard");
+                || bulwark && com.nanonaitor.arsenal.combat.ShieldCombat.isMenuGuarding(player);
         if (morning) {
             // BOW_AND_ARROW is the only 1.12 vanilla pose which remains raised
             // after ModelBiped recalculates its angles. The item itself uses

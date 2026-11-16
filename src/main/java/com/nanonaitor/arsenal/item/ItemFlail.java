@@ -15,7 +15,7 @@ public final class ItemFlail extends ItemArsenalWeapon {
         super(tier, "flail", 2.0D + tier.getMaterial().getAttackDamage(), -3.2D);
         addPropertyOverride(new ResourceLocation("nanonaitors_arsenal", "swinging"),
             (stack, world, entity) -> entity != null
-                && entity.getEntityData().getBoolean("ArsenalFlailActive")
+                && com.nanonaitor.arsenal.data.TransientData.of(entity).getBoolean("ArsenalFlailActive")
                 && entity.getHeldItemMainhand().getItem() == this
                 && (!(entity instanceof EntityPlayer)
                     || !FlailCombat.isBlockingConventionalShield((EntityPlayer) entity))

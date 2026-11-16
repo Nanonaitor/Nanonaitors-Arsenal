@@ -18,8 +18,13 @@ public final class AbilityUseRules {
     public static boolean shield(EntityPlayer p,ItemStack s){return !s.isEmpty()&&s.getItem().isShield(s,p);}
     public static boolean cooling(EntityPlayer p,ItemStack s){return !s.isEmpty()&&p.getCooldownTracker().hasCooldown(s.getItem());}
     public static boolean activeShield(EntityPlayer p){return p.isHandActive()&&shield(p,p.getActiveItemStack());}
+    private static final String ATTACK_LOCK = "ArsenalShieldAttackLock";
     public static boolean weaponSuppressed(EntityPlayer p) { return activeShield(p)
-        || p.getEntityData().getLong("ArsenalShieldAttackLock") > p.world.getTotalWorldTime(); }
+        || com.nanonaitor.arsenal.data.TransientData.of(p).getLong(ATTACK_LOCK) > p.world.getTotalWorldTime(); }
+    /** Blocks Arsenal weapon abilities for the given ticks after a shield action takes over. */
+    public static void lockWeaponAttacks(EntityPlayer p, int ticks) {
+        com.nanonaitor.arsenal.data.TransientData.of(p).setLong(ATTACK_LOCK, p.world.getTotalWorldTime() + ticks);
+    }
     @SubscribeEvent(priority=EventPriority.LOWEST)
     public static void use(PlayerInteractEvent.RightClickItem e){
         EntityPlayer p=e.getEntityPlayer();ItemStack s=p.getHeldItem(e.getHand());

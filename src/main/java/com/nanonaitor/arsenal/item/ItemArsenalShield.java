@@ -32,7 +32,7 @@ public abstract class ItemArsenalShield extends ItemShield {
         addPropertyOverride(new ResourceLocation("blocking"), (stack, world, entity) ->
             entity != null && (entity.isHandActive() && entity.getActiveItemStack() == stack
                 || this instanceof ItemSunWarBulwark
-                    && entity.getEntityData().getBoolean("ArsenalBulwarkMenuGuard")
+                    && com.nanonaitor.arsenal.combat.ShieldCombat.isMenuGuarding(entity)
                     && (entity.getHeldItemMainhand() == stack
                         || entity.getHeldItemOffhand() == stack)) ? 1.0F : 0.0F);
     }

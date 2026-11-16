@@ -4,8 +4,6 @@ import com.nanonaitor.arsenal.compat.SilverSetBonusCompat;
 import com.nanonaitor.arsenal.item.ItemScimitar;
 import com.nanonaitor.arsenal.item.WeaponTier;
 import net.minecraft.entity.EntityLivingBase;
-import net.minecraft.init.MobEffects;
-import net.minecraft.potion.PotionEffect;
 
 public final class ScimitarCombat {
     public static final int WEAKNESS_DURATION_TICKS = 10 * 20;

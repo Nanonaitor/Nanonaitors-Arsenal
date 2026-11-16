@@ -2,7 +2,6 @@ package com.nanonaitor.arsenal.item;
 
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
-import com.nanonaitor.arsenal.compat.ArsenalCompatManager;
 import java.util.List;
 import net.minecraft.entity.SharedMonsterAttributes;
 import net.minecraft.entity.ai.attributes.AttributeModifier;
@@ -30,14 +29,9 @@ public final class ItemSunWarBulwark extends ItemArsenalShield {
         if(player.world.isRemote || stack.isEmpty())return;
         if(!stack.hasTagCompound())stack.setTagCompound(new net.minecraft.nbt.NBTTagCompound());
         if(strain(stack)==0)stack.getTagCompound().setLong("ArsenalGuardRecovery",player.world.getTotalWorldTime());
-        int load=strain(stack)+1;
-        if(load>=com.nanonaitor.arsenal.combat.GuardRules.MAX_STRAIN){
-            load=0;
-            player.getCooldownTracker().setCooldown(stack.getItem(),com.nanonaitor.arsenal.combat.GuardRules.RECOVERY_TICKS);
-            player.getEntityData().setBoolean("ArsenalBulwarkMenuGuard",false);
-            player.resetActiveHand();
-            player.world.setEntityState(player,(byte)30);
-        }
+        // Strain only shows how hard the guard is being pressed. The bulwark's
+        // guard is unbreakable, so a full bar never drops or disables it.
+        int load=Math.min(com.nanonaitor.arsenal.combat.GuardRules.MAX_STRAIN,strain(stack)+1);
         stack.getTagCompound().setInteger("ArsenalGuardStrain",load);
         if(!stack.getTagCompound().hasKey("ArsenalGuardRecovery"))
             stack.getTagCompound().setLong("ArsenalGuardRecovery",player.world.getTotalWorldTime());
@@ -88,7 +82,7 @@ public final class ItemSunWarBulwark extends ItemArsenalShield {
 
     @Override protected void appendShieldDetails(List<String> tooltip) {
         line(tooltip, TextFormatting.GRAY, "Blocks from every direction; attack while guarding to bash.");
-        line(tooltip, TextFormatting.GRAY, "Guard strain can force a short recovery.");
+        line(tooltip, TextFormatting.GRAY, "Its guard cannot be broken; the strain bar shows pressure.");
         line(tooltip, TextFormatting.RED, "Two-Handed");
     }
 }

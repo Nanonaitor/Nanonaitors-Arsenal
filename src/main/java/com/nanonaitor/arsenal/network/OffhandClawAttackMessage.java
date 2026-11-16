@@ -35,7 +35,10 @@ public final class OffhandClawAttackMessage implements IMessage {
             EntityPlayerMP player = context.getServerHandler().player;
             player.getServerWorld().addScheduledTask(() -> {
                 Entity target = player.world.getEntityByID(message.targetId);
-                if (target instanceof EntityLivingBase && player.getDistanceSq(target) <= 36.0D) {
+                // Same reach rule as vanilla's attack packet: 6 blocks with line
+                // of sight, 3 blocks through walls.
+                double maxDistanceSq = target != null && player.canEntityBeSeen(target) ? 36.0D : 9.0D;
+                if (target instanceof EntityLivingBase && player.getDistanceSq(target) <= maxDistanceSq) {
                     ClawOffhandAttackHandler.tryServerAttack(player, (EntityLivingBase) target);
                 }
             });

@@ -1,6 +1,5 @@
 package com.nanonaitor.arsenal.item;
 
-import com.nanonaitor.arsenal.compat.ArsenalCompatManager;
 import com.nanonaitor.arsenal.client.ArsenalTooltip;
 import java.util.List;
 import net.minecraft.client.util.ITooltipFlag;
@@ -14,7 +13,7 @@ import net.minecraft.world.World;
 public final class ItemBatteringRam extends ItemArsenalWeapon {
     public ItemBatteringRam(WeaponTier tier) {
         super(tier, "battering_ram", 7.0D + tier.getMaterial().getAttackDamage(),
-            tier == WeaponTier.GOLD ? -3.0D : -3.6D);
+            tier == WeaponTier.GOLD ? -3.0D : -3.6D, HEAVY_DURABILITY_SCALE);
     }
 
     @Override

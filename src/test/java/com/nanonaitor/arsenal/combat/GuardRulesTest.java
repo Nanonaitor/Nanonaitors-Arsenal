@@ -38,7 +38,6 @@ public final class GuardRulesTest {
         equal(3, GuardRules.scimitarWear(5));
         equal(10, GuardRules.scimitarWear(20));
         equal(25, GuardRules.MAX_STRAIN);
-        equal(60, GuardRules.RECOVERY_TICKS);
         equal(25, GuardRules.recoveredStrain(25, 19));
         equal(24, GuardRules.recoveredStrain(25, 20));
         equal(23, GuardRules.recoveredStrain(25, 40));

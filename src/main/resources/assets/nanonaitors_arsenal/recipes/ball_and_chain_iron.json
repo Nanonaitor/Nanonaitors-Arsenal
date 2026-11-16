@@ -11,7 +11,8 @@
       "ore": "chainIron"
     },
     "B": {
-      "item": "minecraft:iron_block"
+      "type": "forge:ore_dict",
+      "ore": "blockIron"
     }
   },
   "result": {

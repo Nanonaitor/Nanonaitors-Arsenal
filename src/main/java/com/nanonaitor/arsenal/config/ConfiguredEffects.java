@@ -13,6 +13,9 @@ import net.minecraftforge.fml.common.registry.ForgeRegistries;
 
 public final class ConfiguredEffects {
     private static final Set<String> WARNED = new HashSet<>();
+    /** Parsed specs keyed by entry and defaults; config edits produce new keys. */
+    private static final java.util.Map<String, EffectSpec> PARSED =
+        new java.util.concurrent.ConcurrentHashMap<>();
     private ConfiguredEffects() {}
     public static boolean stunImmune(EntityLivingBase target) {
         ResourceLocation id = EntityList.getKey(target);
@@ -26,7 +29,9 @@ public final class ConfiguredEffects {
         for (String entry : entries) {
             if (entry == null || entry.trim().isEmpty()) continue;
             try {
-                EffectSpec spec = EffectSpec.parse(entry, defaultTicks, defaultAmplifier);
+                EffectSpec spec = PARSED.computeIfAbsent(
+                    entry + '|' + defaultTicks + '|' + defaultAmplifier,
+                    key -> EffectSpec.parse(entry, defaultTicks, defaultAmplifier));
                 Potion potion = ForgeRegistries.POTIONS.getValue(new ResourceLocation(spec.id));
                 if (potion == null) { warn(entry); continue; }
                 target.addPotionEffect(new PotionEffect(potion, spec.ticks, spec.amplifier, false, true));

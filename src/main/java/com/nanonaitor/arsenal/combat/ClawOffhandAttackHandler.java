@@ -66,7 +66,7 @@ public final class ClawOffhandAttackHandler {
             SharedMonsterAttributes.ATTACK_DAMAGE).getAttributeValue();
         float enchantmentDamage = EnchantmentHelper.getModifierForCreature(
             main, target.getCreatureAttribute());
-        float damage = baseDamage * (0.2F + strength * strength * 0.8F)
+        float damage = baseDamage * WeaponHits.chargeMultiplier(strength)
             + enchantmentDamage * strength;
 
         // RLCombat inspects the equipped offhand while resolving player damage
@@ -100,18 +100,7 @@ public final class ClawOffhandAttackHandler {
         main.damageItem(1, player);
         player.addExhaustion(0.1F);
 
-        int fireAspect = EnchantmentHelper.getFireAspectModifier(player);
-        if (fireAspect > 0) {
-            target.setFire(fireAspect * 4);
-        }
-        int knockback = EnchantmentHelper.getKnockbackModifier(player);
-        if (knockback > 0) {
-            target.knockBack(player, knockback * 0.5F,
-                MathHelper.sin(player.rotationYaw * 0.017453292F),
-                -MathHelper.cos(player.rotationYaw * 0.017453292F));
-        }
-        EnchantmentHelper.applyThornEnchantments(target, player);
-        EnchantmentHelper.applyArthropodEnchantments(player, target);
+        WeaponHits.applyPostHitEffects(player, target, 0.5F);
 
         // Play impact feedback only after the server confirms damage. Using no
         // excluded player lets the wielder and nearby players hear it exactly

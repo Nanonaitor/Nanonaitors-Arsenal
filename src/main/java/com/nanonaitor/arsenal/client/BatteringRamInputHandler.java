@@ -47,8 +47,7 @@ public final class BatteringRamInputHandler {
             return;
         }
         boolean holdingRam = player.getHeldItemMainhand().getItem() instanceof ItemBatteringRam;
-        boolean hasChargeEnergy = player.capabilities.isCreativeMode
-            || player.getFoodStats().getFoodLevel() > 6;
+        boolean hasChargeEnergy = com.nanonaitor.arsenal.combat.BatteringRamCombat.hasChargeEnergy(player);
         boolean canCharge = holdingRam && ArsenalCompatManager.canUseTwoHanded(player)
             && !ShieldUsePriority.requested(player)
             && !com.nanonaitor.arsenal.combat.AbilityUseRules.cooling(player,player.getHeldItemMainhand())
