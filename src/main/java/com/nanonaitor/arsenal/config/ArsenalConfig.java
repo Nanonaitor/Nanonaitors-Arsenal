@@ -58,8 +58,11 @@ public final class ArsenalConfig {
         @Config.Comment({"Effect lists: modid:potion@level@seconds, e.g. minecraft:weakness@2@10.",
             "Levels are 1-based. Use tier for the existing tier-dependent level/duration.",
             "Empty lists or blank entries apply no effect. Missing optional mod effects are skipped.",
-            "These replace the named potion procs, not direct damage, armor piercing, fire or lightning."})
-        public String[] scimitarHit = {"minecraft:weakness@tier@10"};
+            "These replace the named potion procs, not direct damage, armor piercing, fire or lightning.",
+            "scimitarHitExtra: optional effects on every scimitar hit, empty by default; the scimitar's",
+            "ability is now the block counter (see scimitars). The old default was minecraft:weakness@tier@10."})
+        @Config.Name("scimitarHitExtra")
+        public String[] scimitarHit = {};
         public String[] morningStarFracture = {"nanonaitors_arsenal:armor_fracture@tier@tier"};
         public String[] morningStarStun = {"nanonaitors_arsenal:stunned@1@3"};
         public String[] ballPlayerFracture = {"nanonaitors_arsenal:armor_fracture@tier@10"};
@@ -84,6 +87,33 @@ public final class ArsenalConfig {
 
     @Config.Name("morningStar")
     public static MorningStar morningStar = new MorningStar();
+
+    @Config.Name("scimitars")
+    @Config.Comment("Scimitar counter: blocking an attack while holding a scimitar (dual-scimitar guard or any shield) empowers the next scimitar hit or shield bash.")
+    public static Scimitars scimitars = new Scimitars();
+
+    public static final class Scimitars {
+        @Config.Name("counterMultiplier")
+        @Config.Comment("Damage multiplier for the next scimitar hit or shield bash after a block (the bash's combined dual-wield damage is multiplied).")
+        @Config.RangeDouble(min = 1.0D, max = 5.0D)
+        public double counterMultiplier = 1.3D;
+
+        @Config.Name("counterWindowSeconds")
+        @Config.Comment("How long a block's counter stays ready before fading.")
+        @Config.RangeInt(min = 1, max = 60)
+        public int counterWindowSeconds = 5;
+    }
+
+    @Config.Name("sounds")
+    @Config.Comment("Client-side: loudness of Arsenal's own weapon sounds.")
+    public static Sounds sounds = new Sounds();
+
+    public static final class Sounds {
+        @Config.Name("volume")
+        @Config.Comment("Multiplier for Arsenal's own weapon sounds (chains, ram, claws, bashes, reflects). 1 = normal, 0 = silent.")
+        @Config.RangeDouble(min = 0.0D, max = 2.0D)
+        public double volume = 1.0D;
+    }
 
     @Config.Name("animations")
     @Config.Comment("Client-side third-person weapon animations. Changes apply immediately.")

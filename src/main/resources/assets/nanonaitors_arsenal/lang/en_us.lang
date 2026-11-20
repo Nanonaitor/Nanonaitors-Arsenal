@@ -176,3 +176,7 @@ enchantment.nanonaitors_arsenal.endure=Endure
 enchantment.nanonaitors_arsenal.endure.desc=Scimitars resist guard breaks and recover from failed resistance faster.
 subtitles.nanonaitors_arsenal.ball_chain.rattle=Chain rattles
 subtitles.nanonaitors_arsenal.ball_chain.crash=Chain clashes
+subtitles.nanonaitors_arsenal.battering_ram.charge=Battering Ram creaks
+subtitles.nanonaitors_arsenal.battering_ram.impact=Battering Ram bashes
+subtitles.nanonaitors_arsenal.claws.slash=Claws slash
+subtitles.nanonaitors_arsenal.claws.ring=Claws ring

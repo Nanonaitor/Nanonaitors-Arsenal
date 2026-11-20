@@ -22,6 +22,8 @@ import net.minecraftforge.fml.relauncher.Side;
 @Mod.EventBusSubscriber(modid = NanonaitorsArsenal.MOD_ID, value = Side.CLIENT)
 public final class BallAndChainAnimationHandler {
     private static final Map<EntityPlayer, WindupState> WINDUPS = new WeakHashMap<>();
+    /** The swung and thrown head is drawn a size up from the original. */
+    private static final double BALL_SIZE = 1.3D;
     private static final Map<EntityPlayer, ReleaseState> RELEASES = new WeakHashMap<>();
 
     private BallAndChainAnimationHandler() {}
@@ -255,7 +257,10 @@ public final class BallAndChainAnimationHandler {
                 by = frame.feetY + (right[1] + left[1]) * 0.5D + 0.05D;
                 bz = frame.feetZ + (right[2] + left[2]) * 0.5D + fz * 0.30D;
             }
-            WeaponPartRenderer.renderBall(player.getHeldItemMainhand(), bx, by, bz, 0.421D);
+            // The chain ring faces back toward the hands.
+            WeaponPartRenderer.renderBall(player.getHeldItemMainhand(), bx, by, bz, 0.421D * 1.15D,
+                -(player.prevRenderYawOffset + (player.renderYawOffset - player.prevRenderYawOffset)
+                    * event.getPartialTicks()));
         }
     }
 
@@ -277,7 +282,7 @@ public final class BallAndChainAnimationHandler {
         double ballX = frame.anchorX + windupX * distance;
         double ballY = frame.anchorY + Math.sin(angle) * 0.72D * reachScale;
         double ballZ = frame.anchorZ + windupZ * distance;
-        renderChainAndBall(player, frame, ballX, ballY, ballZ, 0.264D, partialTicks);
+        renderChainAndBall(player, frame, ballX, ballY, ballZ, 0.264D * BALL_SIZE, partialTicks, 0.0F);
     }
 
     private static void renderRelease(EntityPlayer player, ReleaseState state,
@@ -290,8 +295,19 @@ public final class BallAndChainAnimationHandler {
         double ballX = frame.anchorX + frame.forwardX * distance;
         double ballY = frame.anchorY + frame.forwardY * distance;
         double ballZ = frame.anchorZ + frame.forwardZ * distance;
-        renderChainAndBall(player, frame, ballX, ballY, ballZ,
-            0.24D + state.charge * 0.025D, partialTicks);
+        double radius = (0.24D + state.charge * 0.025D) * BALL_SIZE;
+        if (state.charge >= 3) {
+            // A fully charged throw leaves a fading trail behind the ball.
+            for (int i = 1; i <= 2; i++) {
+                double lag = Math.max(0.0D, progress - i * 0.05D);
+                double trail = state.distance * Math.sin(lag * Math.PI);
+                WeaponPartRenderer.renderBallTrail(player.getHeldItemMainhand(),
+                    frame.anchorX + frame.forwardX * trail, frame.anchorY + frame.forwardY * trail,
+                    frame.anchorZ + frame.forwardZ * trail, radius, i == 1 ? 0.35F : 0.18F);
+            }
+        }
+        // The ball tumbles around the chain line in flight.
+        renderChainAndBall(player, frame, ballX, ballY, ballZ, radius, partialTicks, (float) (age * 38.0D));
     }
 
     private static RenderFrame getFrame(EntityPlayer player, float partialTicks,
@@ -324,7 +340,7 @@ public final class BallAndChainAnimationHandler {
      */
     private static void renderChainAndBall(EntityPlayer player, RenderFrame frame,
                                            double ballX, double ballY, double ballZ,
-                                           double radius, float partialTicks) {
+                                           double radius, float partialTicks, float spin) {
         double fromX = frame.anchorX, fromY = frame.anchorY, fromZ = frame.anchorZ;
         double[] hand = com.nanonaitor.arsenal.client.pose.WeaponPoses.weaponHandOffset(player, partialTicks);
         if (hand != null) {
@@ -332,8 +348,8 @@ public final class BallAndChainAnimationHandler {
             fromY = frame.feetY + hand[1];
             fromZ = frame.feetZ + hand[2];
         }
-        WeaponPartRenderer.renderStraightChainAndBall(player.getHeldItemMainhand(),
-            fromX, fromY, fromZ, ballX, ballY, ballZ, radius);
+        WeaponPartRenderer.renderSpinningChainAndBall(player.getHeldItemMainhand(),
+            fromX, fromY, fromZ, ballX, ballY, ballZ, radius, spin);
         // Two-handed (empty off-hand): the other hand holds the slack of the chain.
         double[] other = player.getHeldItemOffhand().isEmpty() && hand != null
             ? com.nanonaitor.arsenal.client.pose.WeaponPoses.handOffset(player, partialTicks, false) : null;

@@ -105,9 +105,7 @@ public final class ClawOffhandAttackHandler {
         // Play impact feedback only after the server confirms damage. Using no
         // excluded player lets the wielder and nearby players hear it exactly
         // once; whiffs remain silent while still animating on the client.
-        player.world.playSound(null, player.posX, player.posY, player.posZ,
-            SoundEvents.ENTITY_PLAYER_ATTACK_SWEEP, player.getSoundCategory(),
-            0.8F, 1.15F);
+        ClawSounds.slash(player);
     }
 
     @SubscribeEvent

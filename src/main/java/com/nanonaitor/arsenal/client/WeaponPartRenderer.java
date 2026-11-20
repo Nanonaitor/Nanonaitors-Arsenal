@@ -16,7 +16,6 @@ public final class WeaponPartRenderer {
     public static final int BALL = 2;
     public static final int BALL_TRAIL_NEAR = 4;
     public static final int BALL_TRAIL_FAR = 5;
-    private static final double LINK_SPACING = 0.28D;
 
     private WeaponPartRenderer() {}
 
@@ -25,7 +24,7 @@ public final class WeaponPartRenderer {
                                           double ballX, double ballY, double ballZ,
                                           double ballRadius) {
         renderChainAndBall(held, anchorX, anchorY, anchorZ,
-            ballX, ballY, ballZ, ballRadius, false);
+            ballX, ballY, ballZ, ballRadius, 0.0F);
     }
 
     public static void renderStraightChainAndBall(ItemStack held,
@@ -33,14 +32,38 @@ public final class WeaponPartRenderer {
                                                   double ballX, double ballY, double ballZ,
                                                   double ballRadius) {
         renderChainAndBall(held, anchorX, anchorY, anchorZ,
-            ballX, ballY, ballZ, ballRadius, true);
+            ballX, ballY, ballZ, ballRadius, 0.0F);
+    }
+
+    /**
+     * @param spin roll of the head around the chain line, in degrees: a thrown
+     *             ball tumbles while its ring keeps facing the chain
+     */
+    public static void renderSpinningChainAndBall(ItemStack held,
+                                                  double anchorX, double anchorY, double anchorZ,
+                                                  double ballX, double ballY, double ballZ,
+                                                  double ballRadius, float spin) {
+        renderChainAndBall(held, anchorX, anchorY, anchorZ,
+            ballX, ballY, ballZ, ballRadius, spin);
+    }
+
+    /** A see-through copy of the head trailing a fully charged throw. */
+    public static void renderBallTrail(ItemStack held, double x, double y, double z,
+                                       double radius, float opacity) {
+        ChainRenderer.renderGhostBall(animationPart(held, BALL), x, y, z, radius * 2.0D, opacity);
     }
 
     /** Renders only the tier head, used when a Ball & Chain is raised as a shield. */
     public static void renderBall(ItemStack held, double x, double y, double z,
                                   double radius) {
+        renderBall(held, x, y, z, radius, 0.0F);
+    }
+
+    /** @param yaw turns the head's chain ring to face this way (degrees, as entity yaw) */
+    public static void renderBall(ItemStack held, double x, double y, double z,
+                                  double radius, float yaw) {
         renderPart(animationPart(held, BALL), x, y, z, radius * 2.0D,
-            0.0F, 0.0F, 0.0F);
+            yaw, 0.0F, 0.0F);
     }
 
     /** Renders a baked-alpha ball-only echo without writing to the depth buffer. */
@@ -135,17 +158,40 @@ public final class WeaponPartRenderer {
         return held.getItem() instanceof ItemScimitar;
     }
 
+    /**
+     * A chain that bends around a point on its way to the head (the flail's chain
+     * passing over the wielder's head instead of through it).
+     */
+    public static void renderChainAndBallVia(ItemStack held,
+                                             double anchorX, double anchorY, double anchorZ,
+                                             double viaX, double viaY, double viaZ,
+                                             double ballX, double ballY, double ballZ,
+                                             double ballRadius) {
+        ItemStack ball = animationPart(held, BALL);
+        double dx = ballX - viaX, dy = ballY - viaY, dz = ballZ - viaZ;
+        double length = Math.sqrt(dx * dx + dy * dy + dz * dz);
+        double k = length < 1.0E-4D ? 0.0D : Math.max(0.0D, length - ballRadius * 0.8D) / length;
+        ChainRenderer.render(ball, new double[][] {{anchorX, anchorY, anchorZ}, {viaX, viaY, viaZ},
+            {viaX + dx * k, viaY + dy * k, viaZ + dz * k}});
+        float yaw = (float) Math.toDegrees(Math.atan2(dx, dz));
+        float tilt = length < 1.0E-4D ? 0.0F
+            : (float) -Math.toDegrees(Math.asin(Math.max(-1.0D, Math.min(1.0D, dy / length))));
+        renderPart(ball, ballX, ballY, ballZ, ballRadius * 2.0D, yaw, tilt, 0.0F);
+    }
+
     private static void renderChainAndBall(ItemStack held,
                                            double anchorX, double anchorY, double anchorZ,
                                            double ballX, double ballY, double ballZ,
-                                           double ballRadius, boolean straightLinks) {
+                                           double ballRadius, float spin) {
         ItemStack ball = animationPart(held, BALL);
         double dx = ballX - anchorX;
         double dy = ballY - anchorY;
         double dz = ballZ - anchorZ;
         double length = Math.sqrt(dx * dx + dy * dy + dz * dz);
-        int links = Math.max(1, (int) Math.ceil(length / LINK_SPACING));
         float yaw = (float) Math.toDegrees(Math.atan2(dx, dz));
+        // Tip the head so its chain ring (model -Z) points back along the chain.
+        float tilt = length < 1.0E-4D ? 0.0F
+            : (float) -Math.toDegrees(Math.asin(Math.max(-1.0D, Math.min(1.0D, dy / length))));
         // Stop the chain at the ball's surface so links do not poke through it.
         double reach = Math.max(0.0D, length - ballRadius * 0.8D);
         if (length > 1.0E-4D && reach > 0.0D) {
@@ -154,7 +200,7 @@ public final class WeaponPartRenderer {
                 {anchorX, anchorY, anchorZ}, {anchorX + dx * k, anchorY + dy * k, anchorZ + dz * k}});
         }
         renderPart(ball, ballX, ballY, ballZ, ballRadius * 2.0D,
-            yaw, 0.0F, 0.0F);
+            yaw, tilt, spin);
     }
 
     /**
@@ -175,6 +221,34 @@ public final class WeaponPartRenderer {
         ChainRenderer.render(animationPart(held, BALL), path);
     }
 
+    private static final ItemStack STICK = new ItemStack(net.minecraft.init.Items.STICK);
+
+    /**
+     * The vanilla stick sprite laid from one camera-relative point to another
+     * (the flail's handle): its diagonal runs along the line, at the usual item scale.
+     */
+    public static void renderStickSprite(double fromX, double fromY, double fromZ,
+                                         double toX, double toY, double toZ) {
+        double dx = toX - fromX, dy = toY - fromY, dz = toZ - fromZ;
+        double length = Math.sqrt(dx * dx + dy * dy + dz * dz);
+        if (length < 1.0E-4D) return;
+        float yaw = (float) Math.toDegrees(Math.atan2(dx, dz));
+        float pitch = (float) Math.toDegrees(Math.acos(Math.max(-1.0D, Math.min(1.0D, dy / length))));
+        // The stick is drawn corner to corner, about 14 px on each side (19.8 px diagonal).
+        double scale = length / (19.8D / 16.0D);
+        GlStateManager.pushMatrix();
+        GlStateManager.translate((fromX + toX) * 0.5D, (fromY + toY) * 0.5D, (fromZ + toZ) * 0.5D);
+        GlStateManager.rotate(yaw, 0.0F, 1.0F, 0.0F);   // then turn toward the tip
+        GlStateManager.rotate(pitch, 1.0F, 0.0F, 0.0F); // tip +Y over toward it
+        GlStateManager.rotate(45.0F, 0.0F, 0.0F, 1.0F); // sprite diagonal onto +Y
+        GlStateManager.scale(scale, scale, scale);
+        ChainRenderer.applyWorldLight(fromX, fromY, fromZ);
+        RenderHelper.enableStandardItemLighting();
+        Minecraft.getMinecraft().getRenderItem().renderItem(STICK, ItemCameraTransforms.TransformType.NONE);
+        RenderHelper.disableStandardItemLighting();
+        GlStateManager.popMatrix();
+    }
+
     /** Render-only part stacks, built once per item and part instead of every frame. */
     private static final java.util.Map<net.minecraft.item.Item, java.util.Map<Integer, ItemStack>> PART_STACKS =
         new java.util.IdentityHashMap<>();
@@ -192,12 +266,12 @@ public final class WeaponPartRenderer {
 
     private static void renderPart(ItemStack stack, double x, double y, double z,
                                    double scale, float yaw, float tilt,
-                                   float alternatingRotation) {
+                                   float roll) {
         GlStateManager.pushMatrix();
         GlStateManager.translate(x, y, z);
         GlStateManager.rotate(yaw, 0.0F, 1.0F, 0.0F);
         GlStateManager.rotate(tilt, 1.0F, 0.0F, 0.0F);
-        GlStateManager.rotate(alternatingRotation, 0.0F, 1.0F, 0.0F);
+        GlStateManager.rotate(roll, 0.0F, 0.0F, 1.0F);
         GlStateManager.scale(scale, scale, scale);
         // Shade the faces like a held item and take the light level where it is,
         // instead of drawing flat full-bright (which washed pale metals out to white).

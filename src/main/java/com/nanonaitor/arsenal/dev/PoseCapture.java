@@ -73,6 +73,8 @@ public final class PoseCapture {
         float[] angles;
         /** Puts the player in a real attack state every tick (wind-up, throw, orbit), or null. */
         Consumer<EntityPlayer> live;
+        /** Shoot from the first-person view instead of the orbiting third-person one. */
+        boolean firstPerson;
         Shot(String sheet, String label, String main, String off, Consumer<WeaponPoses.Input> override) {
             this.sheet = sheet; this.label = label; this.main = main; this.off = off; this.override = override;
         }
@@ -102,7 +104,9 @@ public final class PoseCapture {
         String ram = NanonaitorsArsenal.MOD_ID + ":battering_ram_iron";
         add("battering_ram", "idle, two hands", ram, null, in -> in.active = false);
         add("battering_ram", "ramming", ram, null, in -> in.active = true);
-        add("battering_ram", "one hand (plays normally)", ram, torch, in -> {});
+        add("battering_ram", "attack lunge 25%", ram, null, in -> { in.active = false; in.attackPhase = 0.25F; });
+        add("battering_ram", "one hand, at the hip", ram, torch, in -> in.attackPhase = -1);
+        add("battering_ram", "one hand lunge 25%", ram, torch, in -> in.attackPhase = 0.25F);
 
         String staff = NanonaitorsArsenal.MOD_ID + ":blade_staff_iron";
         add("blade_staff", "idle, two hands", staff, null, in -> { in.active = false; in.attackPhase = -1; });
@@ -167,6 +171,29 @@ public final class PoseCapture {
                 .raise = net.minecraft.util.EnumHand.MAIN_HAND;
         }
 
+        for (float phase : new float[] {0.3F, 0.55F}) {
+            Shot first = add("scimitars", "first person bash " + Math.round(phase * 100) + "%", scimitar, scimitar,
+                in -> in.attackPhase = phase);
+            first.raise = net.minecraft.util.EnumHand.MAIN_HAND;
+            first.firstPerson = true;
+            first.live = p -> com.nanonaitor.arsenal.client.pose.AttackTiming.debugPhase = phase;
+        }
+
+        String claws = NanonaitorsArsenal.MOD_ID + ":claws_iron";
+        String linked = NanonaitorsArsenal.MOD_ID + ":linked_claw_iron";
+        add("claws", "ready", claws, linked, in -> in.attackPhase = -1);
+        for (float phase : new float[] {0.12F, 0.3F, 0.45F}) {
+            add("claws", "right rake " + Math.round(phase * 100) + "%", claws, linked,
+                in -> { in.attackPhase = phase; in.attackCount = 1; in.offAttackPhase = -1; })
+                .live = p -> com.nanonaitor.arsenal.client.pose.AttackTiming.debugPhase = phase;
+        }
+        add("claws", "both hands 35%", claws, linked,
+            in -> { in.attackPhase = 0.35F; in.attackCount = 1; in.offAttackPhase = 0.35F; in.offAttackCount = 1; })
+            .live = p -> com.nanonaitor.arsenal.client.pose.AttackTiming.debugPhase = 0.35F;
+        add("claws", "third-hit lunge 40%", claws, linked,
+            in -> { in.attackPhase = 0.4F; in.attackCount = 3; in.offAttackPhase = -1; })
+            .live = p -> com.nanonaitor.arsenal.client.pose.AttackTiming.debugPhase = 0.4F;
+
         String morning = NanonaitorsArsenal.MOD_ID + ":morning_star_iron";
         add("morning_star", "charging", morning, null, in -> { in.active = true; in.attackPhase = -1; });
         add("morning_star", "smash 15%", morning, null, in -> { in.active = false; in.attackPhase = 0.15F; });
@@ -196,8 +223,10 @@ public final class PoseCapture {
             return;
         }
         if (mc.player == null || mc.world == null || mc.getIntegratedServer() == null) return;
-        mc.gameSettings.hideGUI = true;
-        mc.gameSettings.thirdPersonView = 2;
+        // First-person shots need the GUI pass on: it also draws the hands.
+        mc.gameSettings.hideGUI = !(shotIndex >= 0 && shotIndex < SHOTS.size() && SHOTS.get(shotIndex).firstPerson);
+        mc.gameSettings.thirdPersonView = shotIndex >= 0 && shotIndex < SHOTS.size()
+            && SHOTS.get(shotIndex).firstPerson ? 0 : 2;
         mc.gameSettings.fovSetting = 50.0F;
         mc.player.rotationYaw = mc.player.prevRotationYaw = 180.0F;
         mc.player.rotationPitch = mc.player.prevRotationPitch = 0.0F;
@@ -255,7 +284,8 @@ public final class PoseCapture {
      */
     @SubscribeEvent
     public static void orbitCamera(net.minecraftforge.client.event.EntityViewRenderEvent.CameraSetup event) {
-        if (active == null || !active || shotIndex < 0 || shotIndex >= SHOTS.size()) return;
+        if (active == null || !active || shotIndex < 0 || shotIndex >= SHOTS.size()
+            || SHOTS.get(shotIndex).firstPerson) return;
         event.setYaw(event.getYaw() - VIEWS[Math.min(view, VIEWS.length - 1)]);
     }
 
@@ -294,6 +324,7 @@ public final class PoseCapture {
 
     private static void equip(Minecraft mc, Shot shot) {
         com.nanonaitor.arsenal.client.BallAndChainInputHandler.debugGuard = false;
+        com.nanonaitor.arsenal.client.pose.AttackTiming.debugPhase = -1.0F;
         ItemStack main = stack(shot.main), off = stack(shot.off);
         MinecraftServer server = mc.getIntegratedServer();
         java.util.UUID id = mc.player.getUniqueID();

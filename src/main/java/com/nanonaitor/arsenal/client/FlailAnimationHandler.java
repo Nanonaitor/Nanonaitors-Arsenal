@@ -167,12 +167,16 @@ public final class FlailAnimationHandler {
         // which made the chain climb diagonally upward from the player.
         double anchorY = baseY + (player.isSneaking() ? 1.00D : 1.20D);
         double anchorZ = pz + rightZ * 0.38D;
-        // When Arsenal poses the arm, the chain leaves the whirling hand instead.
-        double[] hand = com.nanonaitor.arsenal.client.pose.WeaponPoses.weaponHandOffset(player, partialTicks);
-        if (hand != null) {
-            anchorX = px + hand[0];
-            anchorY = baseY + hand[1];
-            anchorZ = pz + hand[2];
+        // When Arsenal poses the arm, a short wooden handle sticks out of the
+        // whirling hand and the chain hangs from its tip.
+        double[] grip = com.nanonaitor.arsenal.client.pose.WeaponPoses.weaponArmPoint(player, partialTicks, 8.5D);
+        double[] tip = com.nanonaitor.arsenal.client.pose.WeaponPoses.weaponArmPoint(player, partialTicks, 19.0D);
+        if (grip != null && tip != null) {
+            WeaponPartRenderer.renderStickSprite(px + grip[0], baseY + grip[1], pz + grip[2],
+                px + tip[0], baseY + tip[1], pz + tip[2]);
+            anchorX = px + tip[0];
+            anchorY = baseY + tip[1];
+            anchorZ = pz + tip[2];
         }
 
         double age = player.world.getTotalWorldTime() - state.startTick + partialTicks;
@@ -199,8 +203,24 @@ public final class FlailAnimationHandler {
             forwardX, forwardZ, radius,
             angle - trailGapAngle * 1.75D, 0.12D,
             WeaponPartRenderer.BALL_TRAIL_FAR);
-        WeaponPartRenderer.renderChainAndBall(player.getHeldItemMainhand(),
-            anchorX, anchorY, anchorZ, ballX, ballY, ballZ, 0.30D);
+        // Keep the chain out of the wielder's head: if the straight line would pass
+        // through it, bend the chain over the head on its way out to the ball.
+        double headX = px, headY = baseY + (player.isSneaking() ? 1.30D : 1.62D), headZ = pz;
+        double sx = ballX - anchorX, sy = ballY - anchorY, sz = ballZ - anchorZ;
+        double span = sx * sx + sy * sy + sz * sz;
+        double t = span < 1.0E-6D ? 0.0D : Math.max(0.0D, Math.min(1.0D,
+            ((headX - anchorX) * sx + (headY - anchorY) * sy + (headZ - anchorZ) * sz) / span));
+        double cx = anchorX + sx * t, cy = anchorY + sy * t, cz = anchorZ + sz * t;
+        double ox = cx - headX, oy = cy - headY, oz = cz - headZ;
+        double clearance = Math.sqrt(ox * ox + oy * oy + oz * oz);
+        if (t > 0.0D && t < 1.0D && clearance < 0.45D) {
+            double lift = 0.45D - clearance + 0.12D;
+            WeaponPartRenderer.renderChainAndBallVia(player.getHeldItemMainhand(), anchorX, anchorY, anchorZ,
+                cx, cy + lift + Math.max(0.0D, -oy), cz, ballX, ballY, ballZ, 0.30D);
+        } else {
+            WeaponPartRenderer.renderChainAndBall(player.getHeldItemMainhand(),
+                anchorX, anchorY, anchorZ, ballX, ballY, ballZ, 0.30D);
+        }
     }
 
     private static void renderTrail(ItemStack weapon, double px, double orbitY,

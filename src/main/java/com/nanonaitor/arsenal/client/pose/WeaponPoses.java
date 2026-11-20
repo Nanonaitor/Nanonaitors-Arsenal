@@ -36,14 +36,15 @@ public final class WeaponPoses {
     // Held-item reference point and axis in the right arm's local frame (px):
     // LayerHeldItem's offset (1, 2, -10) plus each model's third-person display
     // translation, rotated by the layer's -90 X / 180 Y turn.
-    /** Battering ram (display translation -2, 4, 0); its axis runs along the arm to the iron head. */
-    private static final double[] RAM_CENTER = {1.0D, 10.0D, -6.0D};
-    private static final double[] RAM_AXIS = {0.0D, 1.0D, 0.0D};
+    /** Hip-held ram (display rotation 75 X): the log points forward along the arm's -Z, toward the head. */
+    private static final double[] RAM_HIP_AXIS = {0.0D, 0.259D, -0.966D};
+    /** Two-handed hip model: the line through both plank handles (the rear one sits in the right fist). */
+    private static final double[] RAM_HANDLES = {1.0D, 10.44D, -7.64D};
     /** Posed blade staff (display rotation 0, 0, -45): the staff lies along the arm's local X. */
     private static final double[] STAFF_CENTER = {-1.0D, 10.0D, -2.0D};
     private static final double[] STAFF_AXIS = {1.0D, 0.0D, 0.0D};
 
-    public enum Kind { NONE, RAM, STAFF, BALL, FLAIL, BULWARK, MORNING_STAR, SCIMITARS }
+    public enum Kind { NONE, RAM, STAFF, BALL, FLAIL, BULWARK, MORNING_STAR, SCIMITARS, CLAWS }
 
     /** What the pose depends on; detected from the player, or forced by the capture tool. */
     public static final class Input {
@@ -61,6 +62,11 @@ public final class WeaponPoses {
         public double throwProgress = -1.0D;
         /** The weapon is held by the left arm, so the pose is mirrored. */
         public boolean weaponArmLeft;
+        /** Ticks since the current motion began (a charge starting, for example). */
+        public float segmentAge;
+        /** Paired claws: the off-hand's own swing, which can play alongside the main hand's. */
+        public float offAttackPhase = -1.0F;
+        public int offAttackCount;
     }
 
     /** Arm angles to apply; arms left null keep the vanilla pose. */
@@ -145,6 +151,12 @@ public final class WeaponPoses {
             in.kind = Kind.SCIMITARS;
             in.active = true;
             in.weaponArmLeft = mainIsLeft;
+        } else if (main instanceof com.nanonaitor.arsenal.item.ItemClaws
+            && (off instanceof com.nanonaitor.arsenal.item.ItemLinkedClaw
+                || off instanceof com.nanonaitor.arsenal.item.ItemClaws)) {
+            // A pair of claws: a low ready stance, raking with whichever hand strikes.
+            in.kind = Kind.CLAWS;
+            in.weaponArmLeft = mainIsLeft;
         } else if (main instanceof ItemBallAndChain) {
             in.kind = Kind.BALL;
             in.twoHanded = player.getHeldItemOffhand().isEmpty();
@@ -162,7 +174,12 @@ public final class WeaponPoses {
                 .getBoolean("ArsenalMorningCharging");
             in.weaponArmLeft = mainIsLeft;
         }
-        if (in.kind != Kind.NONE) {
+        if (in.kind == Kind.CLAWS) {
+            in.attackPhase = AttackTiming.phase(player, partialTicks, EnumHand.MAIN_HAND);
+            in.attackCount = AttackTiming.count(player, EnumHand.MAIN_HAND);
+            in.offAttackPhase = AttackTiming.phase(player, partialTicks, EnumHand.OFF_HAND);
+            in.offAttackCount = AttackTiming.count(player, EnumHand.OFF_HAND);
+        } else if (in.kind != Kind.NONE) {
             in.attackPhase = AttackTiming.phase(player, partialTicks);
             in.attackCount = AttackTiming.count(player);
         }
@@ -185,6 +202,7 @@ public final class WeaponPoses {
             + (Double.isNaN(in.spinAngle) ? "" : "|spin")
             + (in.throwProgress < 0.0D ? "" : "|throw")
             + (in.attackPhase < 0.0F ? "" : "|attack" + in.attackCount)
+            + (in.offAttackPhase < 0.0F ? "" : "|off" + in.offAttackCount)
             + (in.weaponArmLeft ? "|left" : "");
     }
 
@@ -198,13 +216,53 @@ public final class WeaponPoses {
         }
         if (cachedPlayer.get() == player && cachedAge == ageInTicks && debugOverride == null) return cachedPose;
         Input in = detect(player, partialTicks);
+        String segment = segment(in);
+        Object[] started = SEGMENT_STARTS.get(player);
+        if (started == null || !segment.equals(started[0])) {
+            started = new Object[] {segment, ageInTicks};
+            SEGMENT_STARTS.put(player, started);
+        }
+        in.segmentAge = ageInTicks - (Float) started[1];
         Pose pose = pose(in, ageInTicks);
         if (pose != null && in.weaponArmLeft) pose = pose.mirrored();
         cachedPlayer = new java.lang.ref.WeakReference<>(player);
         cachedAge = ageInTicks;
         cachedPose = pose;
-        cachedSegment = segment(in);
+        cachedSegment = segment;
+        cachedInput = in;
         return pose;
+    }
+
+    private static final java.util.Map<EntityPlayer, Object[]> SEGMENT_STARTS = new java.util.WeakHashMap<>();
+    private static Input cachedInput;
+
+    /**
+     * Claw slash trails: the tip of the striking claw over the last part of the
+     * rake, newest first, as world offsets from the feet. Null when no rake is
+     * playing (or poses are not drawn for this player).
+     */
+    public static double[][] clawTrail(EntityPlayer player, float partialTicks, boolean offHand) {
+        if (!enabled() || !(PoseInstaller.anyInstalled() || MoBendsPoses.active())) return null;
+        net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getMinecraft();
+        if (player == mc.getRenderViewEntity() && mc.gameSettings.thirdPersonView == 0) return null;
+        float age = player.ticksExisted + partialTicks;
+        if (compute(player, age, partialTicks) == null || cachedInput == null
+            || cachedInput.kind != Kind.CLAWS) return null;
+        Input in = cachedInput;
+        float a = offHand ? in.offAttackPhase : in.attackPhase;
+        if (a < SWEEP_START || a > SWEEP_END + 0.15F) return null;
+        int count = offHand ? in.offAttackCount : in.attackCount;
+        // Right-arm rake samples; the off-hand's rake is the mirror image.
+        boolean leftArm = in.weaponArmLeft != offHand;
+        double[][] points = new double[7][];
+        for (int i = 0; i < points.length; i++) {
+            float phase = Math.max(SWEEP_START, a - i * 0.04F);
+            Pose pose = new Pose();
+            pose.right = clawRake(phase, count);
+            if (leftArm) pose = pose.mirrored();
+            points[i] = armPoint(player, partialTicks, pose, leftArm, 16.0D);
+        }
+        return points;
     }
 
     // ---- Easing between motions -------------------------------------------
@@ -297,6 +355,28 @@ public final class WeaponPoses {
         Pose pose = compute(player, player.ticksExisted + partialTicks, partialTicks);
         if (pose == null) return null;
         boolean left = (player.getPrimaryHand() == EnumHandSide.LEFT) == weaponHand;
+        return armPoint(player, partialTicks, pose, left, 10.5D);
+    }
+
+    /**
+     * A point along the weapon arm (reach in model pixels from the shoulder; past
+     * 10.5 is beyond the fist, along whatever it holds), as a world offset from
+     * the feet, or null when the arm is not posed (or in first person).
+     */
+    public static double[] weaponArmPoint(EntityPlayer player, float partialTicks, double reach) {
+        if (!enabled() || !(PoseInstaller.anyInstalled() || MoBendsPoses.active())) return null;
+        net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getMinecraft();
+        if (player == mc.getRenderViewEntity() && mc.gameSettings.thirdPersonView == 0) return null;
+        Pose pose = compute(player, player.ticksExisted + partialTicks, partialTicks);
+        if (pose == null) return null;
+        return armPoint(player, partialTicks, pose, player.getPrimaryHand() == EnumHandSide.LEFT, reach);
+    }
+
+    /**
+     * A point down the arm (reach in model pixels from the shoulder: 10.5 is the
+     * fist, more is along a held blade) as a world offset from the feet.
+     */
+    private static double[] armPoint(EntityPlayer player, float partialTicks, Pose pose, boolean left, double reach) {
         float[] arm = left ? pose.left : pose.right;
         if (arm == null) return null;
         float twist = pose.body ? pose.bodyY : 0.0F;
@@ -305,7 +385,7 @@ public final class WeaponPoses {
         // Fist centre in the arm's frame, rotated like ModelRenderer (Z, Y, X),
         // then moved to the (possibly twisted) shoulder pivot. Model pixels.
         double[] hand = GripMath.rotate(arm[0] + (sneak ? 0.4F : 0.0F), arm[1] + twist, arm[2],
-            new double[] {side, 10.5D, 0.0D});
+            new double[] {side, reach, 0.0D});
         double px = hand[0] + side * 5.0D * Math.cos(twist);
         double py = hand[1] + 2.0D;
         double pz = hand[2] - side * 5.0D * Math.sin(twist);
@@ -322,6 +402,57 @@ public final class WeaponPoses {
         return new double[] {lx * c + lz * s, ly, -lx * s + lz * c};
     }
 
+    /** Claw rake (right arm): from the side, sweeping in to the front of the body. */
+    private static final float SWEEP_START = 0.15F;
+    private static final float SWEEP_END = 0.55F;
+
+    static float[] clawRake(float a, int count) {
+        // Ready: low at the side, claws angled forward and out.
+        float[] ready = {-0.35F, 0.05F, 0.12F};
+        if (a < 0.0F) return ready;
+        boolean lunge = count % 3 == 0;
+        boolean high = count % 2 == 0;
+        // Out to the side at shoulder height (or high, for the diagonal strikes),
+        // sweeping in across the front of the body.
+        float[] side = high ? new float[] {-2.25F, 0.95F, 0.15F} : new float[] {-1.50F, 1.20F, 0.15F};
+        float[] front = high ? new float[] {lunge ? -1.05F : -0.90F, -0.50F, 0.0F}
+            : new float[] {lunge ? -1.65F : -1.50F, -0.55F, 0.0F};
+        if (a < SWEEP_START) return mixArm(ready, side, a / SWEEP_START);
+        if (a < SWEEP_END) {
+            float t = (a - SWEEP_START) / (SWEEP_END - SWEEP_START);
+            return mixArm(side, front, t * t * (3.0F - 2.0F * t));
+        }
+        return mixArm(front, ready, (a - SWEEP_END) / (1.0F - SWEEP_END));
+    }
+
+    /** Every third strike of a hand lunges: the body turns into the sweep. */
+    private static float clawLunge(float a, int count) {
+        if (a < 0.0F || count % 3 != 0) return 0.0F;
+        return 0.35F * (float) Math.sin(a * Math.PI);
+    }
+
+    /** Battering Ram attack: a quick thrust forward in the first part of the swing, then back. */
+    private static float ramLunge(float a) {
+        if (a < 0.0F || !ArsenalConfig.animations.attackSpeedSwings) return 0.0F;
+        return a < 0.25F ? 0.55F * a / 0.25F : 0.55F * Math.max(0.0F, 1.0F - (a - 0.25F) / 0.45F);
+    }
+
+    private static float[] mixArm(float[] from, float[] to, float t) {
+        float k = t < 0.0F ? 0.0F : t > 1.0F ? 1.0F : t;
+        return new float[] {from[0] + (to[0] - from[0]) * k, from[1] + (to[1] - from[1]) * k,
+            from[2] + (to[2] - from[2]) * k};
+    }
+
+    /**
+     * Item property "hip" for the Battering Ram while Arsenal draws the arms: the
+     * held model points the log forward from the hip. 1 = one-handed; 2 =
+     * two-handed, rolled over so both plank handles face the hands.
+     */
+    public static final net.minecraft.item.IItemPropertyGetter RAM_AT_HIP = (stack, world, entity) ->
+        entity instanceof EntityPlayer && entity.getHeldItemMainhand() == stack && enabled()
+            && (PoseInstaller.anyInstalled() || MoBendsPoses.active())
+            ? (entity.getHeldItemOffhand().isEmpty() ? 2.0F : 1.0F) : 0.0F;
+
     private static float tremble(float age) {
         return (float) (Math.sin(age * 1.9D) * 0.035D + Math.sin(age * 3.3D + 1.0D) * 0.02D);
     }
@@ -334,19 +465,27 @@ public final class WeaponPoses {
     static Pose pose(Input in, float age) {
         float shake = tremble(age);
         switch (in.kind) {
-            case RAM:
-                if (!in.twoHanded) {
-                    // One-handed (something in the other hand): no special pose, the
-                    // normal holding and swing animations play.
-                    return null;
+            case RAM: {
+                // Carried at the hip, the log pointing forward like a heavy gun (the
+                // "hip" held model). Two-handed, the other hand grips the forward
+                // handle underneath. A normal attack is a short, quick lunge.
+                float x = -0.30F - ramLunge(in.attackPhase) * 0.5F;
+                if (in.active) {
+                    // Charge: pull back for two ticks, drive forward, then bob with the stride.
+                    float t = in.segmentAge;
+                    x = t < 2.0F ? lerp(-0.30F, -0.12F, t / 2.0F)
+                        : t < 5.0F ? lerp(-0.12F, -0.42F, (t - 2.0F) / 3.0F)
+                        : -0.36F + (float) Math.sin(age * 0.9D) * 0.06F;
+                    // Impact (the server swings the arm on a hit): the arms kick back.
+                    if (in.attackPhase >= 0.0F) x += 0.22F * (float) Math.sin(in.attackPhase * Math.PI);
                 }
-            {
-                // The log runs along the right arm; the left hand takes it just behind the right.
-                float pump = in.active ? (float) Math.sin(age * 0.9D) * 0.07F : 0.0F;
-                float[] right = in.active ? new float[] {-1.45F + pump, 0.0F, 0.0F}
-                    : new float[] {-1.00F, 0.0F, 0.0F};
-                return new Pose().right(right[0], right[1], right[2])
-                    .left(GripMath.leftGrip(right, RAM_CENTER, RAM_AXIS, 3.0D, 10.0D, true));
+                float[] right = {x, 0.0F, 0.05F};
+                Pose pose = new Pose().right(right[0], right[1], right[2]);
+                if (in.twoHanded) {
+                    // The left hand takes the front handle.
+                    pose.left(GripMath.leftGrip(right, RAM_HANDLES, RAM_HIP_AXIS, 2.8D, 3.8D, false));
+                }
+                return pose;
             }
 
             case STAFF: {
@@ -414,14 +553,15 @@ public final class WeaponPoses {
             case FLAIL: {
                 if (Double.isNaN(in.spinAngle)) return null;
                 float s = (float) Math.sin(in.spinAngle), c = (float) Math.cos(in.spinAngle);
-                // Raised arm whirling the flail in tight circles overhead.
-                return new Pose().right(-2.50F + 0.35F * s, 0.0F, 0.25F + 0.35F * c);
+                // Raised high and out to the side, whirling in circles above the head
+                // so the chain sweeps over it rather than through it.
+                return new Pose().right(-2.80F + 0.30F * s, 0.0F, 0.45F + 0.30F * c);
             }
 
             case BULWARK:
                 if (!in.twoHanded) {
-                    // Hauling the heavy shield one-handed.
-                    return new Pose().right(-0.20F + shake, 0.0F, 0.20F + shake * 0.5F);
+                    // Carried one-handed at the side, steady (no tremble: it read as a stutter).
+                    return new Pose().right(-0.20F, 0.0F, 0.20F);
                 }
                 if (in.active) {
                     // Vanilla's shield-block angles, which the Bulwark's blocking
@@ -442,6 +582,16 @@ public final class WeaponPoses {
                     return new Pose().right(x, 0.0F, 0.10F);
                 }
                 return null;
+
+            case CLAWS: {
+                // Each hand rakes on its own swing, so both can play at once.
+                float[] right = clawRake(in.attackPhase, in.attackCount);
+                float[] left = clawRake(in.offAttackPhase, in.offAttackCount);
+                Pose pose = new Pose().right(right[0], right[1], right[2]).left(left[0], -left[1], -left[2]);
+                float twist = clawLunge(in.attackPhase, in.attackCount) - clawLunge(in.offAttackPhase, in.offAttackCount);
+                if (twist != 0.0F) pose.bodyY(twist);
+                return pose;
+            }
 
             case SCIMITARS: {
                 // Guard: both blades crossed in front. Bash: a short wind-in, then

@@ -1,61 +1,560 @@
 {
-  "textures": {"particle":"#metal"},
+  "textures": {
+    "particle": "#metal",
+    "ring": "minecraft:blocks/iron_block"
+  },
   "elements": [
     {
-      "from":[3,3,3], "to":[13,13,13],
+      "from": [
+        4,
+        4,
+        4
+      ],
+      "to": [
+        12,
+        12,
+        12
+      ],
       "faces": {
-        "down":{"uv":[0,0,16,16],"texture":"#metal"}, "up":{"uv":[0,0,16,16],"texture":"#metal"},
-        "north":{"uv":[0,0,16,16],"texture":"#metal"}, "south":{"uv":[0,0,16,16],"texture":"#metal"},
-        "west":{"uv":[0,0,16,16],"texture":"#metal"}, "east":{"uv":[0,0,16,16],"texture":"#metal"}
-      }
+        "north": {
+          "texture": "#metal",
+          "uv": [
+            0.0,
+            0.0,
+            16.0,
+            16.0
+          ]
+        },
+        "south": {
+          "texture": "#metal",
+          "uv": [
+            0.0,
+            0.0,
+            16.0,
+            16.0
+          ]
+        },
+        "east": {
+          "texture": "#metal",
+          "uv": [
+            0.0,
+            0.0,
+            16.0,
+            16.0
+          ]
+        },
+        "west": {
+          "texture": "#metal",
+          "uv": [
+            0.0,
+            0.0,
+            16.0,
+            16.0
+          ]
+        },
+        "up": {
+          "texture": "#metal",
+          "uv": [
+            0.0,
+            0.0,
+            16.0,
+            16.0
+          ]
+        },
+        "down": {
+          "texture": "#metal",
+          "uv": [
+            0.0,
+            0.0,
+            16.0,
+            16.0
+          ]
+        }
+      },
+      "name": "core"
     },
     {
-      "from":[5,5,1], "to":[11,11,3],
+      "from": [
+        3,
+        5,
+        5
+      ],
+      "to": [
+        13,
+        11,
+        11
+      ],
       "faces": {
-        "down":{"uv":[0,0,16,16],"texture":"#metal"}, "up":{"uv":[0,0,16,16],"texture":"#metal"},
-        "north":{"uv":[0,0,16,16],"texture":"#metal"}, "west":{"uv":[0,0,16,16],"texture":"#metal"},
-        "east":{"uv":[0,0,16,16],"texture":"#metal"}
-      }
+        "north": {
+          "texture": "#metal",
+          "uv": [
+            0.0,
+            3.2,
+            16.0,
+            12.8
+          ]
+        },
+        "south": {
+          "texture": "#metal",
+          "uv": [
+            0.0,
+            3.2,
+            16.0,
+            12.8
+          ]
+        },
+        "east": {
+          "texture": "#metal",
+          "uv": [
+            2.0,
+            2.0,
+            14.0,
+            14.0
+          ]
+        },
+        "west": {
+          "texture": "#metal",
+          "uv": [
+            2.0,
+            2.0,
+            14.0,
+            14.0
+          ]
+        },
+        "up": {
+          "texture": "#metal",
+          "uv": [
+            0.0,
+            3.2,
+            16.0,
+            12.8
+          ]
+        },
+        "down": {
+          "texture": "#metal",
+          "uv": [
+            0.0,
+            3.2,
+            16.0,
+            12.8
+          ]
+        }
+      },
+      "name": "bulge_x"
     },
     {
-      "from":[5,5,13], "to":[11,11,15],
+      "from": [
+        5,
+        3,
+        5
+      ],
+      "to": [
+        11,
+        13,
+        11
+      ],
       "faces": {
-        "down":{"uv":[0,0,16,16],"texture":"#metal"}, "up":{"uv":[0,0,16,16],"texture":"#metal"},
-        "south":{"uv":[0,0,16,16],"texture":"#metal"}, "west":{"uv":[0,0,16,16],"texture":"#metal"},
-        "east":{"uv":[0,0,16,16],"texture":"#metal"}
-      }
+        "north": {
+          "texture": "#metal",
+          "uv": [
+            3.2,
+            0.0,
+            12.8,
+            16.0
+          ]
+        },
+        "south": {
+          "texture": "#metal",
+          "uv": [
+            3.2,
+            0.0,
+            12.8,
+            16.0
+          ]
+        },
+        "east": {
+          "texture": "#metal",
+          "uv": [
+            3.2,
+            0.0,
+            12.8,
+            16.0
+          ]
+        },
+        "west": {
+          "texture": "#metal",
+          "uv": [
+            3.2,
+            0.0,
+            12.8,
+            16.0
+          ]
+        },
+        "up": {
+          "texture": "#metal",
+          "uv": [
+            2.0,
+            2.0,
+            14.0,
+            14.0
+          ]
+        },
+        "down": {
+          "texture": "#metal",
+          "uv": [
+            2.0,
+            2.0,
+            14.0,
+            14.0
+          ]
+        }
+      },
+      "name": "bulge_y"
     },
     {
-      "from":[1,5,5], "to":[3,11,11],
+      "from": [
+        5,
+        5,
+        3
+      ],
+      "to": [
+        11,
+        11,
+        13
+      ],
       "faces": {
-        "down":{"uv":[0,0,16,16],"texture":"#metal"}, "up":{"uv":[0,0,16,16],"texture":"#metal"},
-        "north":{"uv":[0,0,16,16],"texture":"#metal"}, "south":{"uv":[0,0,16,16],"texture":"#metal"},
-        "west":{"uv":[0,0,16,16],"texture":"#metal"}
-      }
+        "north": {
+          "texture": "#metal",
+          "uv": [
+            2.0,
+            2.0,
+            14.0,
+            14.0
+          ]
+        },
+        "south": {
+          "texture": "#metal",
+          "uv": [
+            2.0,
+            2.0,
+            14.0,
+            14.0
+          ]
+        },
+        "east": {
+          "texture": "#metal",
+          "uv": [
+            0.0,
+            3.2,
+            16.0,
+            12.8
+          ]
+        },
+        "west": {
+          "texture": "#metal",
+          "uv": [
+            0.0,
+            3.2,
+            16.0,
+            12.8
+          ]
+        },
+        "up": {
+          "texture": "#metal",
+          "uv": [
+            3.2,
+            0.0,
+            12.8,
+            16.0
+          ]
+        },
+        "down": {
+          "texture": "#metal",
+          "uv": [
+            3.2,
+            0.0,
+            12.8,
+            16.0
+          ]
+        }
+      },
+      "name": "bulge_z"
     },
     {
-      "from":[13,5,5], "to":[15,11,11],
+      "from": [
+        6,
+        6,
+        2
+      ],
+      "to": [
+        10,
+        10,
+        3
+      ],
       "faces": {
-        "down":{"uv":[0,0,16,16],"texture":"#metal"}, "up":{"uv":[0,0,16,16],"texture":"#metal"},
-        "north":{"uv":[0,0,16,16],"texture":"#metal"}, "south":{"uv":[0,0,16,16],"texture":"#metal"},
-        "east":{"uv":[0,0,16,16],"texture":"#metal"}
-      }
+        "north": {
+          "texture": "#ring",
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ]
+        },
+        "south": {
+          "texture": "#ring",
+          "uv": [
+            6,
+            6,
+            10,
+            10
+          ]
+        },
+        "east": {
+          "texture": "#ring",
+          "uv": [
+            13,
+            6,
+            14,
+            10
+          ]
+        },
+        "west": {
+          "texture": "#ring",
+          "uv": [
+            2,
+            6,
+            3,
+            10
+          ]
+        },
+        "up": {
+          "texture": "#ring",
+          "uv": [
+            6,
+            2,
+            10,
+            3
+          ]
+        },
+        "down": {
+          "texture": "#ring",
+          "uv": [
+            6,
+            13,
+            10,
+            14
+          ]
+        }
+      },
+      "name": "ring_collar"
     },
     {
-      "from":[5,1,5], "to":[11,3,11],
+      "from": [
+        7.5,
+        9,
+        -1
+      ],
+      "to": [
+        8.5,
+        10,
+        2
+      ],
       "faces": {
-        "down":{"uv":[0,0,16,16],"texture":"#metal"}, "north":{"uv":[0,0,16,16],"texture":"#metal"},
-        "south":{"uv":[0,0,16,16],"texture":"#metal"}, "west":{"uv":[0,0,16,16],"texture":"#metal"},
-        "east":{"uv":[0,0,16,16],"texture":"#metal"}
-      }
+        "north": {
+          "texture": "#ring",
+          "uv": [
+            7.5,
+            6,
+            8.5,
+            7
+          ]
+        },
+        "south": {
+          "texture": "#ring",
+          "uv": [
+            7.5,
+            6,
+            8.5,
+            7
+          ]
+        },
+        "east": {
+          "texture": "#ring",
+          "uv": [
+            13,
+            6,
+            16,
+            7
+          ]
+        },
+        "west": {
+          "texture": "#ring",
+          "uv": [
+            0,
+            6,
+            3,
+            7
+          ]
+        },
+        "up": {
+          "texture": "#ring",
+          "uv": [
+            7.5,
+            0,
+            8.5,
+            3
+          ]
+        },
+        "down": {
+          "texture": "#ring",
+          "uv": [
+            7.5,
+            13,
+            8.5,
+            16
+          ]
+        }
+      },
+      "name": "ring_top"
     },
     {
-      "from":[5,13,5], "to":[11,15,11],
+      "from": [
+        7.5,
+        6,
+        -1
+      ],
+      "to": [
+        8.5,
+        7,
+        2
+      ],
       "faces": {
-        "up":{"uv":[0,0,16,16],"texture":"#metal"}, "north":{"uv":[0,0,16,16],"texture":"#metal"},
-        "south":{"uv":[0,0,16,16],"texture":"#metal"}, "west":{"uv":[0,0,16,16],"texture":"#metal"},
-        "east":{"uv":[0,0,16,16],"texture":"#metal"}
-      }
+        "north": {
+          "texture": "#ring",
+          "uv": [
+            7.5,
+            9,
+            8.5,
+            10
+          ]
+        },
+        "south": {
+          "texture": "#ring",
+          "uv": [
+            7.5,
+            9,
+            8.5,
+            10
+          ]
+        },
+        "east": {
+          "texture": "#ring",
+          "uv": [
+            13,
+            9,
+            16,
+            10
+          ]
+        },
+        "west": {
+          "texture": "#ring",
+          "uv": [
+            0,
+            9,
+            3,
+            10
+          ]
+        },
+        "up": {
+          "texture": "#ring",
+          "uv": [
+            7.5,
+            0,
+            8.5,
+            3
+          ]
+        },
+        "down": {
+          "texture": "#ring",
+          "uv": [
+            7.5,
+            13,
+            8.5,
+            16
+          ]
+        }
+      },
+      "name": "ring_bottom"
+    },
+    {
+      "from": [
+        7.5,
+        7,
+        -1
+      ],
+      "to": [
+        8.5,
+        9,
+        0
+      ],
+      "faces": {
+        "north": {
+          "texture": "#ring",
+          "uv": [
+            7.5,
+            7,
+            8.5,
+            9
+          ]
+        },
+        "south": {
+          "texture": "#ring",
+          "uv": [
+            7.5,
+            7,
+            8.5,
+            9
+          ]
+        },
+        "east": {
+          "texture": "#ring",
+          "uv": [
+            0,
+            7,
+            1,
+            9
+          ]
+        },
+        "west": {
+          "texture": "#ring",
+          "uv": [
+            15,
+            7,
+            16,
+            9
+          ]
+        },
+        "up": {
+          "texture": "#ring",
+          "uv": [
+            7.5,
+            15,
+            8.5,
+            16
+          ]
+        },
+        "down": {
+          "texture": "#ring",
+          "uv": [
+            7.5,
+            0,
+            8.5,
+            1
+          ]
+        }
+      },
+      "name": "ring_end"
     }
   ]
 }

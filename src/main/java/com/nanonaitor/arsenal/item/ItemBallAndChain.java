@@ -69,6 +69,7 @@ public final class ItemBallAndChain extends ItemArsenalWeapon {
         tooltip.add(TextFormatting.GRAY + "Higher rotations increase throw reach and damage.");
         tooltip.add(TextFormatting.GRAY + "With an empty offhand, guarding and winding up block every attack.");
         tooltip.add(TextFormatting.GRAY + "A thrown ball smashes projectiles in its path.");
+        tooltip.add(TextFormatting.GRAY + "Knockback also shoves back melee attackers you guard against.");
         tooltip.add(TextFormatting.RED + "Two-Handed");
     }
 

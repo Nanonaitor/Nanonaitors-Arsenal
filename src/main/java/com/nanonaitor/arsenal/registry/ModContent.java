@@ -221,6 +221,11 @@ public final class ModContent {
             item.addPropertyOverride(new ResourceLocation(NanonaitorsArsenal.MOD_ID, "posed"),
                 com.nanonaitor.arsenal.client.pose.WeaponPoses.STAFF_POSED);
         }
+        // Client-only property: carried one-handed, the ram is held at the hip.
+        for (ItemBatteringRam item : BATTERING_RAMS.values()) {
+            item.addPropertyOverride(new ResourceLocation(NanonaitorsArsenal.MOD_ID, "hip"),
+                com.nanonaitor.arsenal.client.pose.WeaponPoses.RAM_AT_HIP);
+        }
         for (ItemMorningStar item : MORNING_STARS.values()) {
             registerModel(item);
         }

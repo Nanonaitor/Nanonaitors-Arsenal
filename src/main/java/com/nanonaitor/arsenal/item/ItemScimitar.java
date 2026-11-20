@@ -84,6 +84,8 @@ public final class ItemScimitar extends ItemArsenalWeapon {
         if (!ArsenalTooltip.begin(tooltip, TextFormatting.GOLD,
                 "Dual wield to alternate attacks and cross-guard.")) return;
         tooltip.add(TextFormatting.GRAY + "Attack while guarding to shield bash.");
+        tooltip.add(TextFormatting.GRAY + "Blocking an attack empowers your next hit or bash (x"
+            + ArsenalConfig.scimitars.counterMultiplier + ").");
         String effects = ConfiguredEffects.displayNames(ArsenalConfig.effects.scimitarHit);
         if (!effects.isEmpty()) tooltip.add(TextFormatting.GRAY + "Hits apply: " + effects + ".");
     }

@@ -17,6 +17,12 @@ public final class ModSounds {
     /** Heavier chain clash when a thrown ball crashes into a block. */
     public static final SoundEvent BALL_CHAIN_CRASH = create("ball_chain.crash");
     public static final SoundEvent SCIMITAR_BASH = create("scimitar.bash");
+    /** Battering Ram: the log creaks as a charge starts; a heavy bash on hits and walls. */
+    public static final SoundEvent RAM_CHARGE = create("battering_ram.charge");
+    public static final SoundEvent RAM_IMPACT = create("battering_ram.impact");
+    /** Claws: a high metal slash on every hit, and a ringing accent on every third. */
+    public static final SoundEvent CLAWS_SLASH = create("claws.slash");
+    public static final SoundEvent CLAWS_RING = create("claws.ring");
     public static final SoundEvent REVERSO_HEAL = create("reverso_heal");
     public static final SoundEvent BLADE_STAFF_REFLECT = create("blade_staff_reflect");
 
@@ -30,7 +36,7 @@ public final class ModSounds {
     @SubscribeEvent
     public static void register(RegistryEvent.Register<SoundEvent> event) {
         event.getRegistry().registerAll(BALL_CHAIN_SWING, BALL_CHAIN_HIT, BALL_CHAIN_RATTLE,
-            BALL_CHAIN_CRASH, SCIMITAR_BASH,
+            BALL_CHAIN_CRASH, SCIMITAR_BASH, RAM_CHARGE, RAM_IMPACT, CLAWS_SLASH, CLAWS_RING,
             REVERSO_HEAL, BLADE_STAFF_REFLECT);
     }
 }

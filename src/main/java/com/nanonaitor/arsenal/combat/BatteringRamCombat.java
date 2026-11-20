@@ -64,6 +64,10 @@ public final class BatteringRamCombat {
                 WeaponHits.chargeMultiplier(player));
             CHARGES.put(player, state);
             player.resetCooldown();
+            // The log creaks as the charge starts.
+            player.world.playSound(null, player.posX, player.posY, player.posZ,
+                com.nanonaitor.arsenal.registry.ModSounds.RAM_CHARGE, player.getSoundCategory(),
+                0.8F, 0.55F + player.getRNG().nextFloat() * 0.1F);
         }
         state.lastHeartbeatTick = player.world.getTotalWorldTime();
     }
@@ -113,13 +117,31 @@ public final class BatteringRamCombat {
             player.addExhaustion(CHARGE_EXHAUSTION_PER_TICK * hungerMultiplier(stack));
         }
 
-        breakRamBlocks(player, stack, forwardX, forwardZ, state.lockedYaw);
-        hitRamTargets(player, state, stack, forwardX, forwardZ);
+        int broken = breakRamBlocks(player, stack, forwardX, forwardZ, state.lockedYaw);
+        if (broken > 0) {
+            impact(player, state, now, 1.2F, 0.75F);
+        } else if (player.collidedHorizontally) {
+            // Ramming a wall it cannot break: a heavy bash, not repeated every tick.
+            impact(player, state, now, 0.9F, 0.85F);
+        }
+        hitRamTargets(player, state, stack, forwardX, forwardZ, now);
     }
 
-    private static void breakRamBlocks(EntityPlayerMP player, ItemStack stack,
+    /** Bash sound and a recoil swing (the arms kick back), at most every 8 ticks. */
+    private static void impact(EntityPlayerMP player, ChargeState state, long now, float volume, float pitch) {
+        if (now - state.lastImpactTick < 8L) return;
+        state.lastImpactTick = now;
+        player.world.playSound(null, player.posX, player.posY, player.posZ,
+            com.nanonaitor.arsenal.registry.ModSounds.RAM_IMPACT, player.getSoundCategory(),
+            volume, pitch + player.getRNG().nextFloat() * 0.1F);
+        player.swingArm(EnumHand.MAIN_HAND);
+    }
+
+    /** @return how many blocks broke this tick */
+    private static int breakRamBlocks(EntityPlayerMP player, ItemStack stack,
                                        double forwardX, double forwardZ,
                                        float lockedYaw) {
+        int broken = 0;
         double rightX = forwardZ;
         double rightZ = -forwardX;
         Set<BlockPos> columns = new HashSet<>();
@@ -154,6 +176,7 @@ public final class BatteringRamCombat {
                     continue;
                 }
                 if (player.world.destroyBlock(pos, true)) {
+                    broken++;
                     int previousDamage = stack.getItemDamage();
                     stack.damageItem(1, player);
                     if (!player.capabilities.isCreativeMode) {
@@ -168,6 +191,7 @@ public final class BatteringRamCombat {
                 }
             }
         }
+        return broken;
     }
 
     private static boolean isBreakableRamBlock(IBlockState state, WeaponTier tier) {
@@ -277,7 +301,7 @@ public final class BatteringRamCombat {
     }
 
     private static void hitRamTargets(EntityPlayerMP player, ChargeState state,
-                                      ItemStack stack, double forwardX, double forwardZ) {
+                                      ItemStack stack, double forwardX, double forwardZ, long now) {
         List<EntityLivingBase> targets = player.world.getEntitiesWithinAABB(
             EntityLivingBase.class,
             player.getEntityBoundingBox().offset(forwardX * 0.8D, 0.0D, forwardZ * 0.8D)
@@ -297,6 +321,7 @@ public final class BatteringRamCombat {
                 baseDamage * state.damageMultiplier + enchantmentDamage)) {
                 state.hitEntities.add(target.getEntityId());
                 target.knockBack(player, 1.5F, forwardX, forwardZ);
+                impact(player, state, now, 1.0F, 0.9F);
                 stack.damageItem(1, player);
                 if (!player.capabilities.isCreativeMode) {
                     player.addExhaustion(ENTITY_HIT_EXHAUSTION * hungerMultiplier(stack));
@@ -321,6 +346,7 @@ public final class BatteringRamCombat {
         private final float lockedPitch;
         private final float damageMultiplier;
         private long lastHeartbeatTick;
+        private long lastImpactTick = Long.MIN_VALUE / 2;
         private final Set<Integer> hitEntities = new HashSet<>();
 
         private ChargeState(float lockedYaw, float lockedPitch,

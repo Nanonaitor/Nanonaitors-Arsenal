@@ -34,6 +34,10 @@ public final class AttackTiming {
         int durationTicks = 6;
         int count;
         EnumHand hand = EnumHand.MAIN_HAND;
+        /** Each hand's own latest swing, so paired weapons can swing both at once. */
+        final long[] handStart = {Long.MIN_VALUE, Long.MIN_VALUE};
+        final int[] handDuration = {6, 6};
+        final int[] handCount = {0, 0};
     }
 
     @SubscribeEvent
@@ -58,6 +62,10 @@ public final class AttackTiming {
                 swing.durationTicks = cooldownTicks(player);
                 swing.hand = player.swingingHand == null ? EnumHand.MAIN_HAND : player.swingingHand;
                 swing.count++;
+                int h = swing.hand.ordinal();
+                swing.handStart[h] = swing.startTick;
+                swing.handDuration[h] = swing.durationTicks;
+                swing.handCount[h]++;
             }
             swing.wasSwinging = swinging;
             swing.lastProgress = player.swingProgressInt;
@@ -71,13 +79,34 @@ public final class AttackTiming {
         return Math.max(4, Math.min(40, (int) Math.round(20.0D / Math.max(0.05D, value))));
     }
 
+    /** Pose capture tool only: a fixed swing progress for the local player (-1 = off). */
+    public static float debugPhase = -1.0F;
+
     /** Swing progress 0..1 timed to attack speed, or -1 when no swing is playing. */
     public static float phase(EntityPlayer player, float partialTicks) {
+        if (debugPhase >= 0.0F && player == Minecraft.getMinecraft().player) return debugPhase;
         Swing swing = SWINGS.get(player);
         if (swing == null || swing.startTick == Long.MIN_VALUE || player.world == null) return -1.0F;
         float age = player.world.getTotalWorldTime() - swing.startTick + partialTicks;
         float phase = age / swing.durationTicks;
         return phase >= 0.0F && phase < 1.0F ? phase : -1.0F;
+    }
+
+    /** One hand's own swing progress 0..1, or -1: the other hand may be swinging too. */
+    public static float phase(EntityPlayer player, float partialTicks, EnumHand hand) {
+        if (debugPhase >= 0.0F && player == Minecraft.getMinecraft().player) return debugPhase;
+        Swing swing = SWINGS.get(player);
+        int h = hand.ordinal();
+        if (swing == null || swing.handStart[h] == Long.MIN_VALUE || player.world == null) return -1.0F;
+        float age = player.world.getTotalWorldTime() - swing.handStart[h] + partialTicks;
+        float phase = age / swing.handDuration[h];
+        return phase >= 0.0F && phase < 1.0F ? phase : -1.0F;
+    }
+
+    /** One hand's swing count. */
+    public static int count(EntityPlayer player, EnumHand hand) {
+        Swing swing = SWINGS.get(player);
+        return swing == null ? 0 : swing.handCount[hand.ordinal()];
     }
 
     /** Which hand the current swing belongs to. */

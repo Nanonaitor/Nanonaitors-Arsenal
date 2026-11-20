@@ -57,5 +57,41 @@
         "name": "nanonaitors_arsenal:ball_chain_crash2"
       }
     ]
+  },
+  "battering_ram.charge": {
+    "subtitle": "subtitles.nanonaitors_arsenal.battering_ram.charge",
+    "sounds": [
+      {
+        "name": "minecraft:block.wooden_trapdoor.open",
+        "type": "event"
+      }
+    ]
+  },
+  "battering_ram.impact": {
+    "subtitle": "subtitles.nanonaitors_arsenal.battering_ram.impact",
+    "sounds": [
+      {
+        "name": "minecraft:entity.zombie.attack_door_wood",
+        "type": "event"
+      }
+    ]
+  },
+  "claws.slash": {
+    "subtitle": "subtitles.nanonaitors_arsenal.claws.slash",
+    "sounds": [
+      {
+        "name": "minecraft:entity.player.attack.sweep",
+        "type": "event"
+      }
+    ]
+  },
+  "claws.ring": {
+    "subtitle": "subtitles.nanonaitors_arsenal.claws.ring",
+    "sounds": [
+      {
+        "name": "minecraft:block.anvil.land",
+        "type": "event"
+      }
+    ]
   }
 }

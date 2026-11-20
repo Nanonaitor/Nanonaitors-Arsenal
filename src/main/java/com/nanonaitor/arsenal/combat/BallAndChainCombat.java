@@ -176,6 +176,10 @@ public final class BallAndChainCombat {
         Vec3d to = ballPosition(state, age);
         state.lastBallPosition = to;
         hitAlongPath(player, state, from, to, age * 2L > state.durationTicks);
+        if (state.crashAt != null && !state.crashed && age * 2L >= state.durationTicks) {
+            state.crashed = true;
+            crashFeedback(player, state);
+        }
         smashProjectiles(player, from, to);
         if (age >= state.durationTicks || player.isDead) {
             THROWS.remove(player);
@@ -190,6 +194,28 @@ public final class BallAndChainCombat {
     }
 
     /** A conventional shield in use; a raised Defender lets the ball keep going. */
+    /** The ball hits a block: heavy thud, a louder chain clash, and a burst of dust and sparks. */
+    private static void crashFeedback(EntityPlayerMP player, ThrowState state) {
+        Vec3d at = state.crashAt;
+        player.world.playSound(null, at.x, at.y, at.z,
+            SoundEvents.ENTITY_IRONGOLEM_ATTACK, player.getSoundCategory(),
+            0.8F, 0.75F + state.charge * 0.08F);
+        player.world.playSound(null, at.x, at.y, at.z,
+            ModSounds.BALL_CHAIN_CRASH, player.getSoundCategory(),
+            1.0F, 0.85F + player.getRNG().nextFloat() * 0.1F);
+        net.minecraft.util.math.BlockPos pos = new net.minecraft.util.math.BlockPos(
+            at.add(state.direction.scale(0.35D)));
+        net.minecraft.block.state.IBlockState block = player.world.getBlockState(pos);
+        net.minecraft.world.WorldServer world = player.getServerWorld();
+        if (block.getMaterial() != net.minecraft.block.material.Material.AIR) {
+            world.spawnParticle(net.minecraft.util.EnumParticleTypes.BLOCK_DUST, at.x, at.y, at.z,
+                18 + state.charge * 6, 0.25D, 0.25D, 0.25D, 0.08D,
+                net.minecraft.block.Block.getStateId(block));
+        }
+        world.spawnParticle(net.minecraft.util.EnumParticleTypes.CRIT, at.x, at.y, at.z,
+            8 + state.charge * 4, 0.2D, 0.2D, 0.2D, 0.35D);
+    }
+
     private static boolean usingRealShield(EntityPlayer player) {
         return AbilityUseRules.activeConventionalShield(player);
     }
@@ -280,13 +306,8 @@ public final class BallAndChainCombat {
             durationTicks);
         playAttackSound(player, false, 0.72F + state.charge * 0.10F);
         if (end.distanceTo(intendedEnd) > 0.05D) {
-            player.world.playSound(null, end.x, end.y, end.z,
-                SoundEvents.ENTITY_IRONGOLEM_ATTACK, player.getSoundCategory(),
-                0.8F, 0.75F + effectiveCharge * 0.08F);
-            // A louder chain clash confirms the ball will crash into the block.
-            player.world.playSound(null, end.x, end.y, end.z,
-                ModSounds.BALL_CHAIN_CRASH, player.getSoundCategory(),
-                1.0F, 0.85F + player.getRNG().nextFloat() * 0.1F);
+            // Played when the ball arrives (see updateThrow), so sound and sight match.
+            state.crashAt = end;
         }
     }
 
@@ -575,6 +596,9 @@ public final class BallAndChainCombat {
         private final Vec3d direction;
         private final float baseDamage;
         private Vec3d lastBallPosition;
+        /** Where the ball meets a block (null when the path is clear); played once on arrival. */
+        private Vec3d crashAt;
+        private boolean crashed;
         private final java.util.Set<Integer> hitOutbound = new java.util.HashSet<>();
         private final java.util.Set<Integer> hitReturning = new java.util.HashSet<>();
 

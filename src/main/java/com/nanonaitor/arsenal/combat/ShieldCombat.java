@@ -151,6 +151,7 @@ public final class ShieldCombat {
                 triggerThorns(player, ball, source);
                 ball.damageItem(GuardRules.scimitarWear(event.getAmount()), player);
                 playBallGuardClang(player);
+                knockBackMeleeAttacker(player, ball, source);
             }
             return;
         }
@@ -164,6 +165,21 @@ public final class ShieldCombat {
                 findEquipped(player, ItemSunWarBulwark.class));
             playBlock(player, 0.65F);
         }
+    }
+
+    /**
+     * Knockback on a Ball and Chain also shoves back a melee attacker whose hit the
+     * guard blocks (no damage), like a shield bash with the ball.
+     */
+    private static void knockBackMeleeAttacker(EntityPlayer defender, ItemStack ball, DamageSource source) {
+        if (!(source.getTrueSource() instanceof EntityLivingBase) || source.isProjectile()
+            || source.getImmediateSource() != source.getTrueSource()) return;
+        int level = net.minecraft.enchantment.EnchantmentHelper.getEnchantmentLevel(
+            net.minecraft.init.Enchantments.KNOCKBACK, ball);
+        if (level <= 0) return;
+        EntityLivingBase attacker = (EntityLivingBase) source.getTrueSource();
+        attacker.knockBack(defender, 0.4F + 0.5F * level,
+            defender.posX - attacker.posX, defender.posZ - attacker.posZ);
     }
 
     private static void triggerThorns(EntityPlayer defender,ItemStack shield,DamageSource source) {
@@ -185,6 +201,7 @@ public final class ShieldCombat {
             || event.getSource().isUnblockable() || !isFrontDamage(player,event.getSource())) return;
         event.setCanceled(true);
         com.nanonaitor.arsenal.compat.ScimitarShieldCompat.blocked(player,event.getSource(),event.getAmount());
+        ScimitarCounter.blocked(player);
         if (!player.world.isRemote) {
             int wear=com.nanonaitor.arsenal.combat.GuardRules.scimitarWear(event.getAmount());
             main.damageItem(wear,player);

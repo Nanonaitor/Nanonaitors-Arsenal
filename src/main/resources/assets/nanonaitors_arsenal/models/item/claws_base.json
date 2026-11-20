@@ -5,100 +5,689 @@
   "elements": [
     {
       "name": "wrist_cuff",
-      "from": [5.5, 5.5, 6.26],
-      "to": [10.5, 10.5, 11],
+      "from": [
+        5.5,
+        5.5,
+        6.26
+      ],
+      "to": [
+        10.5,
+        10.5,
+        11
+      ],
       "faces": {
-        "north": {"texture": "#grip", "uv": [0, 0, 5, 5]},
-        "east": {"texture": "#grip", "uv": [0, 0, 5, 5]},
-        "south": {"texture": "#grip", "uv": [0, 0, 5, 5]},
-        "west": {"texture": "#grip", "uv": [0, 0, 5, 5]},
-        "up": {"texture": "#grip", "uv": [0, 0, 5, 5]},
-        "down": {"texture": "#grip", "uv": [0, 0, 5, 5]}
+        "north": {
+          "texture": "#grip",
+          "uv": [
+            5.5,
+            5.5,
+            10.5,
+            10.5
+          ]
+        },
+        "east": {
+          "texture": "#grip",
+          "uv": [
+            5.0,
+            5.5,
+            9.74,
+            10.5
+          ]
+        },
+        "south": {
+          "texture": "#grip",
+          "uv": [
+            5.5,
+            5.5,
+            10.5,
+            10.5
+          ]
+        },
+        "west": {
+          "texture": "#grip",
+          "uv": [
+            6.26,
+            5.5,
+            11.0,
+            10.5
+          ]
+        },
+        "up": {
+          "texture": "#grip",
+          "uv": [
+            5.5,
+            6.26,
+            10.5,
+            11.0
+          ]
+        },
+        "down": {
+          "texture": "#grip",
+          "uv": [
+            5.5,
+            5.0,
+            10.5,
+            9.74
+          ]
+        }
       }
     },
     {
       "name": "knuckle_plate",
-      "from": [5, 8, 3.5],
-      "to": [11, 10.5, 6.25],
+      "from": [
+        5,
+        8,
+        3.5
+      ],
+      "to": [
+        11,
+        10.5,
+        6.25
+      ],
       "faces": {
-        "north": {"texture": "#metal", "uv": [0, 0, 6, 3]},
-        "east": {"texture": "#metal", "uv": [0, 0, 3, 3]},
-        "south": {"texture": "#metal", "uv": [0, 0, 6, 3]},
-        "west": {"texture": "#metal", "uv": [0, 0, 3, 3]},
-        "up": {"texture": "#metal", "uv": [0, 0, 6, 3]},
-        "down": {"texture": "#metal", "uv": [0, 0, 6, 3]}
+        "north": {
+          "texture": "#metal",
+          "uv": [
+            5,
+            5.5,
+            11,
+            8.0
+          ]
+        },
+        "east": {
+          "texture": "#metal",
+          "uv": [
+            9.75,
+            5.5,
+            12.5,
+            8.0
+          ]
+        },
+        "south": {
+          "texture": "#metal",
+          "uv": [
+            5,
+            5.5,
+            11,
+            8.0
+          ]
+        },
+        "west": {
+          "texture": "#metal",
+          "uv": [
+            3.5,
+            5.5,
+            6.25,
+            8.0
+          ]
+        },
+        "up": {
+          "texture": "#metal",
+          "uv": [
+            5,
+            3.5,
+            11,
+            6.25
+          ]
+        },
+        "down": {
+          "texture": "#metal",
+          "uv": [
+            5,
+            9.75,
+            11,
+            12.5
+          ]
+        }
       }
     },
     {
-      "name": "left_blade",
-      "from": [5.2, 8.5, -7],
-      "to": [6.3, 9.5, 3.49],
+      "from": [
+        5.2,
+        8.5,
+        -2.0
+      ],
+      "to": [
+        6.3,
+        9.5,
+        3.49
+      ],
       "faces": {
-        "north": {"texture": "#metal", "uv": [0, 0, 2, 2]},
-        "east": {"texture": "#metal", "uv": [0, 0, 11, 2]},
-        "south": {"texture": "#metal", "uv": [0, 0, 2, 2]},
-        "west": {"texture": "#metal", "uv": [0, 0, 11, 2]},
-        "up": {"texture": "#metal", "uv": [0, 0, 2, 11]},
-        "down": {"texture": "#metal", "uv": [0, 0, 2, 11]}
+        "north": {
+          "texture": "#metal",
+          "uv": [
+            9.7,
+            6.5,
+            10.8,
+            7.5
+          ]
+        },
+        "south": {
+          "texture": "#metal",
+          "uv": [
+            5.2,
+            6.5,
+            6.3,
+            7.5
+          ]
+        },
+        "east": {
+          "texture": "#metal",
+          "uv": [
+            10.51,
+            6.5,
+            16,
+            7.5
+          ]
+        },
+        "west": {
+          "texture": "#metal",
+          "uv": [
+            0,
+            6.5,
+            5.49,
+            7.5
+          ]
+        },
+        "up": {
+          "texture": "#metal",
+          "uv": [
+            5.2,
+            0,
+            6.3,
+            5.49
+          ]
+        },
+        "down": {
+          "texture": "#metal",
+          "uv": [
+            5.2,
+            10.51,
+            6.3,
+            16
+          ]
+        }
+      },
+      "name": "left_blade"
+    },
+    {
+      "from": [
+        5.2,
+        8.5,
+        -5.0
+      ],
+      "to": [
+        6.3,
+        9.5,
+        -2.0
+      ],
+      "faces": {
+        "north": {
+          "texture": "#metal",
+          "uv": [
+            9.7,
+            6.5,
+            10.8,
+            7.5
+          ]
+        },
+        "south": {
+          "texture": "#metal",
+          "uv": [
+            5.2,
+            6.5,
+            6.3,
+            7.5
+          ]
+        },
+        "east": {
+          "texture": "#metal",
+          "uv": [
+            2.0,
+            6.5,
+            5.0,
+            7.5
+          ]
+        },
+        "west": {
+          "texture": "#metal",
+          "uv": [
+            11.0,
+            6.5,
+            14.0,
+            7.5
+          ]
+        },
+        "up": {
+          "texture": "#metal",
+          "uv": [
+            5.2,
+            11.0,
+            6.3,
+            14.0
+          ]
+        },
+        "down": {
+          "texture": "#metal",
+          "uv": [
+            5.2,
+            2.0,
+            6.3,
+            5.0
+          ]
+        }
+      },
+      "shade": false,
+      "name": "left_tip",
+      "rotation": {
+        "origin": [
+          5.75,
+          9,
+          -2.0
+        ],
+        "axis": "x",
+        "angle": -22.5
       }
     },
     {
-      "name": "center_blade",
-      "from": [7.45, 8.5, -8.5],
-      "to": [8.55, 9.5, 3.49],
+      "from": [
+        7.45,
+        8.5,
+        -2.5
+      ],
+      "to": [
+        8.55,
+        9.5,
+        3.49
+      ],
       "faces": {
-        "north": {"texture": "#metal", "uv": [0, 0, 2, 2]},
-        "east": {"texture": "#metal", "uv": [0, 0, 13, 2]},
-        "south": {"texture": "#metal", "uv": [0, 0, 2, 2]},
-        "west": {"texture": "#metal", "uv": [0, 0, 13, 2]},
-        "up": {"texture": "#metal", "uv": [0, 0, 2, 13]},
-        "down": {"texture": "#metal", "uv": [0, 0, 2, 13]}
+        "north": {
+          "texture": "#metal",
+          "uv": [
+            7.45,
+            6.5,
+            8.55,
+            7.5
+          ]
+        },
+        "south": {
+          "texture": "#metal",
+          "uv": [
+            7.45,
+            6.5,
+            8.55,
+            7.5
+          ]
+        },
+        "east": {
+          "texture": "#metal",
+          "uv": [
+            10.01,
+            6.5,
+            16,
+            7.5
+          ]
+        },
+        "west": {
+          "texture": "#metal",
+          "uv": [
+            0,
+            6.5,
+            5.99,
+            7.5
+          ]
+        },
+        "up": {
+          "texture": "#metal",
+          "uv": [
+            7.45,
+            0,
+            8.55,
+            5.99
+          ]
+        },
+        "down": {
+          "texture": "#metal",
+          "uv": [
+            7.45,
+            10.01,
+            8.55,
+            16
+          ]
+        }
+      },
+      "name": "center_blade"
+    },
+    {
+      "from": [
+        7.45,
+        8.5,
+        -6.5
+      ],
+      "to": [
+        8.55,
+        9.5,
+        -2.5
+      ],
+      "faces": {
+        "north": {
+          "texture": "#metal",
+          "uv": [
+            7.45,
+            6.5,
+            8.55,
+            7.5
+          ]
+        },
+        "south": {
+          "texture": "#metal",
+          "uv": [
+            7.45,
+            6.5,
+            8.55,
+            7.5
+          ]
+        },
+        "east": {
+          "texture": "#metal",
+          "uv": [
+            2.5,
+            6.5,
+            6.5,
+            7.5
+          ]
+        },
+        "west": {
+          "texture": "#metal",
+          "uv": [
+            9.5,
+            6.5,
+            13.5,
+            7.5
+          ]
+        },
+        "up": {
+          "texture": "#metal",
+          "uv": [
+            7.45,
+            9.5,
+            8.55,
+            13.5
+          ]
+        },
+        "down": {
+          "texture": "#metal",
+          "uv": [
+            7.45,
+            2.5,
+            8.55,
+            6.5
+          ]
+        }
+      },
+      "shade": false,
+      "name": "center_tip",
+      "rotation": {
+        "origin": [
+          8.0,
+          9,
+          -2.5
+        ],
+        "axis": "x",
+        "angle": -22.5
       }
     },
     {
-      "name": "right_blade",
-      "from": [9.7, 8.5, -7],
-      "to": [10.8, 9.5, 3.49],
+      "from": [
+        9.7,
+        8.5,
+        -2.0
+      ],
+      "to": [
+        10.8,
+        9.5,
+        3.49
+      ],
       "faces": {
-        "north": {"texture": "#metal", "uv": [0, 0, 2, 2]},
-        "east": {"texture": "#metal", "uv": [0, 0, 11, 2]},
-        "south": {"texture": "#metal", "uv": [0, 0, 2, 2]},
-        "west": {"texture": "#metal", "uv": [0, 0, 11, 2]},
-        "up": {"texture": "#metal", "uv": [0, 0, 2, 11]},
-        "down": {"texture": "#metal", "uv": [0, 0, 2, 11]}
+        "north": {
+          "texture": "#metal",
+          "uv": [
+            5.2,
+            6.5,
+            6.3,
+            7.5
+          ]
+        },
+        "south": {
+          "texture": "#metal",
+          "uv": [
+            9.7,
+            6.5,
+            10.8,
+            7.5
+          ]
+        },
+        "east": {
+          "texture": "#metal",
+          "uv": [
+            10.51,
+            6.5,
+            16,
+            7.5
+          ]
+        },
+        "west": {
+          "texture": "#metal",
+          "uv": [
+            0,
+            6.5,
+            5.49,
+            7.5
+          ]
+        },
+        "up": {
+          "texture": "#metal",
+          "uv": [
+            9.7,
+            0,
+            10.8,
+            5.49
+          ]
+        },
+        "down": {
+          "texture": "#metal",
+          "uv": [
+            9.7,
+            10.51,
+            10.8,
+            16
+          ]
+        }
+      },
+      "name": "right_blade"
+    },
+    {
+      "from": [
+        9.7,
+        8.5,
+        -5.0
+      ],
+      "to": [
+        10.8,
+        9.5,
+        -2.0
+      ],
+      "faces": {
+        "north": {
+          "texture": "#metal",
+          "uv": [
+            5.2,
+            6.5,
+            6.3,
+            7.5
+          ]
+        },
+        "south": {
+          "texture": "#metal",
+          "uv": [
+            9.7,
+            6.5,
+            10.8,
+            7.5
+          ]
+        },
+        "east": {
+          "texture": "#metal",
+          "uv": [
+            2.0,
+            6.5,
+            5.0,
+            7.5
+          ]
+        },
+        "west": {
+          "texture": "#metal",
+          "uv": [
+            11.0,
+            6.5,
+            14.0,
+            7.5
+          ]
+        },
+        "up": {
+          "texture": "#metal",
+          "uv": [
+            9.7,
+            11.0,
+            10.8,
+            14.0
+          ]
+        },
+        "down": {
+          "texture": "#metal",
+          "uv": [
+            9.7,
+            2.0,
+            10.8,
+            5.0
+          ]
+        }
+      },
+      "shade": false,
+      "name": "right_tip",
+      "rotation": {
+        "origin": [
+          10.25,
+          9,
+          -2.0
+        ],
+        "axis": "x",
+        "angle": -22.5
       }
     }
   ],
   "display": {
     "thirdperson_righthand": {
-      "rotation": [0, 0, 270],
-      "translation": [0, -2, 2.75],
-      "scale": [1.05, 1.05, 1.05]
+      "rotation": [
+        0,
+        0,
+        270
+      ],
+      "translation": [
+        0,
+        -2,
+        2.75
+      ],
+      "scale": [
+        1.05,
+        1.05,
+        1.05
+      ]
     },
     "thirdperson_lefthand": {
-      "rotation": [0, 0, 270],
-      "translation": [0, -2, 2.75],
-      "scale": [1.05, 1.05, 1.05]
+      "rotation": [
+        0,
+        0,
+        270
+      ],
+      "translation": [
+        0,
+        -2,
+        2.75
+      ],
+      "scale": [
+        1.05,
+        1.05,
+        1.05
+      ]
     },
     "firstperson_righthand": {
-      "rotation": [30, 330, 330],
-      "translation": [0, -1, -2.5],
-      "scale": [0.9, 0.9, 0.9]
+      "rotation": [
+        30,
+        330,
+        330
+      ],
+      "translation": [
+        0,
+        -1,
+        -2.5
+      ],
+      "scale": [
+        0.9,
+        0.9,
+        0.9
+      ]
     },
     "firstperson_lefthand": {
-      "rotation": [30, 330, 330],
-      "translation": [0, -1, -2.5],
-      "scale": [0.9, 0.9, 0.9]
+      "rotation": [
+        30,
+        330,
+        330
+      ],
+      "translation": [
+        0,
+        -1,
+        -2.5
+      ],
+      "scale": [
+        0.9,
+        0.9,
+        0.9
+      ]
     },
     "gui": {
-      "rotation": [25, 225, 0],
-      "translation": [0, 0, 0],
-      "scale": [0.85, 0.85, 0.85]
+      "rotation": [
+        25,
+        225,
+        0
+      ],
+      "translation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.85,
+        0.85,
+        0.85
+      ]
     },
     "ground": {
-      "rotation": [0, 0, 0],
-      "translation": [0, 3, 0],
-      "scale": [0.45, 0.45, 0.45]
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "translation": [
+        0,
+        3,
+        0
+      ],
+      "scale": [
+        0.45,
+        0.45,
+        0.45
+      ]
     }
   }
 }
