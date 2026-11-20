@@ -36,29 +36,64 @@ public final class MoBendsScimitarCompat {
         }
     }
 
+    // Runs every render frame while guarding: resolve Mo' Bends members once.
+    // Rendering is single-threaded, so plain maps are enough.
+    private static final java.util.Map<String, Method> METHODS = new java.util.HashMap<>();
+    private static final java.util.Map<String, Field> FIELDS = new java.util.HashMap<>();
+    private static Field databaseInstance;
+    private static Method databaseGet;
+
+    private static Method method(Class<?> owner, String name, Class<?>... params)
+        throws NoSuchMethodException {
+        String key = owner.getName() + '#' + name;
+        Method found = METHODS.get(key);
+        if (found == null) {
+            found = owner.getMethod(name, params);
+            METHODS.put(key, found);
+        }
+        return found;
+    }
+
+    private static Field field(Class<?> owner, String name) throws NoSuchFieldException {
+        String key = owner.getName() + '#' + name;
+        Field found = FIELDS.get(key);
+        if (found == null) {
+            found = owner.getField(name);
+            FIELDS.put(key, found);
+        }
+        return found;
+    }
+
+    private static void turn(Object rotation, String operation, float degrees)
+        throws ReflectiveOperationException {
+        method(rotation.getClass(), operation, float.class).invoke(rotation, degrees);
+    }
+
     private static Object rotation(ModelRenderer arm) throws ReflectiveOperationException {
-        Method getRotation=arm.getClass().getMethod("getRotation");
-        return getRotation.invoke(arm);
+        return method(arm.getClass(), "getRotation").invoke(arm);
     }
 
     private static void poseRightArm(ModelRenderer arm) throws ReflectiveOperationException {
         Object rotation=rotation(arm);
-        rotation.getClass().getMethod("orientInstantX",float.class).invoke(rotation,-82.0F);
-        rotation.getClass().getMethod("rotateInstantZ",float.class).invoke(rotation,35.0F);
+        turn(rotation, "orientInstantX", -82.0F);
+        turn(rotation, "rotateInstantZ", 35.0F);
     }
 
     private static void poseLeftArm(ModelRenderer arm) throws ReflectiveOperationException {
         Object rotation=rotation(arm);
         // Mo' Bends mirrors its left arm by reversing the operation order.
         // Using the right-arm order here makes the offhand blade visibly diverge.
-        rotation.getClass().getMethod("orientInstantZ",float.class).invoke(rotation,-35.0F);
-        rotation.getClass().getMethod("rotateInstantX",float.class).invoke(rotation,-82.0F);
+        turn(rotation, "orientInstantZ", -35.0F);
+        turn(rotation, "rotateInstantX", -82.0F);
     }
 
     private static void poseItems(EntityPlayer player) throws ReflectiveOperationException {
-        Class<?> databaseClass=Class.forName("goblinbob.mobends.core.data.EntityDatabase");
-        Object database=databaseClass.getField("instance").get(null);
-        Object data=databaseClass.getMethod("get",EntityLivingBase.class).invoke(database,player);
+        if (databaseGet == null) {
+            Class<?> databaseClass=Class.forName("goblinbob.mobends.core.data.EntityDatabase");
+            databaseInstance=databaseClass.getField("instance");
+            databaseGet=databaseClass.getMethod("get",EntityLivingBase.class);
+        }
+        Object data=databaseGet.invoke(databaseInstance.get(null),player);
         if(data==null)return;
         poseItem(data,"renderRightItemRotation",-28.0F);
         poseItem(data,"renderLeftItemRotation",28.0F);
@@ -66,8 +101,6 @@ public final class MoBendsScimitarCompat {
 
     private static void poseItem(Object data,String fieldName,float z)
         throws ReflectiveOperationException {
-        Field field=data.getClass().getField(fieldName);
-        Object rotation=field.get(data);
-        rotation.getClass().getMethod("orientInstantZ",float.class).invoke(rotation,z);
+        turn(field(data.getClass(), fieldName).get(data), "orientInstantZ", z);
     }
 }

@@ -185,12 +185,22 @@ public final class SilverSetBonusCompat {
             ? ((ItemArsenalWeapon) held.getItem()).getTier() : null;
     }
 
+    // Checked every tick per player; SetBonus sets share one class, so resolve once.
+    private static volatile Method numberEquipped;
+    private static volatile Method maxNumber;
+
     private static boolean isSetComplete(Object set, EntityLivingBase wearer) {
         if (set == null || !(wearer instanceof EntityPlayer)) return false;
         try {
-            Method equipped = set.getClass().getMethod("getNumberEquipped",
-                EntityPlayer.class);
-            Method maximum = set.getClass().getMethod("getMaxNumber");
+            Method equipped = numberEquipped;
+            Method maximum = maxNumber;
+            if (equipped == null || maximum == null
+                || equipped.getDeclaringClass() != set.getClass()
+                    && !equipped.getDeclaringClass().isInstance(set)) {
+                equipped = numberEquipped = set.getClass().getMethod("getNumberEquipped",
+                    EntityPlayer.class);
+                maximum = maxNumber = set.getClass().getMethod("getMaxNumber");
+            }
             int equippedCount = ((Number) equipped.invoke(set, wearer)).intValue();
             int requiredCount = ((Number) maximum.invoke(set)).intValue();
             return requiredCount > 0 && equippedCount >= requiredCount;

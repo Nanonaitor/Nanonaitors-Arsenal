@@ -93,7 +93,8 @@ public final class ClawPairHandler {
     }
 
     private static void syncLinkedClaw(ItemStack main, ItemStack linked) {
-        linked.setItemDamage(main.getItemDamage());
+        // Runs every tick: only write when something actually changed.
+        if (linked.getItemDamage() != main.getItemDamage()) linked.setItemDamage(main.getItemDamage());
         NBTTagCompound linkedTag = new NBTTagCompound();
         if (main.hasTagCompound()) {
             NBTTagCompound mainTag = main.getTagCompound();
@@ -102,7 +103,8 @@ public final class ClawPairHandler {
                 copyTag(mainTag, linkedTag, "Quality");
             }
         }
-        linked.setTagCompound(linkedTag.hasNoTags() ? null : linkedTag);
+        NBTTagCompound wanted = linkedTag.hasNoTags() ? null : linkedTag;
+        if (!java.util.Objects.equals(linked.getTagCompound(), wanted)) linked.setTagCompound(wanted);
     }
 
     private static void copyTag(NBTTagCompound source, NBTTagCompound destination,

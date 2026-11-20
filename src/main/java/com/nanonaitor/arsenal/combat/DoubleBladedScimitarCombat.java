@@ -161,15 +161,13 @@ public final class DoubleBladedScimitarCombat {
         // Magic/armor-piercing projectile damage is combat damage, not environment damage.
         event.setCanceled(true);
         if(RETURNING.get() || defender.world.isRemote || defender.hurtResistantTime>0 || !(source instanceof EntityLivingBase))return;
-        if (!defender.world.isRemote && source instanceof EntityLivingBase) {
-            PendingEffectReflection pending = new PendingEffectReflection(
-                (EntityLivingBase) source,
-                REFLECTION_EFFECT_BASELINE.containsKey(defender)
-                    ? REFLECTION_EFFECT_BASELINE.get(defender) : harmfulEffects(defender),
-                defender.world.getTotalWorldTime() + 2L);
-            PENDING_EFFECT_REFLECTION.put(defender, pending);
-            transferReflectedEffects(defender, pending);
-        }
+        // Server-side and a living attacker are guaranteed by the check above.
+        Map<Potion, PotionEffect> baseline = REFLECTION_EFFECT_BASELINE.get(defender);
+        PendingEffectReflection pending = new PendingEffectReflection((EntityLivingBase) source,
+            baseline != null ? baseline : harmfulEffects(defender),
+            defender.world.getTotalWorldTime() + 2L);
+        PENDING_EFFECT_REFLECTION.put(defender, pending);
+        transferReflectedEffects(defender, pending);
         boolean hit;
         ItemStack weapon = defender.getHeldItemMainhand();
         net.minecraft.item.Item staffItem=weapon.getItem();

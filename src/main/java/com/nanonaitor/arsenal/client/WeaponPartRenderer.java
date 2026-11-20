@@ -150,12 +150,19 @@ public final class WeaponPartRenderer {
             yaw, 0.0F, 0.0F);
     }
 
+    /** Render-only part stacks, built once per item and part instead of every frame. */
+    private static final java.util.Map<net.minecraft.item.Item, java.util.Map<Integer, ItemStack>> PART_STACKS =
+        new java.util.IdentityHashMap<>();
+
     private static ItemStack animationPart(ItemStack held, int part) {
-        ItemStack stack = new ItemStack(held.getItem());
-        NBTTagCompound tag = new NBTTagCompound();
-        tag.setInteger(PART_TAG, part);
-        stack.setTagCompound(tag);
-        return stack;
+        return PART_STACKS.computeIfAbsent(held.getItem(), item -> new java.util.HashMap<>())
+            .computeIfAbsent(part, key -> {
+                ItemStack stack = new ItemStack(held.getItem());
+                NBTTagCompound tag = new NBTTagCompound();
+                tag.setInteger(PART_TAG, key);
+                stack.setTagCompound(tag);
+                return stack;
+            });
     }
 
     private static void renderPart(ItemStack stack, double x, double y, double z,
