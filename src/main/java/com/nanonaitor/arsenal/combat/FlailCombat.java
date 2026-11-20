@@ -17,7 +17,6 @@ import net.minecraft.init.SoundEvents;
 import net.minecraft.item.EnumAction;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.EnumParticleTypes;
-import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.DamageSource;
 import net.minecraft.util.SoundEvent;
 import net.minecraft.util.math.AxisAlignedBB;
@@ -125,9 +124,7 @@ public final class FlailCombat {
     }
 
     public static boolean isDefender(ItemStack stack) {
-        if (stack.isEmpty()) return false;
-        ResourceLocation registryName = stack.getItem().getRegistryName();
-        return registryName != null && "defenders".equals(registryName.getResourceDomain());
+        return AbilityUseRules.defender(stack);
     }
 
     /** Mirrors the modern build's visible four-block flail hitbox ring. */

@@ -18,6 +18,13 @@ public final class AbilityUseRules {
     public static boolean shield(EntityPlayer p,ItemStack s){return !s.isEmpty()&&s.getItem().isShield(s,p);}
     public static boolean cooling(EntityPlayer p,ItemStack s){return !s.isEmpty()&&p.getCooldownTracker().hasCooldown(s.getItem());}
     public static boolean activeShield(EntityPlayer p){return p.isHandActive()&&shield(p,p.getActiveItemStack());}
+    /** Defenders (the Defenders mod) are built to attack while guarding, so they never cancel weapon abilities. */
+    public static boolean defender(ItemStack s){
+        net.minecraft.util.ResourceLocation name=s.isEmpty()?null:s.getItem().getRegistryName();
+        return name!=null&&"defenders".equals(name.getResourceDomain());
+    }
+    /** Guarding with a shield that stops weapon abilities: any shield except a Defender. */
+    public static boolean activeConventionalShield(EntityPlayer p){return activeShield(p)&&!defender(p.getActiveItemStack());}
     private static final String ATTACK_LOCK = "ArsenalShieldAttackLock";
     public static boolean weaponSuppressed(EntityPlayer p) { return activeShield(p)
         || com.nanonaitor.arsenal.data.TransientData.of(p).getLong(ATTACK_LOCK) > p.world.getTotalWorldTime(); }
@@ -34,7 +41,8 @@ public final class AbilityUseRules {
         }
         if(shield(p,s)){
             DoubleBladedScimitarCombat.cancelReflection(p);
-            BallAndChainCombat.cancelAbility(p);
+            // Raising a Defender keeps a Ball and Chain wind-up or throw going.
+            if(!defender(s))BallAndChainCombat.cancelAbility(p);
             if(p.isHandActive()&&p.getActiveItemStack().getItem() instanceof ItemArsenalWeapon)p.resetActiveHand();
         }
     }

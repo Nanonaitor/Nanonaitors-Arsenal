@@ -23,6 +23,28 @@ public final class FlailAnimationHandler {
 
     private FlailAnimationHandler() {}
 
+    /**
+     * The flail ball's orbit angle in radians, matching the rendered orbit
+     * (0 = wielder's right, PI/2 = front), or NaN when the flail is not spinning.
+     */
+    public static double orbitAngle(EntityPlayer player, float partialTicks) {
+        AnimationState state = ACTIVE.get(player);
+        if (state == null || player.world == null
+            || state.endTick < player.world.getTotalWorldTime()
+            || !(player.getHeldItemMainhand().getItem() instanceof ItemFlail)) return Double.NaN;
+        double age = player.world.getTotalWorldTime() - state.startTick + partialTicks;
+        int interval = ChainWeaponStats.swingIntervalTicks(player, player.getHeldItemMainhand());
+        return age / interval * Math.PI * 2.0D;
+    }
+
+    /** Pose capture tool only: show the orbit at about this angle this tick. */
+    public static void debugOrbit(EntityPlayer player, double angle) {
+        long now = player.world.getTotalWorldTime();
+        int interval = ChainWeaponStats.swingIntervalTicks(player, player.getHeldItemMainhand());
+        ACTIVE.put(player, new AnimationState(now - Math.round(angle / (Math.PI * 2.0D) * interval), now + 2L));
+        com.nanonaitor.arsenal.data.TransientData.of(player).setBoolean("ArsenalFlailActive", true);
+    }
+
     public static void startRemoteSwing(int entityId) {
         Minecraft minecraft = Minecraft.getMinecraft();
         if (minecraft.world == null) {
@@ -145,6 +167,13 @@ public final class FlailAnimationHandler {
         // which made the chain climb diagonally upward from the player.
         double anchorY = baseY + (player.isSneaking() ? 1.00D : 1.20D);
         double anchorZ = pz + rightZ * 0.38D;
+        // When Arsenal poses the arm, the chain leaves the whirling hand instead.
+        double[] hand = com.nanonaitor.arsenal.client.pose.WeaponPoses.weaponHandOffset(player, partialTicks);
+        if (hand != null) {
+            anchorX = px + hand[0];
+            anchorY = baseY + hand[1];
+            anchorZ = pz + hand[2];
+        }
 
         double age = player.world.getTotalWorldTime() - state.startTick + partialTicks;
         ItemStack weapon = player.getHeldItemMainhand();

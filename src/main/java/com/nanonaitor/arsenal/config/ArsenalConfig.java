@@ -85,7 +85,27 @@ public final class ArsenalConfig {
     @Config.Name("morningStar")
     public static MorningStar morningStar = new MorningStar();
 
+    @Config.Name("animations")
+    @Config.Comment("Client-side third-person weapon animations. Changes apply immediately.")
+    public static Animations animations = new Animations();
+
     private ArsenalConfig() {}
+
+    public static final class Animations {
+        @Config.Name("weaponPoses")
+        @Config.Comment({"Animate the player's arms for Arsenal weapons in third person:",
+            "two-handed holds, ramming, flail and ball-and-chain spins, blade staff paddling,",
+            "attack-speed-timed swings, and strained one-handed variants of two-handed weapons."})
+        public boolean weaponPoses = true;
+
+        @Config.Name("moBendsPoses")
+        @Config.Comment("With Mo' Bends installed, apply the same weapon poses through Mo' Bends' own skeleton instead of overriding it.")
+        public boolean moBendsPoses = true;
+
+        @Config.Name("attackSpeedSwings")
+        @Config.Comment("Stretch Arsenal weapon swing animations to each weapon's real attack cooldown instead of vanilla's fixed swing.")
+        public boolean attackSpeedSwings = true;
+    }
 
     public static final class Enchantments {
         @Config.Comment("Disabled enchantments remain registered to protect existing saves, but cannot be obtained, applied, or provide effects. Restart required.")

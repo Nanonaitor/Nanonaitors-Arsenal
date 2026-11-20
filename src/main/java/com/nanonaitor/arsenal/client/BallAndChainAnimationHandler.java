@@ -56,8 +56,8 @@ public final class BallAndChainAnimationHandler {
             return;
         }
         EntityPlayer player = (EntityPlayer) entity;
-        if (com.nanonaitor.arsenal.combat.AbilityUseRules.activeShield(player)
-            || player == minecraft.player && ShieldUsePriority.requested(player)) {
+        if (com.nanonaitor.arsenal.combat.AbilityUseRules.activeConventionalShield(player)
+            || player == minecraft.player && ShieldUsePriority.weaponAttackSuppressed(player)) {
             cancelForShield(player);
             return;
         }
@@ -71,8 +71,50 @@ public final class BallAndChainAnimationHandler {
         }
     }
 
+    /** Pose capture tool only: show a wind-up at about this angle this tick. */
+    public static void debugWindup(EntityPlayer player, double angle) {
+        long now = player.world.getTotalWorldTime();
+        int interval = ChainWeaponStats.swingIntervalTicks(player, player.getHeldItemMainhand());
+        WindupState state = new WindupState(now - Math.round(angle / (Math.PI * 2.0D) * interval));
+        state.endTick = now + 3L;
+        RELEASES.remove(player);
+        WINDUPS.put(player, state);
+        com.nanonaitor.arsenal.data.TransientData.of(player).setBoolean("ArsenalBallAndChainActive", true);
+    }
+
+    /** Pose capture tool only: show a throw at about this progress this tick. */
+    public static void debugRelease(EntityPlayer player, double progress) {
+        long now = player.world.getTotalWorldTime();
+        int duration = 20;
+        WINDUPS.remove(player);
+        RELEASES.put(player, new ReleaseState(now - Math.round(progress * duration), 2, 5.0F,
+            player.rotationYaw, 0.0F, duration));
+        com.nanonaitor.arsenal.data.TransientData.of(player).setBoolean("ArsenalBallAndChainActive", true);
+    }
+
     public static boolean isReleaseAnimationActive(EntityPlayer player) {
         return RELEASES.containsKey(player);
+    }
+
+    /**
+     * The wind-up spin angle in radians, matching the rendered ball (0 = ball
+     * level in front, PI/2 = top), or NaN when this player is not winding up.
+     */
+    public static double windupAngle(EntityPlayer player, float partialTicks) {
+        WindupState state = WINDUPS.get(player);
+        if (state == null || RELEASES.containsKey(player)
+            || !(player.getHeldItemMainhand().getItem() instanceof ItemBallAndChain)) return Double.NaN;
+        double age = player.world.getTotalWorldTime() - state.startTick + partialTicks;
+        int interval = ChainWeaponStats.swingIntervalTicks(player, player.getHeldItemMainhand());
+        return age / interval * Math.PI * 2.0D;
+    }
+
+    /** Throw progress 0..1 (out until 0.5, back after), or -1 when no throw is playing. */
+    public static double releaseProgress(EntityPlayer player, float partialTicks) {
+        ReleaseState state = RELEASES.get(player);
+        if (state == null) return -1.0D;
+        double age = player.world.getTotalWorldTime() - state.startTick + partialTicks;
+        return Math.max(0.0D, Math.min(1.0D, age / state.durationTicks));
     }
 
     public static boolean isGuarding(EntityPlayer player) {
@@ -100,7 +142,7 @@ public final class BallAndChainAnimationHandler {
         }
         long now = minecraft.world.getTotalWorldTime();
         for (EntityPlayer player : minecraft.world.playerEntities) {
-            if (com.nanonaitor.arsenal.combat.AbilityUseRules.activeShield(player)) {
+            if (com.nanonaitor.arsenal.combat.AbilityUseRules.activeConventionalShield(player)) {
                 cancelForShield(player);
                 continue;
             }
@@ -112,7 +154,7 @@ public final class BallAndChainAnimationHandler {
                 continue;
             }
             boolean localInput = player == minecraft.player
-                && !ShieldUsePriority.requested(player)
+                && !ShieldUsePriority.weaponAttackSuppressed(player)
                 && minecraft.currentScreen == null
                 && !RELEASES.containsKey(player)
                 && !BallAndChainInputHandler.isGuardingInput()
@@ -218,7 +260,7 @@ public final class BallAndChainAnimationHandler {
         double ballX = frame.anchorX + windupX * distance;
         double ballY = frame.anchorY + Math.sin(angle) * 0.72D * reachScale;
         double ballZ = frame.anchorZ + windupZ * distance;
-        renderChainAndBall(player, frame, ballX, ballY, ballZ, 0.264D);
+        renderChainAndBall(player, frame, ballX, ballY, ballZ, 0.264D, partialTicks);
     }
 
     private static void renderRelease(EntityPlayer player, ReleaseState state,
@@ -232,7 +274,7 @@ public final class BallAndChainAnimationHandler {
         double ballY = frame.anchorY + frame.forwardY * distance;
         double ballZ = frame.anchorZ + frame.forwardZ * distance;
         renderChainAndBall(player, frame, ballX, ballY, ballZ,
-            0.24D + state.charge * 0.025D);
+            0.24D + state.charge * 0.025D, partialTicks);
     }
 
     private static RenderFrame getFrame(EntityPlayer player, float partialTicks,
@@ -256,15 +298,25 @@ public final class BallAndChainAnimationHandler {
         double anchorY = py + (player.isSneaking() ? 1.05D : 1.25D);
         double anchorZ = pz + forwardZ * 0.18D + rightZ * 0.28D;
         return new RenderFrame(anchorX, anchorY, anchorZ,
-            forwardX, forwardY, forwardZ);
+            forwardX, forwardY, forwardZ, px, py, pz);
     }
 
+    /**
+     * The ball keeps its own path (the one the server hits along); the chain
+     * starts in the posed hand when Arsenal draws the arms, else at the anchor.
+     */
     private static void renderChainAndBall(EntityPlayer player, RenderFrame frame,
                                            double ballX, double ballY, double ballZ,
-                                           double radius) {
+                                           double radius, float partialTicks) {
+        double fromX = frame.anchorX, fromY = frame.anchorY, fromZ = frame.anchorZ;
+        double[] hand = com.nanonaitor.arsenal.client.pose.WeaponPoses.weaponHandOffset(player, partialTicks);
+        if (hand != null) {
+            fromX = frame.feetX + hand[0];
+            fromY = frame.feetY + hand[1];
+            fromZ = frame.feetZ + hand[2];
+        }
         WeaponPartRenderer.renderStraightChainAndBall(player.getHeldItemMainhand(),
-            frame.anchorX, frame.anchorY, frame.anchorZ,
-            ballX, ballY, ballZ, radius);
+            fromX, fromY, fromZ, ballX, ballY, ballZ, radius);
     }
 
     private static final class WindupState {
@@ -303,9 +355,16 @@ public final class BallAndChainAnimationHandler {
         private final double forwardX;
         private final double forwardY;
         private final double forwardZ;
+        private final double feetX;
+        private final double feetY;
+        private final double feetZ;
 
         private RenderFrame(double anchorX, double anchorY, double anchorZ,
-                            double forwardX, double forwardY, double forwardZ) {
+                            double forwardX, double forwardY, double forwardZ,
+                            double feetX, double feetY, double feetZ) {
+            this.feetX = feetX;
+            this.feetY = feetY;
+            this.feetZ = feetZ;
             this.anchorX = anchorX;
             this.anchorY = anchorY;
             this.anchorZ = anchorZ;

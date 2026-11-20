@@ -51,7 +51,7 @@ public final class BallAndChainInputHandler {
             return;
         }
         EntityPlayer player = mc.player;
-        if (player != null && ShieldUsePriority.requested(player)) return;
+        if (player != null && ShieldUsePriority.weaponAttackSuppressed(player)) return;
         if (player != null && player.getHeldItemMainhand().getItem()
             instanceof ItemBallAndChain) {
             // Own both edges: otherwise RLCombat starts an ordinary targeted
@@ -88,7 +88,7 @@ public final class BallAndChainInputHandler {
         Minecraft mc = Minecraft.getMinecraft();
         if (mc.player != null && mc.currentScreen == null
             && mc.player.getHeldItemMainhand().getItem() instanceof ItemBallAndChain
-            && !ShieldUsePriority.requested(mc.player)) {
+            && !ShieldUsePriority.weaponAttackSuppressed(mc.player)) {
             // START prevents held-click attacks in Minecraft's tick; END also
             // covers combat mods polling the binding after that tick.
             clearVanillaAttack(mc);
@@ -106,7 +106,8 @@ public final class BallAndChainInputHandler {
         }
         boolean holdingWeapon = player.getHeldItemMainhand().getItem()
             instanceof ItemBallAndChain;
-        if (holdingWeapon && ShieldUsePriority.requested(player)) BallAndChainAnimationHandler.cancelForShield(player);
+        if (holdingWeapon) raiseDefenderOverBall(minecraft, player);
+        if (holdingWeapon && ShieldUsePriority.weaponAttackSuppressed(player)) BallAndChainAnimationHandler.cancelForShield(player);
         boolean retrieving = BallAndChainAnimationHandler.isReleaseAnimationActive(player);
         boolean canGuard = holdingWeapon
             && !com.nanonaitor.arsenal.combat.AbilityUseRules.cooling(player,player.getHeldItemMainhand())
@@ -127,7 +128,7 @@ public final class BallAndChainInputHandler {
         }
         boolean canSwing = holdingWeapon
             && !com.nanonaitor.arsenal.combat.AbilityUseRules.cooling(player,player.getHeldItemMainhand())
-            && !ShieldUsePriority.requested(player)
+            && !ShieldUsePriority.weaponAttackSuppressed(player)
             && !retrieving
             && !guarding
             && minecraft.currentScreen == null
@@ -142,7 +143,7 @@ public final class BallAndChainInputHandler {
                 lastHeartbeatTick = Long.MIN_VALUE;
             }
             if (holdingWeapon && !retrieving && !guarding && player.isHandActive()
-                && !ShieldUsePriority.requested(player)
+                && !ShieldUsePriority.weaponAttackSuppressed(player)
                 && player.getActiveHand() == EnumHand.MAIN_HAND) {
                 player.resetActiveHand();
             }
@@ -158,6 +159,23 @@ public final class BallAndChainInputHandler {
             lastHeartbeatTick = now;
             ModNetwork.CHANNEL.sendToServer(new BallAndChainSwingMessage(true));
         }
+    }
+
+    /**
+     * The game ignores the use key while the ball's own use action runs (wind-up
+     * and throw), so a Defender could not be raised mid-attack. Hand the use
+     * action over to the Defender; the wind-up or throw carries on.
+     */
+    private static void raiseDefenderOverBall(Minecraft mc, EntityPlayer player) {
+        net.minecraft.item.ItemStack offhand = player.getHeldItemOffhand();
+        if (!com.nanonaitor.arsenal.combat.AbilityUseRules.defender(offhand)
+            || mc.currentScreen != null || mc.playerController == null
+            || !mc.gameSettings.keyBindUseItem.isKeyDown()
+            || player.getCooldownTracker().hasCooldown(offhand.getItem())
+            || !player.isHandActive() || player.getActiveHand() != EnumHand.MAIN_HAND
+            || !(player.getActiveItemStack().getItem() instanceof ItemBallAndChain)) return;
+        mc.playerController.onStoppedUsingItem(player);
+        mc.playerController.processRightClick(player, mc.world, EnumHand.OFF_HAND);
     }
 
     public static boolean isSwinging() {
@@ -196,7 +214,8 @@ public final class BallAndChainInputHandler {
             SharedMonsterAttributes.MOVEMENT_SPEED);
         AttributeModifier old = speed.getModifier(USE_SPEED_UUID);
         if (old != null) speed.removeModifier(old);
-        if (active && player.isHandActive()) {
+        if (active && player.isHandActive()
+            && player.getActiveItemStack().getItem() instanceof ItemBallAndChain) {
             // Minecraft 1.12.2 multiplies movement input by 0.2 whenever an
             // item is active. This transient x5 modifier cancels only that
             // animation-state penalty; all other speed effects still apply.

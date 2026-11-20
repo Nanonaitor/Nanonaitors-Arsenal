@@ -41,7 +41,11 @@ import net.minecraftforge.fml.common.network.NetworkRegistry;
 public final class BallAndChainCombat {
     public static final int RELEASE_ANIMATION_TICKS = 16;
     public static final double WINDUP_REACH = 3.0D;
-    private static final double LINE_RADIUS = 0.55D;
+    /**
+     * Thrown-ball hit radius around the ball's centre, close to its drawn size
+     * (0.24-0.32 blocks), so a hit happens where the ball visibly touches.
+     */
+    private static final double BALL_HIT_RADIUS = 0.30D;
     private static final float[] RELEASE_DAMAGE_MULTIPLIER = {0.0F, 1.0F, 1.5F, 2.0F};
     // cancelAbility can run on the client thread (item use), so keep sides apart.
     private static final SidedPlayerMap<SwingState> SWINGS = new SidedPlayerMap<>();
@@ -78,7 +82,7 @@ public final class BallAndChainCombat {
     }
 
     public static void updateSwinging(EntityPlayerMP player, boolean swinging) {
-        if (AbilityUseRules.weaponSuppressed(player)) { cancelAbility(player); return; }
+        if (shieldStopsBall(player)) { cancelAbility(player); return; }
         if(AbilityUseRules.cooling(player,player.getHeldItemMainhand())){cancelAbility(player);return;}
         if (usingRealShield(player)) {SWINGS.remove(player);return;}
         if (!swinging) {
@@ -121,7 +125,7 @@ public final class BallAndChainCombat {
         ItemStack weapon = player.getHeldItemMainhand();
         if (!isValidWielder(player, weapon)) {
             SWINGS.remove(player);
-            player.resetActiveHand();
+            stopBallUse(player);
             return;
         }
         long now = player.world.getTotalWorldTime();
@@ -162,20 +166,20 @@ public final class BallAndChainCombat {
             || ((ItemBallAndChain) current.getItem()).getTier() != state.tier
             ) {
             THROWS.remove(player);
-            if (player.isHandActive()) player.resetActiveHand();
+            stopBallUse(player);
             return false;
         }
         long age = player.world.getTotalWorldTime() - state.startTick;
-        smashProjectiles(player, state, age);
-        if (!state.returnHitDone && age >= state.durationTicks / 2) {
-            state.returnHitDone = true;
-            performThrowPass(player, state, true);
-        }
+        // Hits follow the ball as drawn: each tick checks only the stretch the
+        // ball travelled this tick, outbound first, then on the way back.
+        Vec3d from = state.lastBallPosition;
+        Vec3d to = ballPosition(state, age);
+        state.lastBallPosition = to;
+        hitAlongPath(player, state, from, to, age * 2L > state.durationTicks);
+        smashProjectiles(player, from, to);
         if (age >= state.durationTicks || player.isDead) {
             THROWS.remove(player);
-            if (player.isHandActive()) {
-                player.resetActiveHand();
-            }
+            stopBallUse(player);
             return false;
         }
         if (!player.isHandActive() && player.getHeldItemMainhand().getItem()
@@ -185,8 +189,22 @@ public final class BallAndChainCombat {
         return true;
     }
 
+    /** A conventional shield in use; a raised Defender lets the ball keep going. */
     private static boolean usingRealShield(EntityPlayer player) {
-        return AbilityUseRules.activeShield(player);
+        return AbilityUseRules.activeConventionalShield(player);
+    }
+
+    /** Shield use (or a shield action's attack lock) stops the ball, except while guarding with a Defender. */
+    private static boolean shieldStopsBall(EntityPlayer player) {
+        if (AbilityUseRules.activeShield(player)) return usingRealShield(player);
+        return AbilityUseRules.weaponSuppressed(player);
+    }
+
+    /** Ends the ball's own use action only, never a Defender being held up. */
+    private static void stopBallUse(EntityPlayer player) {
+        if (player.isHandActive() && player.getActiveItemStack().getItem() instanceof ItemBallAndChain) {
+            player.resetActiveHand();
+        }
     }
 
     private static boolean isValidWielder(EntityPlayerMP player, ItemStack stack) {
@@ -231,7 +249,7 @@ public final class BallAndChainCombat {
             return;
         }
         if (!isValidWielder(player, weapon) || swing.charge <= 0) {
-            player.resetActiveHand();
+            stopBallUse(player);
             return;
         }
         ItemBallAndChain item = (ItemBallAndChain) weapon.getItem();
@@ -260,7 +278,7 @@ public final class BallAndChainCombat {
         player.setActiveHand(EnumHand.MAIN_HAND);
         sendReleaseAnimation(player, effectiveCharge, (float) start.distanceTo(end),
             durationTicks);
-        performThrowPass(player, state, false);
+        playAttackSound(player, false, 0.72F + state.charge * 0.10F);
         if (end.distanceTo(intendedEnd) > 0.05D) {
             player.world.playSound(null, end.x, end.y, end.z,
                 SoundEvents.ENTITY_IRONGOLEM_ATTACK, player.getSoundCategory(),
@@ -268,22 +286,23 @@ public final class BallAndChainCombat {
         }
     }
 
-    private static void performThrowPass(EntityPlayerMP player, ThrowState state,
-                                         boolean returning) {
-        Vec3d start = returning ? state.end : state.start;
-        Vec3d end = returning ? state.start : state.end;
+    /** Damages targets the ball touches between two of its tick positions, once per direction. */
+    private static void hitAlongPath(EntityPlayerMP player, ThrowState state, Vec3d from, Vec3d to,
+                                     boolean returning) {
+        java.util.Set<Integer> already = returning ? state.hitReturning : state.hitOutbound;
         Vec3d direction = returning ? state.direction.scale(-1.0D) : state.direction;
-        AxisAlignedBB search = sweptBox(start, end, LINE_RADIUS, LINE_RADIUS);
+        AxisAlignedBB search = sweptBox(from, to, BALL_HIT_RADIUS, BALL_HIT_RADIUS);
         List<EntityLivingBase> targets = player.world.getEntitiesWithinAABB(
             EntityLivingBase.class, search,
-            target -> isValidTarget(player, target));
-        targets.sort(Comparator.comparingDouble(target -> target.getDistanceSq(start.x,
-            start.y, start.z)));
+            target -> isValidTarget(player, target) && !already.contains(target.getEntityId()));
+        targets.sort(Comparator.comparingDouble(target -> target.getDistanceSq(from.x,
+            from.y, from.z)));
         boolean hit = false;
         for (EntityLivingBase target : targets) {
-            if (!intersectsLine(target, start, end, LINE_RADIUS, LINE_RADIUS)) {
+            if (!intersectsLine(target, from, to, BALL_HIT_RADIUS, BALL_HIT_RADIUS)) {
                 continue;
             }
+            already.add(target.getEntityId());
             float damage = state.baseDamage + EnchantmentHelper.getModifierForCreature(
                 state.weapon, target.getCreatureAttribute());
             if (isFullCharge(state)) {
@@ -299,8 +318,7 @@ public final class BallAndChainCombat {
                 }
             }
         }
-        playAttackSound(player, hit,
-            (returning ? 0.66F : 0.72F) + state.charge * 0.10F);
+        if (hit) playAttackSound(player, true, (returning ? 0.66F : 0.72F) + state.charge * 0.10F);
     }
 
     private static boolean applyHit(EntityPlayerMP player, EntityLivingBase target,
@@ -356,10 +374,7 @@ public final class BallAndChainCombat {
      * Each tick compares the ball's path this tick with each projectile's path
      * this tick, so fast arrows cannot slip between two ticks.
      */
-    private static void smashProjectiles(EntityPlayerMP player, ThrowState state, long age) {
-        Vec3d from = state.lastBallPosition;
-        Vec3d to = ballPosition(state, age);
-        state.lastBallPosition = to;
+    private static void smashProjectiles(EntityPlayerMP player, Vec3d from, Vec3d to) {
         // Grown generously: an arrow can move about 3 blocks in one tick.
         AxisAlignedBB search = sweptBox(from, to, 4.0D, 4.0D);
         for (net.minecraft.entity.Entity projectile : player.world.getEntitiesInAABBexcluding(
@@ -551,8 +566,9 @@ public final class BallAndChainCombat {
         private final Vec3d end;
         private final Vec3d direction;
         private final float baseDamage;
-        private boolean returnHitDone;
         private Vec3d lastBallPosition;
+        private final java.util.Set<Integer> hitOutbound = new java.util.HashSet<>();
+        private final java.util.Set<Integer> hitReturning = new java.util.HashSet<>();
 
         private ThrowState(long startTick, int durationTicks, ItemStack weapon, WeaponTier tier,
                            int charge, Vec3d start, Vec3d end, Vec3d direction,

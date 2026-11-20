@@ -53,7 +53,7 @@ public final class FlailInputHandler {
     }
 
     private static void requestSwing(EntityPlayer player) {
-        if(ShieldUsePriority.flailSuppressed(player)||com.nanonaitor.arsenal.combat.AbilityUseRules.cooling(player,player.getHeldItemMainhand()))return;
+        if(ShieldUsePriority.weaponAttackSuppressed(player)||com.nanonaitor.arsenal.combat.AbilityUseRules.cooling(player,player.getHeldItemMainhand()))return;
         if (FlailCombat.isBlockingConventionalShield(player)) {
             return;
         }

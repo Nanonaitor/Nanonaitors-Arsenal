@@ -210,6 +210,12 @@ public final class ModContent {
         registerModel(IRON_CHAIN_ITEM);
         registerModel(SUN_WAR_BULWARK);
         registerModel(TARTSY_SHIELD);
+        // Client-only property: while Arsenal poses a two-handed staff grip, the
+        // staff model switches to one held crosswise in the fist.
+        for (ItemDoubleBladedScimitar item : DOUBLE_BLADED_SCIMITARS.values()) {
+            item.addPropertyOverride(new ResourceLocation(NanonaitorsArsenal.MOD_ID, "posed"),
+                com.nanonaitor.arsenal.client.pose.WeaponPoses.STAFF_POSED);
+        }
         for (ItemMorningStar item : MORNING_STARS.values()) {
             registerModel(item);
         }

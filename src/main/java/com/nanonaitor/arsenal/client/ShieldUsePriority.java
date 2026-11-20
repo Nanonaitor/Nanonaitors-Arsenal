@@ -8,8 +8,11 @@ import net.minecraft.entity.player.EntityPlayer;
  */
 public final class ShieldUsePriority {
     private ShieldUsePriority() {}
-    /** Flails support Defender counterattacks, but never conventional shield use. */
-    public static boolean flailSuppressed(EntityPlayer player) {
+    /**
+     * Flails and Balls and Chains attack while guarding with a Defender, but
+     * stop for conventional shield use.
+     */
+    public static boolean weaponAttackSuppressed(EntityPlayer player) {
         if (ShieldInputHandler.suppressWeaponAttack()) return true;
         if (com.nanonaitor.arsenal.combat.FlailCombat.isDefender(player.getHeldItemOffhand())
             && (!player.isHandActive()

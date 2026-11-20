@@ -1,2 +1,1 @@
-{"parent":"nanonaitors_arsenal:item/blade_staff_base","overrides":[{"predicate":{"nanonaitors_arsenal:reflecting":1.0},"model":"nanonaitors_arsenal:item/blade_staff_reflecting"}],"textures":{"layer0":"nanonaitors_arsenal:items/blade_staff_desert_venom"}}
-
+{"parent":"nanonaitors_arsenal:item/blade_staff_base","overrides":[{"predicate":{"nanonaitors_arsenal:posed":1.0},"model":"nanonaitors_arsenal:item/blade_staff_desert_venom_posed"},{"predicate":{"nanonaitors_arsenal:reflecting":1.0},"model":"nanonaitors_arsenal:item/blade_staff_reflecting"}],"textures":{"layer0":"nanonaitors_arsenal:items/blade_staff_desert_venom"}}

@@ -36,6 +36,11 @@ public final class BatteringRamAnimationHandler {
             && player.isHandActive() && player.getActiveItemStack() == player.getHeldItemMainhand()
             && !com.nanonaitor.arsenal.data.TransientData.of(player).getBoolean("ArsenalBallAndChainActive");
         if (!ram && !bulwark && !morning && !scimitars && !ballGuard) return;
+        // Full weapon poses take over whenever they can draw; these simple
+        // vanilla arm poses remain the fallback (poses off, or another mod's model).
+        if (!scimitars && com.nanonaitor.arsenal.client.pose.WeaponPoses.posesArms(player)
+            && (com.nanonaitor.arsenal.client.pose.PoseInstaller.isInstalled(event.getRenderer())
+                || com.nanonaitor.arsenal.client.pose.MoBendsPoses.active())) return;
         if (ram && !ArsenalCompatManager.canUseTwoHanded(player)) return;
         ModelPlayer model = event.getRenderer().getMainModel();
         PREVIOUS.put(player, new PreviousPose(model));

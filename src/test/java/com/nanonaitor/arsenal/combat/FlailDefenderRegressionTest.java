@@ -53,8 +53,14 @@ public final class FlailDefenderRegressionTest {
         // reverting the client to the general shield-priority gate again.
         String input = new String(Files.readAllBytes(Paths.get(
             "src/main/java/com/nanonaitor/arsenal/client/FlailInputHandler.java")), StandardCharsets.UTF_8);
-        check(input.contains("ShieldUsePriority.flailSuppressed(player)"));
+        check(input.contains("ShieldUsePriority.weaponAttackSuppressed(player)"));
         check(!input.contains("ShieldUsePriority.requested(player)"));
+        // The Ball and Chain keeps winding up and throwing while a Defender guards.
+        String ball = new String(Files.readAllBytes(Paths.get(
+            "src/main/java/com/nanonaitor/arsenal/client/BallAndChainInputHandler.java")), StandardCharsets.UTF_8);
+        check(ball.contains("ShieldUsePriority.weaponAttackSuppressed(player)"));
+        check(!ball.contains("ShieldUsePriority.requested("));
+        check(ball.contains("raiseDefenderOverBall"));
         System.out.println("Flail/Defender regression: " + checks + " checks passed.");
     }
 }
