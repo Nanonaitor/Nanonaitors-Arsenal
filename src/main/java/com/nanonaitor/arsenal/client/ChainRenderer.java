@@ -32,6 +32,13 @@ final class ChainRenderer {
     /** Light from above-front, as items are lit; the chain is a shade darker than the head. */
     private static final double[] LIGHT = normalize(new double[] {0.3D, 1.0D, 0.55D});
     private static final float TONE = 0.82F;
+    /** Realistic chains: wrought iron, a shade darker than an iron head so the two read apart. */
+    private static final float[] IRON = {0.66F, 0.66F, 0.68F};
+    /** Living and Sentient chains are tendon, not metal. */
+    private static final float[] TENDON = {0.80F, 0.19F, 0.19F};
+    private static final float[] MATERIAL = {TONE, TONE, TONE};
+    /** Colour multiplier for the chain being drawn (rendering is single-threaded). */
+    private static float[] tint = MATERIAL;
 
     private ChainRenderer() {}
 
@@ -42,8 +49,22 @@ final class ChainRenderer {
     static void render(ItemStack texturePart, double[][] path) {
         if (path.length < 2) return;
         Minecraft mc = Minecraft.getMinecraft();
-        TextureAtlasSprite sprite = mc.getRenderItem()
-            .getItemModelWithOverrides(texturePart, null, null).getParticleTexture();
+        net.minecraft.item.Item item = texturePart.getItem();
+        com.nanonaitor.arsenal.item.WeaponTier tier = item instanceof com.nanonaitor.arsenal.item.ItemArsenalWeapon
+            ? ((com.nanonaitor.arsenal.item.ItemArsenalWeapon) item).getTier() : null;
+        boolean parasite = tier == com.nanonaitor.arsenal.item.WeaponTier.LIVING
+            || tier == com.nanonaitor.arsenal.item.WeaponTier.SENTIENT;
+        TextureAtlasSprite sprite;
+        if (parasite) {
+            sprite = mc.getTextureMapBlocks().getAtlasSprite("minecraft:blocks/iron_block");
+            tint = TENDON;
+        } else if (com.nanonaitor.arsenal.config.ArsenalConfig.animations.chainMaterialColors) {
+            sprite = mc.getRenderItem().getItemModelWithOverrides(texturePart, null, null).getParticleTexture();
+            tint = MATERIAL;
+        } else {
+            sprite = mc.getTextureMapBlocks().getAtlasSprite("minecraft:blocks/iron_block");
+            tint = IRON;
+        }
         double[] mid = path[path.length / 2];
         applyWorldLight(mid[0], mid[1], mid[2]);
         mc.getTextureManager().bindTexture(TextureMap.LOCATION_BLOCKS_TEXTURE);
@@ -112,11 +133,12 @@ final class ChainRenderer {
     private static void face(BufferBuilder buffer, double[] p0, double[] p1, double[] p2, double[] p3,
                              double[] normal, float u0, float u1, float v0, float v1) {
         double lambert = Math.max(0.0D, dot(normal, LIGHT));
-        float shade = (float) (0.45D + 0.55D * lambert) * TONE;
-        buffer.pos(p0[0], p0[1], p0[2]).tex(u0, v0).color(shade, shade, shade, 1.0F).endVertex();
-        buffer.pos(p1[0], p1[1], p1[2]).tex(u1, v0).color(shade, shade, shade, 1.0F).endVertex();
-        buffer.pos(p2[0], p2[1], p2[2]).tex(u1, v1).color(shade, shade, shade, 1.0F).endVertex();
-        buffer.pos(p3[0], p3[1], p3[2]).tex(u0, v1).color(shade, shade, shade, 1.0F).endVertex();
+        float shade = (float) (0.45D + 0.55D * lambert);
+        float r = shade * tint[0], g = shade * tint[1], b = shade * tint[2];
+        buffer.pos(p0[0], p0[1], p0[2]).tex(u0, v0).color(r, g, b, 1.0F).endVertex();
+        buffer.pos(p1[0], p1[1], p1[2]).tex(u1, v0).color(r, g, b, 1.0F).endVertex();
+        buffer.pos(p2[0], p2[1], p2[2]).tex(u1, v1).color(r, g, b, 1.0F).endVertex();
+        buffer.pos(p3[0], p3[1], p3[2]).tex(u0, v1).color(r, g, b, 1.0F).endVertex();
     }
 
     /** Lightmap coordinates for the block at this camera-relative point. */

@@ -1,6 +1,5 @@
 package com.nanonaitor.arsenal.combat;
 
-import com.nanonaitor.arsenal.client.ParasiteChainColors;
 import com.nanonaitor.arsenal.item.*;
 import net.minecraft.init.Bootstrap;
 import java.nio.file.Files;
@@ -19,9 +18,6 @@ public final class FlailDefenderRegressionTest {
         check(ChainWeaponStats.intervalForSpeed(1.6D * 1.4D) == 9);
         check(ChainWeaponStats.intervalForSpeed((0.8D + 1.6D) * 1.4D) == 6);
         check(ChainWeaponStats.intervalForSpeed(100D) == 1);
-        check(ParasiteChainColors.colorForPart(1) == 0xFFCC3030);
-        check(ParasiteChainColors.colorForPart(3) == 0xFFCC3030);
-        for (int part : new int[]{0,2,4,5}) check(ParasiteChainColors.colorForPart(part) == -1);
         for (WeaponTier tier : new WeaponTier[]{WeaponTier.LIVING, WeaponTier.SENTIENT}) {
             ItemArsenalWeapon[] weapons = {new ItemMorningStar(tier), new ItemScimitar(tier),
                 new ItemDoubleBladedScimitar(tier), new ItemClaws(tier), new ItemFlail(tier),

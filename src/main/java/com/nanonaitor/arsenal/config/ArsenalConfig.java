@@ -105,6 +105,11 @@ public final class ArsenalConfig {
         @Config.Name("attackSpeedSwings")
         @Config.Comment("Stretch Arsenal weapon swing animations to each weapon's real attack cooldown instead of vanilla's fixed swing.")
         public boolean attackSpeedSwings = true;
+
+        @Config.Name("chainMaterialColors")
+        @Config.Comment({"Draw flail and ball-and-chain chains in each tier's material instead of realistic iron.",
+            "Off (default): every chain is dark iron, as crafted from iron chain; Living and Sentient chains are red (tendon)."})
+        public boolean chainMaterialColors = false;
     }
 
     public static final class Enchantments {

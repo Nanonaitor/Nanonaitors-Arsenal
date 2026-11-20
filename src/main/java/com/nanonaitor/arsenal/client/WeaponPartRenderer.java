@@ -13,9 +13,7 @@ import org.lwjgl.opengl.GL11;
 
 public final class WeaponPartRenderer {
     public static final String PART_TAG = "ArsenalAnimationPart";
-    public static final int CHAIN_LINK_FLAT = 1;
     public static final int BALL = 2;
-    public static final int CHAIN_LINK_UPRIGHT = 3;
     public static final int BALL_TRAIL_NEAR = 4;
     public static final int BALL_TRAIL_FAR = 5;
     private static final double LINK_SPACING = 0.28D;

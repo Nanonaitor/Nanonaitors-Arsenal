@@ -135,6 +135,11 @@ public final class PoseCapture {
         Shot guard = add("ball_and_chain", "guard", ball, null, in -> {});
         guard.raise = net.minecraft.util.EnumHand.MAIN_HAND;
         guard.live = p -> com.nanonaitor.arsenal.client.BallAndChainInputHandler.debugGuard = true;
+        for (String tier : new String[] {"gold", "sentient"}) {
+            add("ball_and_chain", tier + " wind-up ~0 deg", NanonaitorsArsenal.MOD_ID + ":ball_and_chain_" + tier, null,
+                in -> in.active = false)
+                .live = p -> com.nanonaitor.arsenal.client.BallAndChainAnimationHandler.debugWindup(p, 0.0D);
+        }
         add("ball_and_chain", "one hand wind-up ~90 deg", ball, torch, in -> in.active = false)
             .live = p -> com.nanonaitor.arsenal.client.BallAndChainAnimationHandler.debugWindup(p, Math.PI / 2.0D);
 
