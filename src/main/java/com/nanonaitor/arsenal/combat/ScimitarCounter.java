@@ -77,10 +77,9 @@ public final class ScimitarCounter {
         if (!(source.getTrueSource() instanceof EntityPlayer) || source.getImmediateSource() != source.getTrueSource()) return;
         EntityPlayer player = (EntityPlayer) source.getTrueSource();
         if (player.world.isRemote || !holdsScimitar(player) || !isCharged(player)) return;
-        String type = source.getDamageType();
-        if (!"player".equals(type) && !"arsenal_scimitar_bash".equals(type)) return;
+        if (!countersDamageType(source.getDamageType())) return;
         TransientData.of(player).setLong(CHARGED_UNTIL, 0L);
-        event.setAmount(event.getAmount() * (float) ArsenalConfig.scimitars.counterMultiplier);
+        event.setAmount(counterDamage(event.getAmount(), ArsenalConfig.scimitars.counterMultiplier));
         if (player instanceof EntityPlayerMP) {
             ((EntityPlayerMP) player).getServerWorld().spawnParticle(EnumParticleTypes.CRIT_MAGIC,
                 event.getEntityLiving().posX, event.getEntityLiving().posY + event.getEntityLiving().height * 0.6D,
@@ -88,6 +87,16 @@ public final class ScimitarCounter {
         }
         player.world.playSound(null, player.posX, player.posY, player.posZ,
             SoundEvents.ENTITY_PLAYER_ATTACK_CRIT, player.getSoundCategory(), 1.0F, 1.2F);
+    }
+
+    /** The counter empowers melee scimitar hits and the scimitar shield bash, nothing else. */
+    public static boolean countersDamageType(String type) {
+        return "player".equals(type) || "arsenal_scimitar_bash".equals(type);
+    }
+
+    /** The empowered damage. */
+    public static float counterDamage(float amount, double multiplier) {
+        return amount * (float) multiplier;
     }
 
     private static boolean fromFront(EntityPlayer player, DamageSource source) {

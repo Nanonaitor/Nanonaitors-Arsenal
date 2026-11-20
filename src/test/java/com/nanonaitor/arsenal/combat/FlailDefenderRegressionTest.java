@@ -81,6 +81,25 @@ public final class FlailDefenderRegressionTest {
         net.minecraft.item.ItemStack legendary = new net.minecraft.item.ItemStack(net.minecraft.init.Items.IRON_SWORD);
         legendary.setTagCompound(named.copy());
         check(com.nanonaitor.arsenal.compat.WorldEquipmentCompat.isSpecialStack(legendary));
+        // Scimitar counter: only melee scimitar hits and the shield bash are empowered.
+        check(ScimitarCounter.countersDamageType("player"));
+        check(ScimitarCounter.countersDamageType("arsenal_scimitar_bash"));
+        check(!ScimitarCounter.countersDamageType("arrow"));
+        check(!ScimitarCounter.countersDamageType("magic"));
+        check(Math.abs(ScimitarCounter.counterDamage(10.0F, 1.3D) - 13.0F) < 1.0E-4F);
+        check(com.nanonaitor.arsenal.config.ArsenalConfig.scimitars.counterMultiplier == 1.3D);
+        check(com.nanonaitor.arsenal.config.ArsenalConfig.scimitars.counterWindowSeconds == 5);
+        // Weakness is no longer the default scimitar effect.
+        check(com.nanonaitor.arsenal.config.ArsenalConfig.effects.scimitarHit.length == 0);
+        // Ball and Chain guard Knockback: grows with the level and never deals damage.
+        check(ShieldCombat.guardKnockback(0) == 0.0F);
+        check(Math.abs(ShieldCombat.guardKnockback(1) - 0.9F) < 1.0E-4F);
+        check(ShieldCombat.guardKnockback(2) > ShieldCombat.guardKnockback(1));
+        String shields = new String(Files.readAllBytes(Paths.get(
+            "src/main/java/com/nanonaitor/arsenal/combat/ShieldCombat.java")), StandardCharsets.UTF_8);
+        int push = shields.indexOf("private static void knockBackMeleeAttacker");
+        String pushBody = shields.substring(push, shields.indexOf("public static float guardKnockback", push));
+        check(!pushBody.contains("attackEntityFrom"));
         System.out.println("Flail/Defender regression: " + checks + " checks passed.");
     }
 }

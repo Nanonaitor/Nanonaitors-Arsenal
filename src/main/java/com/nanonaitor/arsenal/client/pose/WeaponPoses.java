@@ -260,7 +260,8 @@ public final class WeaponPoses {
             Pose pose = new Pose();
             pose.right = clawRake(phase, count);
             if (leftArm) pose = pose.mirrored();
-            points[i] = armPoint(player, partialTicks, pose, leftArm, 16.0D);
+            // Sampled past poses: always the vanilla arm math (a provider knows only the current frame).
+            points[i] = vanillaArmPoint(player, partialTicks, pose, leftArm, 16.0D);
         }
         return points;
     }
@@ -376,7 +377,35 @@ public final class WeaponPoses {
      * A point down the arm (reach in model pixels from the shoulder: 10.5 is the
      * fist, more is along a held blade) as a world offset from the feet.
      */
+    /**
+     * Hook for mods that draw their own player model (custom proportions): given
+     * a point down an arm (reach in vanilla model pixels from the shoulder, 10.5 =
+     * the fist), return where it really is as a world offset {x, y, z} from the
+     * player's interpolated feet, or null to use Arsenal's vanilla-arm math.
+     * Arsenal's chains, the flail handle, claw streaks and the guard ball follow it.
+     * Set it from the other mod's client setup; it is read on the render thread.
+     */
+    public interface ArmPointProvider {
+        double[] armPoint(EntityPlayer player, float partialTicks, boolean leftArm, double reach);
+    }
+
+    public static volatile ArmPointProvider armPointProvider;
+
     private static double[] armPoint(EntityPlayer player, float partialTicks, Pose pose, boolean left, double reach) {
+        ArmPointProvider provider = armPointProvider;
+        if (provider != null) {
+            try {
+                double[] point = provider.armPoint(player, partialTicks, left, reach);
+                if (point != null && point.length == 3) return point;
+            } catch (RuntimeException ignored) {
+                // A broken provider must not break rendering; fall back to vanilla math.
+            }
+        }
+        return vanillaArmPoint(player, partialTicks, pose, left, reach);
+    }
+
+    /** {@link #armPoint} on the vanilla player model, for any pose (also past or future ones). */
+    private static double[] vanillaArmPoint(EntityPlayer player, float partialTicks, Pose pose, boolean left, double reach) {
         float[] arm = left ? pose.left : pose.right;
         if (arm == null) return null;
         float twist = pose.body ? pose.bodyY : 0.0F;

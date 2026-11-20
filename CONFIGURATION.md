@@ -1,4 +1,4 @@
-# Arsenal 1.12.2 configuration (2.0.1)
+# Arsenal 1.12.2 configuration (2.0.26)
 
 File: `<Minecraft profile>/config/nanonaitors_arsenal.cfg`.
 In game: **Mods → Nanonaitor's Arsenal → Config**. The category pages contain
@@ -34,8 +34,7 @@ skipped with a warning rather than crashing; optional SRP effects require SRP.
 Example inside the generated `effects` category:
 
 ```text
-S:scimitarHit <
-    minecraft:weakness@tier@10
+S:scimitarHitExtra <
     minecraft:slowness@1@3
 >
 S:flailHit <
@@ -44,7 +43,7 @@ S:flailHit <
 
 | Setting | Default and trigger |
 | --- | --- |
-| scimitarHit | Weakness, tier/set-dependent level, 10 seconds; confirmed scimitar melee hit |
+| scimitarHitExtra | Empty; optional effects on a confirmed scimitar melee hit. Before 2.0.26 this was `scimitarHit` with Weakness (`minecraft:weakness@tier@10`); scimitars now use the block counter below. Add that line back to restore Weakness. |
 | morningStarFracture | `nanonaitors_arsenal:armor_fracture@tier@tier`; original fully-charged fracture trigger, tier cap and player/mob duration |
 | morningStarStun | `nanonaitors_arsenal:stunned@1@3`; original 20% full-charge ability proc |
 | ballPlayerFracture | `nanonaitors_arsenal:armor_fracture@tier@10`; full-charge outgoing hit against players |
@@ -60,6 +59,29 @@ Changing the potion lists does **not** change direct damage, piercing, permanent
 mob armor fracture, fire, Ice & Fire's separate freezing, lightning, or the
 temporary SRP adaptation-bypass hook. Vanilla enchantment effects and reflected
 enemy effects also remain separate. Fixed tooltip descriptions describe defaults.
+
+## Scimitar counter
+
+Blocking an attack while holding a scimitar (the dual-scimitar guard, a vanilla or
+modded shield, or an Arsenal guard) charges the next scimitar hit or scimitar
+shield bash. The bash multiplies its combined dual-wield damage.
+
+| Setting | Default |
+| --- | ---: |
+| scimitars.counterMultiplier | 1.3 |
+| scimitars.counterWindowSeconds | 5 |
+
+## Animations and sounds (client)
+
+These only change what a player sees and hears; each player can set their own.
+
+| Setting | Default | Effect |
+| --- | --- | --- |
+| animations.weaponPoses | true | Third-person weapon poses |
+| animations.moBendsPoses | true | The same poses through Mo' Bends when it is installed |
+| animations.attackSpeedSwings | true | Swings timed to each weapon's attack speed |
+| animations.chainMaterialColors | false | Chains in each tier's material instead of iron (red tendon for Living/Sentient) |
+| sounds.volume | 1.0 | Multiplier for Arsenal's own sounds (0 to 2, 0 = silent) |
 
 ## Reach
 
@@ -97,7 +119,8 @@ and restores AI if an already-stunned entity becomes exempt.
 These bonuses require SetBonus **and detection of RLCraft's configured sets and
 bonuses**, not just wearing visually similar armor in standalone Minecraft.
 
-- Silver/Gold Scimitar + matching active set: default Weakness II.
+- Silver/Gold Scimitar + matching active set: Weakness II, only if Weakness is
+  added back to `scimitarHitExtra` with the `tier` level.
 - Silver Ball & Chain + matching active set: charges `1 → 3` (full) in two rotations.
 - Gold retains its pre-existing `1 → full` two-rotation behavior with or without
   its set. The matching set also receives full reach/damage on rotation two.

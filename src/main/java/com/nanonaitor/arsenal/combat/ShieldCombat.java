@@ -178,8 +178,13 @@ public final class ShieldCombat {
             net.minecraft.init.Enchantments.KNOCKBACK, ball);
         if (level <= 0) return;
         EntityLivingBase attacker = (EntityLivingBase) source.getTrueSource();
-        attacker.knockBack(defender, 0.4F + 0.5F * level,
+        attacker.knockBack(defender, guardKnockback(level),
             defender.posX - attacker.posX, defender.posZ - attacker.posZ);
+    }
+
+    /** Push strength for a Knockback level on the Ball and Chain guard (0 = none). */
+    public static float guardKnockback(int level) {
+        return level <= 0 ? 0.0F : 0.4F + 0.5F * level;
     }
 
     private static void triggerThorns(EntityPlayer defender,ItemStack shield,DamageSource source) {
