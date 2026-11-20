@@ -14,11 +14,11 @@ public final class ArsenalConfig {
     public static WorldEquipment worldEquipment = new WorldEquipment();
 
     public static final class WorldEquipment {
-        @Config.Comment("Offer same-tier Arsenal alternatives in Forge loot tables containing vanilla/Spartan melee weapons. Socketed stays optional and handles its own loot rolls.")
+        @Config.Comment("Offer same-tier Arsenal alternatives in Forge loot tables containing vanilla/Spartan melee weapons. Only plain entries are swapped: named, NBT-set or attribute-set items (modpack legendaries) are never replaced. Socketed stays optional and handles its own loot rolls.")
         public boolean lootIntegration = true;
         @Config.RangeDouble(min=0D,max=1D)
         public double lootReplacementChance = 0.25D;
-        @Config.Comment("Allow newly spawned vanilla humanoids already carrying a vanilla/Spartan melee weapon to use a same-tier Arsenal weapon. Does not equip empty hands or replace bows.")
+        @Config.Comment("Allow newly spawned vanilla humanoids already carrying a vanilla/Spartan melee weapon to use a same-tier Arsenal weapon. Does not equip empty hands, replace bows, or touch named mobs and named/lore/attribute gear.")
         public boolean mobEquipment = true;
         @Config.RangeDouble(min=0D,max=1D)
         public double mobReplacementChance = 0.25D;

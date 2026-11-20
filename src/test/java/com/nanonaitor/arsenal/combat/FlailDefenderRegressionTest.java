@@ -61,6 +61,30 @@ public final class FlailDefenderRegressionTest {
         check(ball.contains("ShieldUsePriority.weaponAttackSuppressed(player)"));
         check(!ball.contains("ShieldUsePriority.requested("));
         check(ball.contains("raiseDefenderOverBall"));
+        // World equipment never swaps a modpack's hand-made (legendary) items.
+        net.minecraft.world.storage.loot.conditions.LootCondition[] none =
+            new net.minecraft.world.storage.loot.conditions.LootCondition[0];
+        net.minecraft.world.storage.loot.functions.LootFunction count =
+            new net.minecraft.world.storage.loot.functions.SetCount(none,
+                new net.minecraft.world.storage.loot.RandomValueRange(1));
+        net.minecraft.nbt.NBTTagCompound named = new net.minecraft.nbt.NBTTagCompound();
+        net.minecraft.nbt.NBTTagCompound display = new net.minecraft.nbt.NBTTagCompound();
+        display.setString("Name", "Gungnir");
+        named.setTag("display", display);
+        net.minecraft.world.storage.loot.functions.LootFunction setNbt =
+            new net.minecraft.world.storage.loot.functions.SetNBT(none, named);
+        check(com.nanonaitor.arsenal.compat.WorldEquipmentCompat.isPlainLoot(null));
+        check(com.nanonaitor.arsenal.compat.WorldEquipmentCompat.isPlainLoot(
+            new net.minecraft.world.storage.loot.functions.LootFunction[] {count}));
+        check(!com.nanonaitor.arsenal.compat.WorldEquipmentCompat.isPlainLoot(
+            new net.minecraft.world.storage.loot.functions.LootFunction[] {count, setNbt}));
+        net.minecraft.item.ItemStack plain = new net.minecraft.item.ItemStack(net.minecraft.init.Items.IRON_SWORD);
+        check(!com.nanonaitor.arsenal.compat.WorldEquipmentCompat.isSpecialStack(plain));
+        plain.addEnchantment(net.minecraft.init.Enchantments.SHARPNESS, 2);
+        check(!com.nanonaitor.arsenal.compat.WorldEquipmentCompat.isSpecialStack(plain));
+        net.minecraft.item.ItemStack legendary = new net.minecraft.item.ItemStack(net.minecraft.init.Items.IRON_SWORD);
+        legendary.setTagCompound(named.copy());
+        check(com.nanonaitor.arsenal.compat.WorldEquipmentCompat.isSpecialStack(legendary));
         System.out.println("Flail/Defender regression: " + checks + " checks passed.");
     }
 }

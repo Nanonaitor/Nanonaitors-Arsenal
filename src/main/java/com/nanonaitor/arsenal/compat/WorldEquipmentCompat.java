@@ -94,6 +94,8 @@ public final class WorldEquipmentCompat {
                     WeaponTier tier=tierFor(source);
                     if(tier==null || alternatives(tier).isEmpty())continue;
                     LootFunction[] functions=(LootFunction[])fieldByType(LootEntryItem.class,LootFunction[].class,entry);
+                    // Named, NBT-set or attribute-set entries are hand-made (legendary) items: never swap them.
+                    if(!isPlainLoot(functions))continue;
                     LootCondition[] conditions=(LootCondition[])fieldByType(LootEntry.class,LootCondition[].class,entry);
                     LootEntry replacement=new AlternativeEntry((LootEntryItem)entry,source,tier,functions,conditions);
                     pool.removeEntry(entry.getEntryName());pool.addEntry(replacement);
@@ -101,6 +103,36 @@ public final class WorldEquipmentCompat {
             }
         }catch(ReflectiveOperationException | RuntimeException ex){warn(ex);}
     }
+    /**
+     * True when a loot entry only rolls an ordinary item: count, damage,
+     * metadata and random enchantments. Anything else (set_nbt names and lore,
+     * set_attributes, specific enchantments, other mods' functions) marks a
+     * designed item such as a modpack's legendary weapon, which stays as is.
+     */
+    public static boolean isPlainLoot(LootFunction[] functions){
+        if(functions==null)return true;
+        for(LootFunction function:functions){
+            if(!(function instanceof net.minecraft.world.storage.loot.functions.SetCount
+                || function instanceof net.minecraft.world.storage.loot.functions.SetDamage
+                || function instanceof net.minecraft.world.storage.loot.functions.SetMetadata
+                || function instanceof net.minecraft.world.storage.loot.functions.EnchantRandomly
+                || function instanceof net.minecraft.world.storage.loot.functions.EnchantWithLevels
+                || function instanceof net.minecraft.world.storage.loot.functions.LootingEnchantBonus))return false;
+        }
+        return true;
+    }
+
+    /**
+     * True for gear that was given an identity: a name or lore, attribute
+     * modifiers, unbreakable, or any data beyond enchantments and repair cost.
+     */
+    public static boolean isSpecialStack(ItemStack stack){
+        NBTTagCompound tag=stack.getTagCompound();
+        if(tag==null)return false;
+        for(String key:tag.getKeySet())if(!key.equals("ench") && !key.equals("RepairCost"))return true;
+        return false;
+    }
+
     private static final class AlternativeEntry extends LootEntryItem {
         private final LootEntryItem original;
         private final WeaponTier tier;
@@ -130,7 +162,8 @@ public final class WorldEquipmentCompat {
             ResourceLocation id=EntityList.getKey(mob);
             if(id==null || !id.getResourceDomain().equals("minecraft") || !Arrays.asList("zombie","husk","zombie_villager","zombie_pigman","skeleton","stray","wither_skeleton","vindication_illager").contains(id.getResourcePath()))continue;
             ItemStack held=mob.getHeldItemMainhand();
-            if(held.isEmpty() || held.hasDisplayName())continue;
+            // Named mobs and designed gear (names, lore, attributes) keep their weapons.
+            if(held.isEmpty() || mob.hasCustomName() || isSpecialStack(held))continue;
             List<Item> choices=alternatives(tierFor(held.getItem()));
             if(choices.isEmpty() || mob.getRNG().nextDouble()>=ArsenalConfig.worldEquipment.mobReplacementChance)continue;
             Item item=choices.get(mob.getRNG().nextInt(choices.size()));
