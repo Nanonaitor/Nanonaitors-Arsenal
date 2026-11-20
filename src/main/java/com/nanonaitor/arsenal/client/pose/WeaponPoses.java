@@ -43,7 +43,7 @@ public final class WeaponPoses {
     private static final double[] STAFF_CENTER = {-1.0D, 10.0D, -2.0D};
     private static final double[] STAFF_AXIS = {1.0D, 0.0D, 0.0D};
 
-    public enum Kind { NONE, RAM, STAFF, BALL, FLAIL, BULWARK, MORNING_STAR }
+    public enum Kind { NONE, RAM, STAFF, BALL, FLAIL, BULWARK, MORNING_STAR, SCIMITARS }
 
     /** What the pose depends on; detected from the player, or forced by the capture tool. */
     public static final class Input {
@@ -138,6 +138,13 @@ public final class WeaponPoses {
             in.twoHanded = player.getHeldItemOffhand().isEmpty();
             in.active = DoubleBladedScimitarCombat.isReflecting(player);
             in.weaponArmLeft = mainIsLeft;
+        } else if (main instanceof com.nanonaitor.arsenal.item.ItemScimitar
+            && off instanceof com.nanonaitor.arsenal.item.ItemScimitar
+            && com.nanonaitor.arsenal.compat.ScimitarShieldCompat.isGuarding(player)) {
+            // Paired scimitars held crossed as a guard; a bash slashes both outward.
+            in.kind = Kind.SCIMITARS;
+            in.active = true;
+            in.weaponArmLeft = mainIsLeft;
         } else if (main instanceof ItemBallAndChain) {
             in.kind = Kind.BALL;
             in.twoHanded = player.getHeldItemOffhand().isEmpty();
@@ -170,12 +177,23 @@ public final class WeaponPoses {
     private static java.lang.ref.WeakReference<EntityPlayer> cachedPlayer = new java.lang.ref.WeakReference<>(null);
     private static float cachedAge = Float.NaN;
     private static Pose cachedPose;
+    private static String cachedSegment = "";
+
+    /** Names the kind of motion, so a change of motion can be eased (see {@link #applyTo}). */
+    private static String segment(Input in) {
+        return in.kind + "|" + in.twoHanded + "|" + in.active
+            + (Double.isNaN(in.spinAngle) ? "" : "|spin")
+            + (in.throwProgress < 0.0D ? "" : "|throw")
+            + (in.attackPhase < 0.0F ? "" : "|attack" + in.attackCount)
+            + (in.weaponArmLeft ? "|left" : "");
+    }
 
     /** The pose for this player, or null to keep vanilla arms. */
     public static Pose compute(EntityPlayer player, float ageInTicks, float partialTicks) {
         if (!enabled()) return null;
         if (debugAngles != null && player == net.minecraft.client.Minecraft.getMinecraft().player) {
             float[] a = debugAngles;
+            cachedSegment = "debug";
             return new Pose().right(a[0], a[1], a[2]).left(a[3], a[4], a[5]);
         }
         if (cachedPlayer.get() == player && cachedAge == ageInTicks && debugOverride == null) return cachedPose;
@@ -185,7 +203,77 @@ public final class WeaponPoses {
         cachedPlayer = new java.lang.ref.WeakReference<>(player);
         cachedAge = ageInTicks;
         cachedPose = pose;
+        cachedSegment = segment(in);
         return pose;
+    }
+
+    // ---- Easing between motions -------------------------------------------
+    // Poses change instantly when the motion changes (wind-up to throw, throw
+    // to the next wind-up, guard to bash...). Each change eases from the arms
+    // last drawn to the new motion over a few ticks so nothing snaps.
+    private static final float BLEND_TICKS = 3.0F;
+    private static final java.util.Map<EntityPlayer, Blend> BLENDS = new java.util.WeakHashMap<>();
+    private static final java.util.Map<EntityPlayer, Blend> MO_BENDS_BLENDS = new java.util.WeakHashMap<>();
+
+    private static final class Blend {
+        String segment;
+        float start = -1000.0F;
+        float[] fromRight, fromLeft;
+        float fromBody;
+        float[] lastRight, lastLeft;
+        float lastBody;
+    }
+
+    /** Starts a new ease when the motion changes; returns the ease progress 0..1 (1 = done). */
+    private static float track(java.util.Map<EntityPlayer, Blend> map, EntityPlayer player, float age) {
+        Blend blend = map.get(player);
+        if (blend == null) {
+            blend = new Blend();
+            map.put(player, blend);
+        }
+        if (!cachedSegment.equals(blend.segment)) {
+            if (blend.segment != null && blend.lastRight != null) {
+                blend.fromRight = blend.lastRight.clone();
+                blend.fromLeft = blend.lastLeft.clone();
+                blend.fromBody = blend.lastBody;
+                blend.start = age;
+            }
+            blend.segment = cachedSegment;
+        }
+        float t = (age - blend.start) / BLEND_TICKS;
+        if (t < 0.0F || t >= 1.0F || blend.fromRight == null) return 1.0F;
+        return t * t * (3.0F - 2.0F * t);
+    }
+
+    private static float[] mix(float[] from, float[] to, float k) {
+        return new float[] {from[0] + (to[0] - from[0]) * k, from[1] + (to[1] - from[1]) * k,
+            from[2] + (to[2] - from[2]) * k};
+    }
+
+    /**
+     * The pose for the Mo' Bends path, eased between motions. Mo' Bends eases
+     * its own arms back when Arsenal stops posing, so only posed motions ease here.
+     */
+    public static Pose computeForMoBends(EntityPlayer player, float ageInTicks, float partialTicks) {
+        Pose pose = compute(player, ageInTicks, partialTicks);
+        float k = track(MO_BENDS_BLENDS, player, ageInTicks);
+        Blend blend = MO_BENDS_BLENDS.get(player);
+        if (pose == null) {
+            blend.lastRight = null;
+            return null;
+        }
+        Pose out = pose;
+        if (k < 1.0F && blend.fromRight != null) {
+            out = new Pose();
+            out.right = pose.right == null ? null : mix(blend.fromRight, pose.right, k);
+            out.left = pose.left == null ? null : mix(blend.fromLeft, pose.left, k);
+            out.body = pose.body || blend.fromBody != 0.0F;
+            out.bodyY = blend.fromBody + ((pose.body ? pose.bodyY : 0.0F) - blend.fromBody) * k;
+        }
+        blend.lastRight = out.right == null ? new float[3] : out.right.clone();
+        blend.lastLeft = out.left == null ? new float[3] : out.left.clone();
+        blend.lastBody = out.body ? out.bodyY : 0.0F;
+        return out;
     }
 
     /**
@@ -195,12 +283,20 @@ public final class WeaponPoses {
      * Chain effects start here so the chain leaves the hand that swings it.
      */
     public static double[] weaponHandOffset(EntityPlayer player, float partialTicks) {
+        return handOffset(player, partialTicks, true);
+    }
+
+    /**
+     * Like {@link #weaponHandOffset}, for the weapon hand or the other hand
+     * (which, for example, holds the slack of a Ball and Chain's chain).
+     */
+    public static double[] handOffset(EntityPlayer player, float partialTicks, boolean weaponHand) {
         if (!enabled() || !(PoseInstaller.anyInstalled() || MoBendsPoses.active())) return null;
         net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getMinecraft();
         if (player == mc.getRenderViewEntity() && mc.gameSettings.thirdPersonView == 0) return null;
         Pose pose = compute(player, player.ticksExisted + partialTicks, partialTicks);
         if (pose == null) return null;
-        boolean left = player.getPrimaryHand() == EnumHandSide.LEFT;
+        boolean left = (player.getPrimaryHand() == EnumHandSide.LEFT) == weaponHand;
         float[] arm = left ? pose.left : pose.right;
         if (arm == null) return null;
         float twist = pose.body ? pose.bodyY : 0.0F;
@@ -240,8 +336,9 @@ public final class WeaponPoses {
         switch (in.kind) {
             case RAM:
                 if (!in.twoHanded) {
-                    // Dragging a two-handed log with one arm.
-                    return new Pose().right(-0.28F + shake, 0.15F, 0.22F + shake * 0.5F);
+                    // One-handed (something in the other hand): no special pose, the
+                    // normal holding and swing animations play.
+                    return null;
                 }
             {
                 // The log runs along the right arm; the left hand takes it just behind the right.
@@ -266,8 +363,17 @@ public final class WeaponPoses {
                 // so the grip rests on a slight diagonal (right end low) and the
                 // left-side stroke tips less far than the right.
                 if (!in.twoHanded) {
-                    return new Pose().right(-0.55F + shake, -0.15F, -0.35F - 0.30F * stroke * side)
-                        .bodyY(-0.18F * stroke * side);
+                    // One-handed: gripped at the middle like a sword. The strike
+                    // raises the staff and brings it down across the body, rolling
+                    // the arm so the leading blade tips towards the target.
+                    if (in.attackPhase < 0.0F) return new Pose().right(-0.45F, -0.10F, -0.55F);
+                    float a = in.attackPhase;
+                    float x = a < 0.30F ? lerp(-0.45F, -2.25F, a / 0.30F)
+                        : a < 0.70F ? lerp(-2.25F, -0.55F, (a - 0.30F) / 0.40F) : lerp(-0.55F, -0.45F, (a - 0.70F) / 0.30F);
+                    float roll = a < 0.30F ? lerp(-0.55F, -0.95F, a / 0.30F)
+                        : a < 0.70F ? lerp(-0.95F, 0.15F, (a - 0.30F) / 0.40F) : lerp(0.15F, -0.55F, (a - 0.70F) / 0.30F);
+                    float inward = -0.10F - 0.40F * stroke;
+                    return new Pose().right(x, inward, roll).bodyY(-0.25F * stroke);
                 }
                 float roll = side > 0.0F ? -0.30F - 0.60F * stroke : -0.30F + 0.65F * stroke;
                 float[] right = {-0.95F + 0.25F * stroke, -0.30F, roll};
@@ -337,6 +443,22 @@ public final class WeaponPoses {
                 }
                 return null;
 
+            case SCIMITARS: {
+                // Guard: both blades crossed in front. Bash: a short wind-in, then
+                // both arms slash outward and return to the guard.
+                if (in.attackPhase < 0.0F) {
+                    return new Pose().right(-1.25F, -0.55F, 0.0F).left(-1.25F, 0.55F, 0.0F);
+                }
+                float a = in.attackPhase;
+                float y = a < 0.20F ? lerp(-0.55F, -0.85F, a / 0.20F)
+                    : a < 0.65F ? lerp(-0.85F, 0.80F, (a - 0.20F) / 0.45F) : lerp(0.80F, -0.55F, (a - 0.65F) / 0.35F);
+                float x = a < 0.20F ? lerp(-1.25F, -1.40F, a / 0.20F)
+                    : a < 0.65F ? lerp(-1.40F, -1.05F, (a - 0.20F) / 0.45F) : lerp(-1.05F, -1.25F, (a - 0.65F) / 0.35F);
+                float z = a < 0.20F ? 0.0F
+                    : a < 0.65F ? lerp(0.0F, 0.45F, (a - 0.20F) / 0.45F) : lerp(0.45F, 0.0F, (a - 0.65F) / 0.35F);
+                return new Pose().right(x, y, z).left(x, -y, -z);
+            }
+
             default:
                 return null;
         }
@@ -347,9 +469,15 @@ public final class WeaponPoses {
      * (claws, scimitars, morning star) to the weapon's attack cooldown.
      */
     public static void prepareSwing(ModelBiped model, Entity entity, float ageInTicks) {
-        if (!enabled() || !ArsenalConfig.animations.attackSpeedSwings
-            || !(entity instanceof EntityPlayer) || ageInTicks == 0.0F) return;
+        if (!enabled() || !(entity instanceof EntityPlayer) || ageInTicks == 0.0F) return;
         EntityPlayer player = (EntityPlayer) entity;
+        if (compute(player, ageInTicks, ageInTicks - (int) ageInTicks) != null) {
+            // A full weapon pose owns the arms: vanilla's swing would only twist
+            // the body and shift the shoulders under it, a visible twitch.
+            model.swingProgress = 0.0F;
+            return;
+        }
+        if (!ArsenalConfig.animations.attackSpeedSwings) return;
         EnumHand hand = AttackTiming.hand(player);
         if (!(player.getHeldItem(hand).getItem() instanceof ItemArsenalWeapon)) return;
         Item item = player.getHeldItem(hand).getItem();
@@ -366,8 +494,46 @@ public final class WeaponPoses {
      */
     public static boolean applyTo(ModelBiped model, Entity entity, float ageInTicks) {
         if (!(entity instanceof EntityPlayer) || ageInTicks == 0.0F) return false;
-        Pose pose = compute((EntityPlayer) entity, ageInTicks, ageInTicks - (int) ageInTicks);
-        if (pose == null) return false;
+        EntityPlayer player = (EntityPlayer) entity;
+        Pose pose = compute(player, ageInTicks, ageInTicks - (int) ageInTicks);
+        float k = track(BLENDS, player, ageInTicks);
+        boolean changed = false;
+        if (pose != null) {
+            applyPose(model, pose);
+            changed = true;
+        }
+        Blend blend = BLENDS.get(player);
+        if (k < 1.0F) {
+            // Ease from the arms last drawn to this motion (posed or vanilla).
+            float[] right = mix(blend.fromRight, angles(model.bipedRightArm), k);
+            float[] left = mix(blend.fromLeft, angles(model.bipedLeftArm), k);
+            float body = blend.fromBody + (model.bipedBody.rotateAngleY - blend.fromBody) * k;
+            model.bipedBody.rotateAngleY = body;
+            model.bipedRightArm.rotationPointZ = (float) Math.sin(body) * 5.0F;
+            model.bipedRightArm.rotationPointX = (float) -Math.cos(body) * 5.0F;
+            model.bipedLeftArm.rotationPointZ = (float) -Math.sin(body) * 5.0F;
+            model.bipedLeftArm.rotationPointX = (float) Math.cos(body) * 5.0F;
+            setAngles(model.bipedRightArm, right);
+            setAngles(model.bipedLeftArm, left);
+            changed = true;
+        }
+        blend.lastRight = angles(model.bipedRightArm);
+        blend.lastLeft = angles(model.bipedLeftArm);
+        blend.lastBody = model.bipedBody.rotateAngleY;
+        return changed;
+    }
+
+    private static float[] angles(ModelRenderer arm) {
+        return new float[] {arm.rotateAngleX, arm.rotateAngleY, arm.rotateAngleZ};
+    }
+
+    private static void setAngles(ModelRenderer arm, float[] angles) {
+        arm.rotateAngleX = angles[0];
+        arm.rotateAngleY = angles[1];
+        arm.rotateAngleZ = angles[2];
+    }
+
+    private static void applyPose(ModelBiped model, Pose pose) {
         float sneak = model.isSneak ? 0.4F : 0.0F;
         if (pose.body) {
             float twist = pose.bodyY;
@@ -380,7 +546,6 @@ public final class WeaponPoses {
         float twist = pose.body ? pose.bodyY : 0.0F;
         if (pose.right != null) set(model.bipedRightArm, pose.right, sneak, twist);
         if (pose.left != null) set(model.bipedLeftArm, pose.left, sneak, twist);
-        return true;
     }
 
     private static void set(ModelRenderer arm, float[] angles, float sneak, float twist) {

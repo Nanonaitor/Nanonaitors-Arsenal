@@ -79,13 +79,28 @@ public final class WeaponPartRenderer {
     }
 
     public static void renderBlockingScimitar(ItemStack held, EnumHand hand) {
+        renderBlockingScimitar(held, hand, -1.0F);
+    }
+
+    /**
+     * @param bash shield-bash progress 0..1 (or -1): both blades uncross and
+     *             slash outward, then return to the crossed guard.
+     */
+    public static void renderBlockingScimitar(ItemStack held, EnumHand hand, float bash) {
         double side = hand == EnumHand.MAIN_HAND ? 1.0D : -1.0D;
+        double out = bash < 0.0F ? 0.0D : Math.sin(Math.min(1.0F, bash / 0.65F) * Math.PI * 0.5D)
+            * (bash < 0.65F ? 1.0D : 1.0D - (bash - 0.65F) / 0.35F);
         GlStateManager.pushMatrix();
         GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
         GlStateManager.enableBlend();
         GlStateManager.enableRescaleNormal();
         RenderHelper.enableStandardItemLighting();
         GlStateManager.translate(side * 0.18D, -0.25D, -0.86D);
+        if (out > 0.0D) {
+            GlStateManager.translate(side * 0.34D * out, 0.04D * out, -0.06D * out);
+            GlStateManager.rotate((float) (-side * 40.0D * out), 0.0F, 1.0F, 0.0F);
+            GlStateManager.rotate((float) (side * 60.0D * out), 0.0F, 0.0F, 1.0F);
+        }
         GlStateManager.rotate((float)(-side * 66.0D), 0.0F, 0.0F, 1.0F);
         GlStateManager.rotate(-8.0F, 1.0F, 0.0F, 0.0F);
         if (hand == EnumHand.MAIN_HAND) {
@@ -132,22 +147,34 @@ public final class WeaponPartRenderer {
         double dz = ballZ - anchorZ;
         double length = Math.sqrt(dx * dx + dy * dy + dz * dz);
         int links = Math.max(1, (int) Math.ceil(length / LINK_SPACING));
-        double horizontal = Math.sqrt(dx * dx + dz * dz);
         float yaw = (float) Math.toDegrees(Math.atan2(dx, dz));
-        float tilt = (float) Math.toDegrees(Math.atan2(horizontal, dy));
-        for (int index = 1; index < links; index++) {
-            double t = index / (double) links;
-            // The 1.12 renderer uses a flat item sprite for each link. Rotating
-            // alternating sprites by 90 degrees makes the chain appear jagged or
-            // partially disappear. Keep every centered link on the same axis so
-            // the repeated segments form one clean, straight chain.
-            ItemStack chain = animationPart(held, CHAIN_LINK_UPRIGHT);
-            renderPart(chain,
-                anchorX + dx * t, anchorY + dy * t, anchorZ + dz * t,
-                0.26D, yaw, tilt, 0.0F);
+        // Stop the chain at the ball's surface so links do not poke through it.
+        double reach = Math.max(0.0D, length - ballRadius * 0.8D);
+        if (length > 1.0E-4D && reach > 0.0D) {
+            double k = reach / length;
+            ChainRenderer.render(ball, new double[][] {
+                {anchorX, anchorY, anchorZ}, {anchorX + dx * k, anchorY + dy * k, anchorZ + dz * k}});
         }
         renderPart(ball, ballX, ballY, ballZ, ballRadius * 2.0D,
             yaw, 0.0F, 0.0F);
+    }
+
+    /**
+     * A loose length of chain between two points (the hand holding the slack and
+     * the swinging hand), sagging under its own weight.
+     */
+    public static void renderSlackChain(ItemStack held, double fromX, double fromY, double fromZ,
+                                        double toX, double toY, double toZ) {
+        double dx = toX - fromX, dy = toY - fromY, dz = toZ - fromZ;
+        double span = Math.sqrt(dx * dx + dy * dy + dz * dz);
+        double sag = 0.10D + span * 0.35D;
+        int segments = 10;
+        double[][] path = new double[segments + 1][];
+        for (int i = 0; i <= segments; i++) {
+            double t = i / (double) segments;
+            path[i] = new double[] {fromX + dx * t, fromY + dy * t - sag * 4.0D * t * (1.0D - t), fromZ + dz * t};
+        }
+        ChainRenderer.render(animationPart(held, BALL), path);
     }
 
     /** Render-only part stacks, built once per item and part instead of every frame. */
@@ -174,8 +201,13 @@ public final class WeaponPartRenderer {
         GlStateManager.rotate(tilt, 1.0F, 0.0F, 0.0F);
         GlStateManager.rotate(alternatingRotation, 0.0F, 1.0F, 0.0F);
         GlStateManager.scale(scale, scale, scale);
+        // Shade the faces like a held item and take the light level where it is,
+        // instead of drawing flat full-bright (which washed pale metals out to white).
+        ChainRenderer.applyWorldLight(x, y, z);
+        RenderHelper.enableStandardItemLighting();
         Minecraft.getMinecraft().getRenderItem().renderItem(
             stack, ItemCameraTransforms.TransformType.NONE);
+        RenderHelper.disableStandardItemLighting();
         GlStateManager.popMatrix();
     }
 }

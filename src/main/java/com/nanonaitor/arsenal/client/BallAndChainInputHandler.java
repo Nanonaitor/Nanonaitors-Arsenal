@@ -26,12 +26,17 @@ public final class BallAndChainInputHandler {
     private static long lastHeartbeatTick = Long.MIN_VALUE;
     private static boolean wasSwinging;
     private static boolean guarding;
+    /** After letting go: keep the wind-up drawn until the throw arrives (no flash of the idle ball). */
+    private static long awaitingReleaseUntil = Long.MIN_VALUE;
+    /** Pose capture tool only: treat the use key as a ball guard. */
+    public static boolean debugGuard;
 
     private BallAndChainInputHandler() {}
     public static void cancelForShield(EntityPlayer player) {
         wasSwinging = false;
         guarding = false;
         lastHeartbeatTick = Long.MIN_VALUE;
+        awaitingReleaseUntil = Long.MIN_VALUE;
         BallAndChainAnimationHandler.cancelForShield(player);
         if (player.isHandActive() && player.getActiveItemStack().getItem() instanceof ItemBallAndChain)
             player.resetActiveHand();
@@ -62,6 +67,7 @@ public final class BallAndChainInputHandler {
                 ModNetwork.CHANNEL.sendToServer(new BallAndChainSwingMessage(false));
                 wasSwinging = false;
                 lastHeartbeatTick = Long.MIN_VALUE;
+                awaitingReleaseUntil = player.world.getTotalWorldTime() + 8L;
             }
         }
     }
@@ -134,13 +140,17 @@ public final class BallAndChainInputHandler {
             && minecraft.currentScreen == null
             && isAttackPhysicallyDown();
         updateUseSpeed(player, canSwing || retrieving);
+        if (retrieving) awaitingReleaseUntil = Long.MIN_VALUE;
         com.nanonaitor.arsenal.data.TransientData.of(player).setBoolean("ArsenalBallAndChainActive",
-            holdingWeapon && (canSwing || retrieving));
+            holdingWeapon && (canSwing || retrieving || awaitingRelease()));
         if (!canSwing) {
             if (wasSwinging) {
                 ModNetwork.CHANNEL.sendToServer(new BallAndChainSwingMessage(false));
                 wasSwinging = false;
                 lastHeartbeatTick = Long.MIN_VALUE;
+                if (holdingWeapon && !ShieldUsePriority.weaponAttackSuppressed(player)) {
+                    awaitingReleaseUntil = player.world.getTotalWorldTime() + 8L;
+                }
             }
             if (holdingWeapon && !retrieving && !guarding && player.isHandActive()
                 && !ShieldUsePriority.weaponAttackSuppressed(player)
@@ -182,8 +192,19 @@ public final class BallAndChainInputHandler {
         return wasSwinging;
     }
 
+    /** The attack was let go and the throw has not arrived yet (a few ticks at most). */
+    public static boolean awaitingRelease() {
+        Minecraft mc = Minecraft.getMinecraft();
+        return mc.world != null && mc.world.getTotalWorldTime() < awaitingReleaseUntil;
+    }
+
+    /** The throw arrived (or was refused): stop holding the wind-up. */
+    public static void releaseArrived() {
+        awaitingReleaseUntil = Long.MIN_VALUE;
+    }
+
     public static boolean isGuardingInput() {
-        return guarding;
+        return guarding || debugGuard;
     }
 
     /** Only Arsenal's server-timed sound events may represent this weapon's attacks. */

@@ -240,6 +240,8 @@ public final class ModernWeaponInputHandler {
             scimitarBashOwnsAttack=true;
             ModNetwork.CHANNEL.sendToServer(new ModernWeaponControlMessage(
                 ModernWeaponControlMessage.SCIMITAR_BASH, true));
+            // The swing is shared with other players and plays the outward double slash.
+            player.swingArm(EnumHand.MAIN_HAND);
         }
         if (mc.currentScreen == null && !scimitarBashOwnsAttack
             && !guard && !offhandButton && !disabled && dualScimitars
@@ -287,7 +289,8 @@ public final class ModernWeaponInputHandler {
         // Render both blades ourselves so vanilla cannot move one outside the
         // camera. They are mirrored into the classic crossed-sword guard.
         event.setCanceled(true);
-        WeaponPartRenderer.renderBlockingScimitar(event.getItemStack(), event.getHand());
+        WeaponPartRenderer.renderBlockingScimitar(event.getItemStack(), event.getHand(),
+            com.nanonaitor.arsenal.client.pose.AttackTiming.phase(player, event.getPartialTicks()));
     }
 
     public static float morningCharge(EntityPlayerSP player) {

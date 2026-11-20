@@ -165,6 +165,11 @@ public final class ModContent {
             ? new ItemStack(Items.STICK)
             : new ItemStack(spartanHandle, 1, 0);
         registerOreOnce("handleWeapon", handle);
+        // Spartan Weaponry's Pole (material:1) for long-hafted weapons (Blade Staff).
+        ItemStack pole = spartanHandle == null || spartanHandle == Items.AIR
+            ? new ItemStack(Items.STICK)
+            : new ItemStack(spartanHandle, 1, 1);
+        registerOreOnce("poleWeapon", pole);
     }
 
     private static void registerOreOnce(String name, ItemStack candidate) {

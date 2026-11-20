@@ -34,7 +34,9 @@ public final class ShieldInputHandler {
             && com.nanonaitor.arsenal.combat.AbilityUseRules.shield(mc.player, mc.player.getHeldItemOffhand())) {
             // Stop the weapon before vanilla checks isHandActive, without starting
             // a shield ourselves or bypassing block/entity interactions.
-            BallAndChainInputHandler.cancelForShield(mc.player);
+            // A Defender guards alongside the Ball and Chain instead of cancelling it.
+            boolean defender = com.nanonaitor.arsenal.combat.AbilityUseRules.defender(mc.player.getHeldItemOffhand());
+            if (!defender) BallAndChainInputHandler.cancelForShield(mc.player);
             ModernWeaponInputHandler.cancelMorningCharge(mc.player);
             ModNetwork.CHANNEL.sendToServer(new com.nanonaitor.arsenal.network.ModernWeaponControlMessage(
                 com.nanonaitor.arsenal.network.ModernWeaponControlMessage.SHIELD_TAKEOVER, true));

@@ -174,3 +174,5 @@ enchantment.nanonaitors_arsenal.magic_log=Magic Log
 enchantment.nanonaitors_arsenal.magic_log.desc=Halves Battering Ram hunger use and converts its damage to magic.
 enchantment.nanonaitors_arsenal.endure=Endure
 enchantment.nanonaitors_arsenal.endure.desc=Scimitars resist guard breaks and recover from failed resistance faster.
+subtitles.nanonaitors_arsenal.ball_chain.rattle=Chain rattles
+subtitles.nanonaitors_arsenal.ball_chain.crash=Chain clashes

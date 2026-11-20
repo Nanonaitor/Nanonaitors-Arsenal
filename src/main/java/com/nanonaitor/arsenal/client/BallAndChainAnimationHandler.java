@@ -62,6 +62,7 @@ public final class BallAndChainAnimationHandler {
             return;
         }
         WINDUPS.remove(player);
+        if (player == minecraft.player) BallAndChainInputHandler.releaseArrived();
         com.nanonaitor.arsenal.data.TransientData.of(player).setBoolean("ArsenalBallAndChainActive", true);
         RELEASES.put(player, new ReleaseState(minecraft.world.getTotalWorldTime(),
             Math.max(1, Math.min(3, charge)), Math.max(0.0F, distance), yaw, pitch,
@@ -173,6 +174,10 @@ public final class BallAndChainAnimationHandler {
                     WINDUPS.put(player, state);
                 }
                 state.endTick = now + 3L;
+            } else if (player == minecraft.player && state != null
+                && BallAndChainInputHandler.awaitingRelease() && !RELEASES.containsKey(player)) {
+                // Let go: keep spinning until the throw starts, so the swing flows into it.
+                state.endTick = now + 1L;
             }
         }
         Iterator<Map.Entry<EntityPlayer, WindupState>> windupIterator =
@@ -238,6 +243,18 @@ public final class BallAndChainAnimationHandler {
             double bx = frame.anchorX + frame.forwardX * 0.46D;
             double by = frame.anchorY - 0.12D + frame.forwardY * 0.12D;
             double bz = frame.anchorZ + frame.forwardZ * 0.46D;
+            double[] right = com.nanonaitor.arsenal.client.pose.WeaponPoses.handOffset(player, event.getPartialTicks(), true);
+            double[] left = com.nanonaitor.arsenal.client.pose.WeaponPoses.handOffset(player, event.getPartialTicks(), false);
+            if (right != null && left != null) {
+                // Held up in front like a shield, as in first person: centred between
+                // both hands and pushed a little ahead of them.
+                float yaw = player.prevRenderYawOffset
+                    + (player.renderYawOffset - player.prevRenderYawOffset) * event.getPartialTicks();
+                double fx = -Math.sin(Math.toRadians(yaw)), fz = Math.cos(Math.toRadians(yaw));
+                bx = frame.feetX + (right[0] + left[0]) * 0.5D + fx * 0.30D;
+                by = frame.feetY + (right[1] + left[1]) * 0.5D + 0.05D;
+                bz = frame.feetZ + (right[2] + left[2]) * 0.5D + fz * 0.30D;
+            }
             WeaponPartRenderer.renderBall(player.getHeldItemMainhand(), bx, by, bz, 0.421D);
         }
     }
@@ -317,6 +334,14 @@ public final class BallAndChainAnimationHandler {
         }
         WeaponPartRenderer.renderStraightChainAndBall(player.getHeldItemMainhand(),
             fromX, fromY, fromZ, ballX, ballY, ballZ, radius);
+        // Two-handed (empty off-hand): the other hand holds the slack of the chain.
+        double[] other = player.getHeldItemOffhand().isEmpty() && hand != null
+            ? com.nanonaitor.arsenal.client.pose.WeaponPoses.handOffset(player, partialTicks, false) : null;
+        if (other != null) {
+            WeaponPartRenderer.renderSlackChain(player.getHeldItemMainhand(),
+                frame.feetX + other[0], frame.feetY + other[1], frame.feetZ + other[2],
+                fromX, fromY, fromZ);
+        }
     }
 
     private static final class WindupState {

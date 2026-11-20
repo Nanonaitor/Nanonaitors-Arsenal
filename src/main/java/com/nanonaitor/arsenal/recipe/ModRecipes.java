@@ -195,7 +195,7 @@ public final class ModRecipes {
             args.add(key);args.add(keys[i+1]);
         }
         if (a.indexOf('S') >= 0 || b.indexOf('S') >= 0 || c.indexOf('S') >= 0) {
-            args.add('S');args.add(handleIngredient(t));
+            args.add('S');args.add("blade_staff".equals(family) ? poleIngredient(t) : handleIngredient(t));
         }
         ShapedOreRecipe r = new ShapedOreRecipe(new ResourceLocation(NanonaitorsArsenal.MOD_ID,"compat"),
             new ItemStack(map.get(t)), args.toArray());
@@ -208,6 +208,15 @@ public final class ModRecipes {
             if (!witherbone.isEmpty()) return witherbone;
         }
         return "handleWeapon";
+    }
+    /** The Blade Staff is long-hafted: Spartan's Pole (or Witherbone Pole) when present, else a stick. */
+    private static Object poleIngredient(WeaponTier tier) {
+        if (tier.isMyrmex()) {
+            ItemStack witherbone = ArsenalCompatManager.itemStack(
+                "spartanfire:witherbone_pole");
+            if (!witherbone.isEmpty()) return witherbone;
+        }
+        return "poleWeapon";
     }
     private static Object ingredient(String descriptor) {
         if (descriptor.startsWith("ore:")) return descriptor.substring(4);

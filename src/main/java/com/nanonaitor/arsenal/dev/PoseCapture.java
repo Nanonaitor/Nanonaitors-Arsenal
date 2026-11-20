@@ -102,7 +102,7 @@ public final class PoseCapture {
         String ram = NanonaitorsArsenal.MOD_ID + ":battering_ram_iron";
         add("battering_ram", "idle, two hands", ram, null, in -> in.active = false);
         add("battering_ram", "ramming", ram, null, in -> in.active = true);
-        add("battering_ram", "one hand (struggle)", ram, torch, in -> {});
+        add("battering_ram", "one hand (plays normally)", ram, torch, in -> {});
 
         String staff = NanonaitorsArsenal.MOD_ID + ":blade_staff_iron";
         add("blade_staff", "idle, two hands", staff, null, in -> { in.active = false; in.attackPhase = -1; });
@@ -115,7 +115,10 @@ public final class PoseCapture {
         }
         add("blade_staff", "reflecting", staff, null, in -> in.active = true);
         add("blade_staff", "one hand idle", staff, torch, in -> { in.active = false; in.attackPhase = -1; });
-        add("blade_staff", "one hand paddle 50%", staff, torch, in -> { in.active = false; in.attackPhase = 0.5F; in.attackCount = 0; });
+        for (float phase : new float[] {0.2F, 0.45F, 0.7F}) {
+            add("blade_staff", "one hand strike " + Math.round(phase * 100) + "%", staff, torch,
+                in -> { in.active = false; in.attackPhase = phase; in.attackCount = 0; });
+        }
 
         String ball = NanonaitorsArsenal.MOD_ID + ":ball_and_chain_iron";
         add("ball_and_chain", "idle", ball, null, in -> { in.spinAngle = Double.NaN; in.throwProgress = -1; in.active = false; });
@@ -129,7 +132,9 @@ public final class PoseCapture {
             add("ball_and_chain", "throw ~" + Math.round(t * 100) + "%", ball, null, in -> in.active = false)
                 .live = p -> com.nanonaitor.arsenal.client.BallAndChainAnimationHandler.debugRelease(p, t);
         }
-        add("ball_and_chain", "guard", ball, null, in -> { in.active = true; in.spinAngle = Double.NaN; in.throwProgress = -1; });
+        Shot guard = add("ball_and_chain", "guard", ball, null, in -> {});
+        guard.raise = net.minecraft.util.EnumHand.MAIN_HAND;
+        guard.live = p -> com.nanonaitor.arsenal.client.BallAndChainInputHandler.debugGuard = true;
         add("ball_and_chain", "one hand wind-up ~90 deg", ball, torch, in -> in.active = false)
             .live = p -> com.nanonaitor.arsenal.client.BallAndChainAnimationHandler.debugWindup(p, Math.PI / 2.0D);
 
@@ -148,6 +153,14 @@ public final class PoseCapture {
         add("sun_war_bulwark", "one hand (struggle)", bulwark, torch, in -> in.active = false);
         add("sun_war_bulwark", "in offhand, guard", null, bulwark, in -> in.active = true)
             .raise = net.minecraft.util.EnumHand.OFF_HAND;
+
+        String scimitar = NanonaitorsArsenal.MOD_ID + ":scimitar_iron";
+        add("scimitars", "guard", scimitar, scimitar, in -> in.attackPhase = -1)
+            .raise = net.minecraft.util.EnumHand.MAIN_HAND;
+        for (float phase : new float[] {0.15F, 0.4F, 0.6F, 0.85F}) {
+            add("scimitars", "bash " + Math.round(phase * 100) + "%", scimitar, scimitar, in -> in.attackPhase = phase)
+                .raise = net.minecraft.util.EnumHand.MAIN_HAND;
+        }
 
         String morning = NanonaitorsArsenal.MOD_ID + ":morning_star_iron";
         add("morning_star", "charging", morning, null, in -> { in.active = true; in.attackPhase = -1; });
@@ -275,6 +288,7 @@ public final class PoseCapture {
     }
 
     private static void equip(Minecraft mc, Shot shot) {
+        com.nanonaitor.arsenal.client.BallAndChainInputHandler.debugGuard = false;
         ItemStack main = stack(shot.main), off = stack(shot.off);
         MinecraftServer server = mc.getIntegratedServer();
         java.util.UUID id = mc.player.getUniqueID();

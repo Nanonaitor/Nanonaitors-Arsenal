@@ -12,6 +12,10 @@ import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 public final class ModSounds {
     public static final SoundEvent BALL_CHAIN_SWING = create("ball_chain.swing");
     public static final SoundEvent BALL_CHAIN_HIT = create("ball_chain.hit");
+    /** Chain rattle layered on each wind-up swing and throw. */
+    public static final SoundEvent BALL_CHAIN_RATTLE = create("ball_chain.rattle");
+    /** Heavier chain clash when a thrown ball crashes into a block. */
+    public static final SoundEvent BALL_CHAIN_CRASH = create("ball_chain.crash");
     public static final SoundEvent SCIMITAR_BASH = create("scimitar.bash");
     public static final SoundEvent REVERSO_HEAL = create("reverso_heal");
     public static final SoundEvent BLADE_STAFF_REFLECT = create("blade_staff_reflect");
@@ -25,7 +29,8 @@ public final class ModSounds {
 
     @SubscribeEvent
     public static void register(RegistryEvent.Register<SoundEvent> event) {
-        event.getRegistry().registerAll(BALL_CHAIN_SWING, BALL_CHAIN_HIT, SCIMITAR_BASH,
+        event.getRegistry().registerAll(BALL_CHAIN_SWING, BALL_CHAIN_HIT, BALL_CHAIN_RATTLE,
+            BALL_CHAIN_CRASH, SCIMITAR_BASH,
             REVERSO_HEAL, BLADE_STAFF_REFLECT);
     }
 }

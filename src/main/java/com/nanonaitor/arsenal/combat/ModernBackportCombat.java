@@ -53,8 +53,11 @@ public final class ModernBackportCombat {
         if (action == ModernWeaponControlMessage.SHIELD_TAKEOVER) {
             if (AbilityUseRules.shield(player, player.getHeldItemOffhand())) {
                 cancelMorning(player);
-                BallAndChainCombat.cancelAbility(player);
-                AbilityUseRules.lockWeaponAttacks(player, 4);
+                // Defenders attack while guarding: a wind-up or throw carries on.
+                if (!AbilityUseRules.defender(player.getHeldItemOffhand())) {
+                    BallAndChainCombat.cancelAbility(player);
+                    AbilityUseRules.lockWeaponAttacks(player, 4);
+                }
             }
             return;
         }

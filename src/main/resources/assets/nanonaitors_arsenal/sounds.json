@@ -1,17 +1,61 @@
 {
   "scimitar.bash": {
-    "sounds": ["nanonaitors_arsenal:scimitar_bash"]
+    "sounds": [
+      "nanonaitors_arsenal:scimitar_bash"
+    ]
   },
   "ball_chain.swing": {
-    "sounds": [{"name": "minecraft:entity.player.attack.nodamage", "type": "event"}]
+    "sounds": [
+      {
+        "name": "minecraft:entity.player.attack.nodamage",
+        "type": "event"
+      }
+    ]
   },
   "ball_chain.hit": {
-    "sounds": [{"name": "minecraft:entity.player.attack.strong", "type": "event"}]
+    "sounds": [
+      {
+        "name": "minecraft:entity.player.attack.strong",
+        "type": "event"
+      }
+    ]
   },
   "reverso_heal": {
-    "sounds": ["nanonaitors_arsenal:reverso_heal"]
+    "sounds": [
+      "nanonaitors_arsenal:reverso_heal"
+    ]
   },
   "blade_staff_reflect": {
-    "sounds": ["nanonaitors_arsenal:blade_staff_reflect"]
+    "sounds": [
+      "nanonaitors_arsenal:blade_staff_reflect"
+    ]
+  },
+  "ball_chain.rattle": {
+    "subtitle": "subtitles.nanonaitors_arsenal.ball_chain.rattle",
+    "sounds": [
+      {
+        "name": "nanonaitors_arsenal:ball_chain_swing1"
+      },
+      {
+        "name": "nanonaitors_arsenal:ball_chain_swing2"
+      },
+      {
+        "name": "nanonaitors_arsenal:ball_chain_swing3"
+      },
+      {
+        "name": "nanonaitors_arsenal:ball_chain_swing4"
+      }
+    ]
+  },
+  "ball_chain.crash": {
+    "subtitle": "subtitles.nanonaitors_arsenal.ball_chain.crash",
+    "sounds": [
+      {
+        "name": "nanonaitors_arsenal:ball_chain_crash1"
+      },
+      {
+        "name": "nanonaitors_arsenal:ball_chain_crash2"
+      }
+    ]
   }
 }

@@ -49,7 +49,7 @@ public final class MoBendsPoses {
         if (!active()) return;
         EntityPlayer player = event.getEntityPlayer();
         float partial = event.getPartialRenderTick();
-        WeaponPoses.Pose pose = WeaponPoses.compute(player, player.ticksExisted + partial, partial);
+        WeaponPoses.Pose pose = WeaponPoses.computeForMoBends(player, player.ticksExisted + partial, partial);
         if (pose == null) return;
         try {
             Object data = playerData(player);

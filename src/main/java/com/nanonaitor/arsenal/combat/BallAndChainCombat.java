@@ -283,6 +283,10 @@ public final class BallAndChainCombat {
             player.world.playSound(null, end.x, end.y, end.z,
                 SoundEvents.ENTITY_IRONGOLEM_ATTACK, player.getSoundCategory(),
                 0.8F, 0.75F + effectiveCharge * 0.08F);
+            // A louder chain clash confirms the ball will crash into the block.
+            player.world.playSound(null, end.x, end.y, end.z,
+                ModSounds.BALL_CHAIN_CRASH, player.getSoundCategory(),
+                1.0F, 0.85F + player.getRNG().nextFloat() * 0.1F);
         }
     }
 
@@ -481,6 +485,10 @@ public final class BallAndChainCombat {
         SoundEvent sound = hit ? ModSounds.BALL_CHAIN_HIT : ModSounds.BALL_CHAIN_SWING;
         player.world.playSound(null, player.posX, player.posY, player.posZ,
             sound, player.getSoundCategory(), hit ? 1.0F : 0.65F, pitch);
+        // The chain itself rattles with every swing, a little under the swing's level.
+        player.world.playSound(null, player.posX, player.posY, player.posZ,
+            ModSounds.BALL_CHAIN_RATTLE, player.getSoundCategory(), 0.55F,
+            0.9F + player.getRNG().nextFloat() * 0.2F);
     }
 
     private static float getArmorPiercing(WeaponTier tier) {

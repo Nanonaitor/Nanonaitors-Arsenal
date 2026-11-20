@@ -25,7 +25,7 @@ import net.minecraftforge.fml.common.event.FMLServerStartedEvent;
 public final class NanonaitorsArsenal {
     public static final String MOD_ID = "nanonaitors_arsenal";
     public static final String NAME = "Nanonaitor's Arsenal";
-    public static final String VERSION = "2.0.23";
+    public static final String VERSION = "2.0.24";
     public static final Logger LOGGER = LogManager.getLogger(NAME);
     public static final CreativeTabs CREATIVE_TAB = new ArsenalCreativeTab();
 
