@@ -207,8 +207,14 @@ public final class FlailAnimationHandler {
         // camera and could sweep across the view for a moment.
         Minecraft mc = Minecraft.getMinecraft();
         if (player == mc.getRenderViewEntity() && mc.gameSettings.thirdPersonView == 0) {
-            WeaponPartRenderer.renderBall(player.getHeldItemMainhand(), ballX, ballY, ballZ, 0.30D,
-                (float) Math.toDegrees(Math.atan2(ballX - anchorX, ballZ - anchorZ)));
+            // The chain starts a short way out from the hip, toward the head, so it
+            // circles the player without ever crossing the camera.
+            double fx = ballX - anchorX, fy = ballY - anchorY, fz = ballZ - anchorZ;
+            double reach = Math.sqrt(fx * fx + fy * fy + fz * fz);
+            double skip = Math.min(0.85D, reach * 0.5D) / Math.max(1.0E-4D, reach);
+            WeaponPartRenderer.renderChainAndBall(player.getHeldItemMainhand(),
+                anchorX + fx * skip, anchorY - 0.15D + fy * skip, anchorZ + fz * skip,
+                ballX, ballY, ballZ, 0.30D);
             return;
         }
         // Keep the chain out of the wielder's head: if the straight line would pass

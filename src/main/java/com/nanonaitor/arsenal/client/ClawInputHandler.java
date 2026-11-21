@@ -133,6 +133,7 @@ public final class ClawInputHandler {
             // Everything Nunchaku supplies the actual main-hand attack when
             // installed; Arsenal supplies it in standalone profiles.
             player.swingArm(EnumHand.MAIN_HAND);
+            com.nanonaitor.arsenal.client.pose.AttackTiming.noteSwing(player, EnumHand.MAIN_HAND);
             if (!Loader.isModLoaded("everythingnunchaku")
                 && hit != null && hit.typeOfHit == RayTraceResult.Type.ENTITY
                 && hit.entityHit instanceof EntityLivingBase) {
@@ -217,5 +218,6 @@ public final class ClawInputHandler {
         player.swingingHand = EnumHand.OFF_HAND;
         player.swingProgressInt = -1;
         player.isSwingInProgress = true;
+        com.nanonaitor.arsenal.client.pose.AttackTiming.noteSwing(player, EnumHand.OFF_HAND);
     }
 }

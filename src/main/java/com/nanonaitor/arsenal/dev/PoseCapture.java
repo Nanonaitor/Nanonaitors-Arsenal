@@ -155,6 +155,13 @@ public final class PoseCapture {
                 .live = p -> com.nanonaitor.arsenal.client.FlailAnimationHandler.debugOrbit(p, angle);
         }
 
+        for (int q : new int[] {1, 3}) {
+            final double angle = q * Math.PI / 2.0D;
+            Shot first = add("flail", "first person spin ~" + (q * 90) + " deg", flail, null, in -> {});
+            first.firstPerson = true;
+            first.live = p -> com.nanonaitor.arsenal.client.FlailAnimationHandler.debugOrbit(p, angle);
+        }
+
         String bulwark = NanonaitorsArsenal.MOD_ID + ":sun_war_bulwark";
         add("sun_war_bulwark", "carry, two hands", bulwark, null, in -> in.active = false);
         add("sun_war_bulwark", "guard, two hands", bulwark, null, in -> in.active = true)
@@ -193,6 +200,15 @@ public final class PoseCapture {
         add("claws", "third-hit lunge 40%", claws, linked,
             in -> { in.attackPhase = 0.4F; in.attackCount = 3; in.offAttackPhase = -1; })
             .live = p -> com.nanonaitor.arsenal.client.pose.AttackTiming.debugPhase = 0.4F;
+
+        // Probe: Blade Staff + Tartsy Shield with right-click held; logs whether the shield is up.
+        String tartsy = NanonaitorsArsenal.MOD_ID + ":tartsy_shield";
+        add("probe", "staff + tartsy, right-click held", staff, tartsy, in -> {})
+            .live = PoseCapture::probeHoldUse;
+        add("probe", "staff + vanilla shield, right-click held", staff, "minecraft:shield", in -> {})
+            .live = PoseCapture::probeHoldUse;
+        add("probe", "sword + tartsy, right-click held", "minecraft:iron_sword", tartsy, in -> {})
+            .live = PoseCapture::probeHoldUse;
 
         String morning = NanonaitorsArsenal.MOD_ID + ":morning_star_iron";
         add("morning_star", "charging", morning, null, in -> { in.active = true; in.attackPhase = -1; });
@@ -241,7 +257,8 @@ public final class PoseCapture {
             // Keep a raised shield up: the game lowers it whenever the use key is not held.
             net.minecraft.util.EnumHand raise = SHOTS.get(shotIndex).raise;
             if (raise != null && !mc.player.isHandActive()) mc.player.setActiveHand(raise);
-            if (raise == null && mc.player.isHandActive()) mc.player.resetActiveHand();
+            if (raise == null && SHOTS.get(shotIndex).live != (Consumer<EntityPlayer>) PoseCapture::probeHoldUse
+                && !"probe".equals(SHOTS.get(shotIndex).sheet) && mc.player.isHandActive()) mc.player.resetActiveHand();
             Consumer<EntityPlayer> live = SHOTS.get(shotIndex).live;
             if (live != null) live.accept(mc.player);
         }
@@ -328,7 +345,32 @@ public final class PoseCapture {
         player.connection.setPlayerLocation(0.5D, 4.0D, 0.5D, 180.0F, 0.0F);
     }
 
+    private static int probeTicks;
+
+    /** Holds the use key as a player would, and logs client and server shield state each tick. */
+    private static void probeHoldUse(EntityPlayer player) {
+        Minecraft mc = Minecraft.getMinecraft();
+        int key = mc.gameSettings.keyBindUseItem.getKeyCode();
+        net.minecraft.client.settings.KeyBinding.setKeyBindState(key, true);
+        if (probeTicks % 4 == 0) net.minecraft.client.settings.KeyBinding.onTick(key);
+        EntityPlayerMP server = mc.getIntegratedServer().getPlayerList().getPlayerByUUID(player.getUniqueID());
+        NanonaitorsArsenal.LOGGER.info("probe-detail [{}] t={} offhandId={} offCooldown={} mainCooldown={} itemInUse={}",
+            SHOTS.get(shotIndex).label, probeTicks, System.identityHashCode(player.getHeldItemOffhand()),
+            player.getCooldownTracker().hasCooldown(player.getHeldItemOffhand().getItem()),
+            player.getCooldownTracker().hasCooldown(player.getHeldItemMainhand().getItem()), player.getItemInUseCount());
+        EntityPlayerMP srv = mc.getIntegratedServer().getPlayerList().getPlayerByUUID(player.getUniqueID());
+        NanonaitorsArsenal.LOGGER.info("probe-nbt t={} client off={} main={} | server off={} main={}", probeTicks,
+            player.getHeldItemOffhand().getTagCompound(), player.getHeldItemMainhand().getTagCompound(),
+            srv == null ? "-" : srv.getHeldItemOffhand().getTagCompound(), srv == null ? "-" : srv.getHeldItemMainhand().getTagCompound());
+        NanonaitorsArsenal.LOGGER.info("probe [{}] t={} client active={} hand={} item={} | server active={} item={}",
+            SHOTS.get(shotIndex).label, probeTicks, player.isHandActive(), player.getActiveHand(), player.getActiveItemStack().getItem().getRegistryName(),
+            server != null && server.isHandActive(), server == null ? "-" : server.getActiveItemStack().getItem().getRegistryName());
+        probeTicks++;
+    }
+
     private static void equip(Minecraft mc, Shot shot) {
+        probeTicks = 0;
+        net.minecraft.client.settings.KeyBinding.setKeyBindState(mc.gameSettings.keyBindUseItem.getKeyCode(), false);
         com.nanonaitor.arsenal.client.BallAndChainInputHandler.debugGuard = false;
         com.nanonaitor.arsenal.client.pose.AttackTiming.debugPhase = -1.0F;
         com.nanonaitor.arsenal.client.ModernWeaponInputHandler.debugMorningCharge = -1.0F;

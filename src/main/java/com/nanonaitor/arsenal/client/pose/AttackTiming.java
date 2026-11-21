@@ -38,6 +38,32 @@ public final class AttackTiming {
         final long[] handStart = {Long.MIN_VALUE, Long.MIN_VALUE};
         final int[] handDuration = {6, 6};
         final int[] handCount = {0, 0};
+        /** A swing reported directly (see noteSwing) this or last tick: skip re-detecting it. */
+        long notedTick = Long.MIN_VALUE;
+    }
+
+    /**
+     * Report a swing as it happens. Vanilla keeps one swing per player, so a hand
+     * swinging right after the other would hide the first from tick detection;
+     * paired weapons (claws) report each hand so both animations play together.
+     */
+    public static void noteSwing(EntityPlayer player, EnumHand hand) {
+        if (player.world == null) return;
+        Swing swing = SWINGS.get(player);
+        if (swing == null) {
+            swing = new Swing();
+            SWINGS.put(player, swing);
+        }
+        long now = player.world.getTotalWorldTime();
+        int h = hand.ordinal();
+        swing.handStart[h] = now;
+        swing.handDuration[h] = cooldownTicks(player);
+        swing.handCount[h]++;
+        swing.startTick = now;
+        swing.durationTicks = swing.handDuration[h];
+        swing.hand = hand;
+        swing.count++;
+        swing.notedTick = now;
     }
 
     @SubscribeEvent
@@ -57,7 +83,8 @@ public final class AttackTiming {
             }
             boolean swinging = player.isSwingInProgress;
             // A new swing either starts from rest or restarts mid-swing (progress drops).
-            if (swinging && (!swing.wasSwinging || player.swingProgressInt < swing.lastProgress)) {
+            boolean noted = swing.notedTick >= now - 1L;
+            if (swinging && !noted && (!swing.wasSwinging || player.swingProgressInt < swing.lastProgress)) {
                 swing.startTick = now - Math.max(0, player.swingProgressInt);
                 swing.durationTicks = cooldownTicks(player);
                 swing.hand = player.swingingHand == null ? EnumHand.MAIN_HAND : player.swingingHand;

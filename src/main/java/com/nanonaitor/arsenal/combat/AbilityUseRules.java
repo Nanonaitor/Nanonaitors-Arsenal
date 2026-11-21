@@ -17,6 +17,11 @@ import net.minecraftforge.fml.common.gameevent.TickEvent;
 public final class AbilityUseRules {
     public static boolean shield(EntityPlayer p,ItemStack s){return !s.isEmpty()&&s.getItem().isShield(s,p);}
     public static boolean cooling(EntityPlayer p,ItemStack s){return !s.isEmpty()&&p.getCooldownTracker().hasCooldown(s.getItem());}
+    /** The off-hand holds something that guards: any shield (isShield or a shield-class item). */
+    public static boolean offhandGuard(EntityPlayer p){
+        ItemStack off=p.getHeldItemOffhand();
+        return shield(p,off)||(!off.isEmpty()&&off.getItem() instanceof net.minecraft.item.ItemShield);
+    }
     public static boolean activeShield(EntityPlayer p){return p.isHandActive()&&shield(p,p.getActiveItemStack());}
     /** Defenders (the Defenders mod) are built to attack while guarding, so they never cancel weapon abilities. */
     public static boolean defender(ItemStack s){
@@ -40,8 +45,11 @@ public final class AbilityUseRules {
     @SubscribeEvent(priority=EventPriority.LOWEST)
     public static void use(PlayerInteractEvent.RightClickItem e){
         EntityPlayer p=e.getEntityPlayer();ItemStack s=p.getHeldItem(e.getHand());
+        // Any shield-type item in the off-hand (vanilla, Arsenal's Tartsy/Bulwark, modded)
+        // gets the right-click. Cancelling here also stops the server from resyncing
+        // the inventory over a declined weapon use, which used to drop the shield again.
         if(s.getItem() instanceof ItemArsenalWeapon && (cooling(p,s)
-            || e.getHand()==EnumHand.MAIN_HAND&&shield(p,p.getHeldItemOffhand()))){
+            || e.getHand()==EnumHand.MAIN_HAND&&offhandGuard(p))){
             e.setCanceled(true);e.setCancellationResult(EnumActionResult.PASS);
         }
         if(shield(p,s)){

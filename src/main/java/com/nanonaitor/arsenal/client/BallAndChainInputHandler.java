@@ -128,18 +128,10 @@ public final class BallAndChainInputHandler {
         // Guarding is crouch + right-click; standing right-click plays paddle ball.
         boolean canGuard = useHeld && !retrieving && player.isSneaking();
         long tick = player.world.getTotalWorldTime();
-        paddling = useHeld && !player.isSneaking() && !isAttackPhysicallyDown();
+        // Standing right-click does nothing by itself; held during a wind-up it
+        // speeds the spin (the wind boost).
+        paddling = false;
         boolean paddleSwing = false;
-        if (!paddling) {
-            paddleStart = Long.MIN_VALUE;
-        } else if (!retrieving && !awaitingRelease()) {
-            if (paddleStart == Long.MIN_VALUE) paddleStart = tick;
-            int turn = com.nanonaitor.arsenal.combat.ChainWeaponStats.swingIntervalTicks(
-                player, player.getHeldItemMainhand());
-            // One full turn of wind-up, then let go; the next turn starts once it is back.
-            paddleSwing = tick - paddleStart < turn + 1;
-            if (!paddleSwing) paddleStart = Long.MIN_VALUE;
-        }
         if (!canGuard) {
             guarding = false;
         } else if (!guarding && !wasSwinging

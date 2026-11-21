@@ -457,10 +457,10 @@ public final class WeaponPoses {
         return mixArm(front, ready, (a - SWEEP_END) / (1.0F - SWEEP_END));
     }
 
-    /** Every third strike of a hand lunges: the body turns into the sweep. */
-    private static float clawLunge(float a, int count) {
-        if (a < 0.0F || count % 3 != 0) return 0.0F;
-        return 0.35F * (float) Math.sin(a * Math.PI);
+    /** The torso turns into each strike; every third strike of a hand lunges further. */
+    private static float clawTwist(float a, int count) {
+        if (a < 0.0F) return 0.0F;
+        return (count % 3 == 0 ? 0.50F : 0.32F) * (float) Math.sin(a * Math.PI);
     }
 
     /** Battering Ram attack: a quick thrust forward in the first part of the swing, then back. */
@@ -630,7 +630,7 @@ public final class WeaponPoses {
                 float[] right = clawRake(in.attackPhase, in.attackCount);
                 float[] left = clawRake(in.offAttackPhase, in.offAttackCount);
                 Pose pose = new Pose().right(right[0], right[1], right[2]).left(left[0], -left[1], -left[2]);
-                float twist = clawLunge(in.attackPhase, in.attackCount) - clawLunge(in.offAttackPhase, in.offAttackCount);
+                float twist = clawTwist(in.attackPhase, in.attackCount) - clawTwist(in.offAttackPhase, in.offAttackCount);
                 if (twist != 0.0F) pose.bodyY(twist);
                 return pose;
             }
