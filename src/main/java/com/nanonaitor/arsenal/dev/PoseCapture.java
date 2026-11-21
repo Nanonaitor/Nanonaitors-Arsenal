@@ -224,7 +224,8 @@ public final class PoseCapture {
 
     private static boolean active() {
         if (active == null) {
-            active = new File(Minecraft.getMinecraft().mcDataDir, MARKER).isFile();
+            File marker = new File(Minecraft.getMinecraft().mcDataDir, MARKER);
+            active = marker.isFile() && !WeaponClips.requested(marker);
             if (active) {
                 buildShots();
                 NanonaitorsArsenal.LOGGER.info("Arsenal pose capture: {} shots queued", SHOTS.size());

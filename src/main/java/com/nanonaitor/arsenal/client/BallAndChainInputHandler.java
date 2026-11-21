@@ -78,7 +78,11 @@ public final class BallAndChainInputHandler {
         }
     }
 
+    /** Dev clip recorder only: treat the attack button as held. */
+    public static boolean debugAttackHeld;
+
     public static boolean isAttackPhysicallyDown() {
+        if (debugAttackHeld) return true;
         Minecraft mc = Minecraft.getMinecraft();
         if (!mc.inGameHasFocus || mc.currentScreen != null) return false;
         int key = mc.gameSettings.keyBindAttack.getKeyCode();

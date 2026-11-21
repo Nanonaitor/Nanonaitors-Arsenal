@@ -188,7 +188,7 @@ public final class ModernWeaponInputHandler {
         EntityPlayerSP player = mc.player;
         if (player == null) { reset(); return; }
         long now = player.world.getTotalWorldTime();
-        boolean attack = Mouse.isButtonDown(0);
+        boolean attack = Mouse.isButtonDown(0) || BallAndChainInputHandler.debugAttackHeld;
 
         if (mc.currentScreen == null && attack && !attackWasDown
             && player.getHeldItemMainhand().isEmpty()
