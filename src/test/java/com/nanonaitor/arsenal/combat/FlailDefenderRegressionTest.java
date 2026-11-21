@@ -56,7 +56,7 @@ public final class FlailDefenderRegressionTest {
             "src/main/java/com/nanonaitor/arsenal/client/BallAndChainInputHandler.java")), StandardCharsets.UTF_8);
         check(ball.contains("ShieldUsePriority.weaponAttackSuppressed(player)"));
         check(!ball.contains("ShieldUsePriority.requested("));
-        check(ball.contains("raiseDefenderOverBall"));
+        check(ball.contains("ShieldUsePriority.raiseDefenderOverWeapon"));
         // World equipment never swaps a modpack's hand-made (legendary) items.
         net.minecraft.world.storage.loot.conditions.LootCondition[] none =
             new net.minecraft.world.storage.loot.conditions.LootCondition[0];

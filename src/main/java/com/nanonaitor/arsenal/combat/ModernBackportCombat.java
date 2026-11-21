@@ -52,9 +52,9 @@ public final class ModernBackportCombat {
     public static void handleControl(EntityPlayerMP player,byte action,boolean active,int targetId) {
         if (action == ModernWeaponControlMessage.SHIELD_TAKEOVER) {
             if (AbilityUseRules.shield(player, player.getHeldItemOffhand())) {
-                cancelMorning(player);
-                // Defenders attack while guarding: a wind-up or throw carries on.
+                // Defenders attack while guarding: a charge, wind-up or throw carries on.
                 if (!AbilityUseRules.defender(player.getHeldItemOffhand())) {
+                    cancelMorning(player);
                     BallAndChainCombat.cancelAbility(player);
                     AbilityUseRules.lockWeaponAttacks(player, 4);
                 }
@@ -103,14 +103,15 @@ public final class ModernBackportCombat {
         }
     }
 
-    private static int chargeTicks(ItemStack stack) {
+    /** Ticks for a full Morning Star charge (Luna shortens it). */
+    public static int chargeTicks(ItemStack stack) {
         int luna=com.nanonaitor.arsenal.config.ContentSwitches
             .enabledEnchantmentLevel(ModContent.LUNA,stack);
         return Math.max(1, (int)Math.ceil(ArsenalConfig.morningStar.fullChargeSeconds * 20.0D*(1.0D-.25D*luna)));
     }
 
     private static void morningStar(EntityPlayerMP player, boolean active) {
-        if (AbilityUseRules.weaponSuppressed(player)) { cancelMorning(player); return; }
+        if (AbilityUseRules.suppressedUnlessDefending(player)) { cancelMorning(player); return; }
         if (player.isSpectator() || !com.nanonaitor.arsenal.compat.ReskillableCompat.canUse(player, player.getHeldItemMainhand())) {
             cancelMorning(player);
             return;
@@ -212,7 +213,8 @@ public final class ModernBackportCombat {
         player.swingArm(EnumHand.MAIN_HAND);
         player.world.playSound(null, player.posX, player.posY, player.posZ,
             SoundEvents.ENTITY_PLAYER_ATTACK_SWEEP, SoundCategory.PLAYERS, 0.85F, 0.88F);
-        player.resetActiveHand();
+        if (player.isHandActive() && player.getActiveItemStack().getItem() instanceof ItemMorningStar)
+            player.resetActiveHand();
         player.resetCooldown();
     }
 

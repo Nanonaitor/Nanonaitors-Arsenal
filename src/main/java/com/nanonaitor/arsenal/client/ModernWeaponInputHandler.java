@@ -121,9 +121,11 @@ public final class ModernWeaponInputHandler {
         }
         if (event.getButton() == 1
             && player.getHeldItemMainhand().getItem() instanceof ItemMorningStar) {
-            // Only actual ItemShield implementations get right-click priority.
-            // Defenders and Scimitars intentionally do not count as shields here.
-            if (player.getHeldItemOffhand().getItem() instanceof ItemShield) {
+            // Only actual ItemShield implementations get right-click priority, plus
+            // Defenders (guarding with one keeps the charge going). Scimitars too.
+            if (com.nanonaitor.arsenal.combat.AbilityUseRules.defender(player.getHeldItemOffhand())) {
+                // let the Defender take the use key (see raiseDefenderOverWeapon)
+            } else if (player.getHeldItemOffhand().getItem() instanceof ItemShield) {
                 if (morning) cancelMorningCharge(player);
             } else if (!(player.getHeldItemOffhand().getItem() instanceof ItemScimitar)) {
                 event.setCanceled(true);
@@ -198,7 +200,7 @@ public final class ModernWeaponInputHandler {
         }
 
         boolean boost = mc.currentScreen == null && Mouse.isButtonDown(1)
-            && Mouse.isButtonDown(0)
+            && (Mouse.isButtonDown(0) || BallAndChainInputHandler.isPaddling())
             && player.getHeldItemMainhand().getItem() instanceof ItemBallAndChain
             && player.getHeldItemOffhand().isEmpty()
             && BallAndChainInputHandler.isSwinging()
@@ -213,6 +215,9 @@ public final class ModernWeaponInputHandler {
                 ModernWeaponControlMessage.BALL_WIND_BOOST, boost));
         }
 
+        if (player.getHeldItemMainhand().getItem() instanceof ItemMorningStar) {
+            ShieldUsePriority.raiseDefenderOverWeapon(mc, player);
+        }
         if (mc.currentScreen == null
             && player.getHeldItemMainhand().getItem() instanceof ItemMorningStar
             && !isUsingShield(player)) {
@@ -277,11 +282,12 @@ public final class ModernWeaponInputHandler {
                 WeaponPartRenderer.renderCarryOnShieldBall(player.getHeldItemMainhand());
             return;
         }
-        if (morning && event.getHand() == EnumHand.MAIN_HAND
+        if ((morning || debugMorningCharge >= 0.0F) && event.getHand() == EnumHand.MAIN_HAND
             && event.getItemStack().getItem() instanceof ItemMorningStar) {
             event.setCanceled(true);
             WeaponPartRenderer.renderChargingMorningStar(event.getItemStack(),
-                morningCharge(player));
+                debugMorningCharge >= 0.0F ? debugMorningCharge : morningCharge(player),
+                player.ticksExisted + event.getPartialTicks());
             return;
         }
         if (!com.nanonaitor.arsenal.compat.ScimitarShieldCompat.isGuarding(player)
@@ -293,10 +299,14 @@ public final class ModernWeaponInputHandler {
             com.nanonaitor.arsenal.client.pose.AttackTiming.phase(player, event.getPartialTicks()));
     }
 
+    /** Pose capture tool only: a fixed first-person charge (-1 = off). */
+    public static float debugMorningCharge = -1.0F;
+
     public static float morningCharge(EntityPlayerSP player) {
         if (!morning || morningStarted == Long.MIN_VALUE) return 0;
-        return (float)Math.min(1.0D, (player.world.getTotalWorldTime() - morningStarted)
-            / (ArsenalConfig.morningStar.fullChargeSeconds * 20.0D));
+        return (float)Math.min(1.0D, (player.world.getTotalWorldTime() - morningStarted
+            + Minecraft.getMinecraft().getRenderPartialTicks())
+            / com.nanonaitor.arsenal.combat.ModernBackportCombat.chargeTicks(player.getHeldItemMainhand()));
     }
 
     private static boolean hasFreeHandBulwark(EntityPlayerSP player) {
@@ -332,7 +342,7 @@ public final class ModernWeaponInputHandler {
         morning = true;
         morningStarted = player.world.getTotalWorldTime();
         heartbeat = morningStarted;
-        player.setActiveHand(EnumHand.MAIN_HAND);
+        if (!player.isHandActive()) player.setActiveHand(EnumHand.MAIN_HAND);
         com.nanonaitor.arsenal.data.TransientData.of(player).setBoolean("ArsenalMorningCharging", true);
         ModNetwork.CHANNEL.sendToServer(new ModernWeaponControlMessage(
             ModernWeaponControlMessage.MORNING_STAR, true));
@@ -361,7 +371,7 @@ public final class ModernWeaponInputHandler {
     }
 
     private static boolean isUsingShield(EntityPlayerSP player) {
-        return ShieldUsePriority.requested(player)
+        return ShieldUsePriority.weaponAttackSuppressed(player)
             || com.nanonaitor.arsenal.combat.AbilityUseRules.cooling(player,player.getHeldItemMainhand());
     }
 

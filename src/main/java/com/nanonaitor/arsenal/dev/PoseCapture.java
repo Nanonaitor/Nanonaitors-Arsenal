@@ -132,7 +132,7 @@ public final class PoseCapture {
             add("ball_and_chain", "wind-up ~" + (q * 90) + " deg", ball, null, in -> in.active = false)
                 .live = p -> com.nanonaitor.arsenal.client.BallAndChainAnimationHandler.debugWindup(p, angle);
         }
-        for (double t : new double[] {0.05D, 0.3D, 0.75D}) {
+        for (double t : new double[] {0.05D, 0.3D, 0.58D, 0.75D}) {
             add("ball_and_chain", "throw ~" + Math.round(t * 100) + "%", ball, null, in -> in.active = false)
                 .live = p -> com.nanonaitor.arsenal.client.BallAndChainAnimationHandler.debugRelease(p, t);
         }
@@ -198,6 +198,12 @@ public final class PoseCapture {
         add("morning_star", "charging", morning, null, in -> { in.active = true; in.attackPhase = -1; });
         add("morning_star", "smash 15%", morning, null, in -> { in.active = false; in.attackPhase = 0.15F; });
         add("morning_star", "smash 40%", morning, null, in -> { in.active = false; in.attackPhase = 0.40F; });
+        for (float charge : new float[] {0.0F, 0.5F, 1.0F}) {
+            Shot first = add("morning_star", "first person charge " + Math.round(charge * 100) + "%", morning, null,
+                in -> in.active = true);
+            first.firstPerson = true;
+            first.live = p -> com.nanonaitor.arsenal.client.ModernWeaponInputHandler.debugMorningCharge = charge;
+        }
     }
 
     private static boolean active() {
@@ -272,7 +278,7 @@ public final class PoseCapture {
         if (event.phase != TickEvent.Phase.END || !captureNow || active == null || !active) return;
         Minecraft mc = Minecraft.getMinecraft();
         BufferedImage screen = ScreenShotHelper.createScreenshot(mc.displayWidth, mc.displayHeight, mc.getFramebuffer());
-        currentRow[view] = crop(screen);
+        currentRow[view] = SHOTS.get(shotIndex).firstPerson ? fit(screen) : crop(screen);
         captureNow = false;
         view++;
         waitTicks = 3;
@@ -325,6 +331,7 @@ public final class PoseCapture {
     private static void equip(Minecraft mc, Shot shot) {
         com.nanonaitor.arsenal.client.BallAndChainInputHandler.debugGuard = false;
         com.nanonaitor.arsenal.client.pose.AttackTiming.debugPhase = -1.0F;
+        com.nanonaitor.arsenal.client.ModernWeaponInputHandler.debugMorningCharge = -1.0F;
         ItemStack main = stack(shot.main), off = stack(shot.off);
         MinecraftServer server = mc.getIntegratedServer();
         java.util.UUID id = mc.player.getUniqueID();
@@ -344,6 +351,18 @@ public final class PoseCapture {
         if (id == null) return ItemStack.EMPTY;
         Item item = ForgeRegistries.ITEMS.getValue(new ResourceLocation(id));
         return item == null ? ItemStack.EMPTY : new ItemStack(item);
+    }
+
+    /** The whole screen, scaled to fit a cell (first-person shots). */
+    private static BufferedImage fit(BufferedImage screen) {
+        double k = Math.min(CELL_W / (double) screen.getWidth(), CELL_H / (double) screen.getHeight());
+        int w = (int) (screen.getWidth() * k), h = (int) (screen.getHeight() * k);
+        BufferedImage out = new BufferedImage(CELL_W, CELL_H, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g = out.createGraphics();
+        g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+        g.drawImage(screen, (CELL_W - w) / 2, (CELL_H - h) / 2, w, h, null);
+        g.dispose();
+        return out;
     }
 
     private static BufferedImage crop(BufferedImage screen) {

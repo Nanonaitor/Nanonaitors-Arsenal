@@ -45,7 +45,21 @@ public final class BallAndChainCombat {
      * Thrown-ball hit radius around the ball's centre, close to its drawn size
      * (0.24-0.32 blocks), so a hit happens where the ball visibly touches.
      */
-    private static final double BALL_HIT_RADIUS = 0.30D;
+
+    /** Radius of the ball as drawn for a throw of this charge (matches the client renderer). */
+    public static double visualBallRadius(int charge) {
+        return 0.625D * (0.24D + Math.max(1, Math.min(3, charge)) * 0.025D) * 1.3D;
+    }
+
+    /** Damage hits use a radius 30% larger than the drawn ball. */
+    public static double hitRadius(int charge) {
+        return visualBallRadius(charge) * 1.3D;
+    }
+
+    /** Blocks stop the ball a little inside its drawn size, so near misses fly on. */
+    public static double crashRadius(int charge) {
+        return visualBallRadius(charge) * 0.8D;
+    }
     private static final float[] RELEASE_DAMAGE_MULTIPLIER = {0.0F, 1.0F, 1.5F, 2.0F};
     // cancelAbility can run on the client thread (item use), so keep sides apart.
     private static final SidedPlayerMap<SwingState> SWINGS = new SidedPlayerMap<>();
@@ -207,13 +221,22 @@ public final class BallAndChainCombat {
             at.add(state.direction.scale(0.35D)));
         net.minecraft.block.state.IBlockState block = player.world.getBlockState(pos);
         net.minecraft.world.WorldServer world = player.getServerWorld();
+        // Chips burst off the block face; sparks and a puff come off the ball itself.
+        Vec3d face = at.add(state.direction.scale(0.3D));
         if (block.getMaterial() != net.minecraft.block.material.Material.AIR) {
-            world.spawnParticle(net.minecraft.util.EnumParticleTypes.BLOCK_DUST, at.x, at.y, at.z,
-                18 + state.charge * 6, 0.25D, 0.25D, 0.25D, 0.08D,
+            world.spawnParticle(net.minecraft.util.EnumParticleTypes.BLOCK_DUST, face.x, face.y, face.z,
+                30 + state.charge * 12, 0.3D, 0.3D, 0.3D, 0.15D,
+                net.minecraft.block.Block.getStateId(block));
+            world.spawnParticle(net.minecraft.util.EnumParticleTypes.BLOCK_CRACK, face.x, face.y, face.z,
+                16 + state.charge * 6, 0.2D, 0.2D, 0.2D, 0.25D,
                 net.minecraft.block.Block.getStateId(block));
         }
         world.spawnParticle(net.minecraft.util.EnumParticleTypes.CRIT, at.x, at.y, at.z,
-            8 + state.charge * 4, 0.2D, 0.2D, 0.2D, 0.35D);
+            14 + state.charge * 6, 0.15D, 0.15D, 0.15D, 0.55D);
+        world.spawnParticle(net.minecraft.util.EnumParticleTypes.FIREWORKS_SPARK, at.x, at.y, at.z,
+            6 + state.charge * 3, 0.1D, 0.1D, 0.1D, 0.12D);
+        world.spawnParticle(net.minecraft.util.EnumParticleTypes.EXPLOSION_NORMAL, at.x, at.y, at.z,
+            2 + state.charge, 0.1D, 0.1D, 0.1D, 0.02D);
     }
 
     private static boolean usingRealShield(EntityPlayer player) {
@@ -222,8 +245,7 @@ public final class BallAndChainCombat {
 
     /** Shield use (or a shield action's attack lock) stops the ball, except while guarding with a Defender. */
     private static boolean shieldStopsBall(EntityPlayer player) {
-        if (AbilityUseRules.activeShield(player)) return usingRealShield(player);
-        return AbilityUseRules.weaponSuppressed(player);
+        return AbilityUseRules.suppressedUnlessDefending(player);
     }
 
     /** Ends the ball's own use action only, never a Defender being held up. */
@@ -247,7 +269,7 @@ public final class BallAndChainCombat {
         Vec3d forward = horizontalLook(player);
         double reach = ChainWeaponStats.ballWindupReach(player, weapon);
         Vec3d end = stopAtSolidBlock(player, start,
-            start.add(forward.scale(reach)));
+            start.add(forward.scale(reach)), crashRadius(1));
         AxisAlignedBB search = sweptBox(start, end, 0.7D, 1.0D);
         List<EntityLivingBase> targets = player.world.getEntitiesWithinAABB(
             EntityLivingBase.class, search,
@@ -292,11 +314,16 @@ public final class BallAndChainCombat {
         if (horizontal.lengthSquared() > 0.0001D) horizontal = horizontal.normalize();
         Vec3d intendedEnd = start.add(direction.scale(throwReach - longChain))
             .add(horizontal.scale(longChain));
-        Vec3d end = stopAtSolidBlock(player, start, intendedEnd);
+        Vec3d end = stopAtSolidBlock(player, start, intendedEnd, crashRadius(effectiveCharge));
         float multiplier = RELEASE_DAMAGE_MULTIPLIER[effectiveCharge];
         float baseDamage = (float) player.getEntityAttribute(
             SharedMonsterAttributes.ATTACK_DAMAGE).getAttributeValue() * multiplier;
         int durationTicks = ChainWeaponStats.ballReleaseAnimationTicks(player, weapon);
+        // Keep the ball's speed when a block cuts the throw short (it used to slow down).
+        double full = start.distanceTo(intendedEnd);
+        if (full > 0.01D && end.distanceTo(intendedEnd) > 0.05D) {
+            durationTicks = Math.max(4, (int) Math.round(durationTicks * start.distanceTo(end) / full));
+        }
         ThrowState state = new ThrowState(player.world.getTotalWorldTime(),
             durationTicks, weapon, item.getTier(), effectiveCharge, start, end,
             direction, baseDamage);
@@ -316,7 +343,7 @@ public final class BallAndChainCombat {
                                      boolean returning) {
         java.util.Set<Integer> already = returning ? state.hitReturning : state.hitOutbound;
         Vec3d direction = returning ? state.direction.scale(-1.0D) : state.direction;
-        AxisAlignedBB search = sweptBox(from, to, BALL_HIT_RADIUS, BALL_HIT_RADIUS);
+        AxisAlignedBB search = sweptBox(from, to, hitRadius(state.charge), hitRadius(state.charge));
         List<EntityLivingBase> targets = player.world.getEntitiesWithinAABB(
             EntityLivingBase.class, search,
             target -> isValidTarget(player, target) && !already.contains(target.getEntityId()));
@@ -324,7 +351,7 @@ public final class BallAndChainCombat {
             from.y, from.z)));
         boolean hit = false;
         for (EntityLivingBase target : targets) {
-            if (!intersectsLine(target, from, to, BALL_HIT_RADIUS, BALL_HIT_RADIUS)) {
+            if (!intersectsLine(target, from, to, hitRadius(state.charge), hitRadius(state.charge))) {
                 continue;
             }
             already.add(target.getEntityId());
@@ -450,17 +477,18 @@ public final class BallAndChainCombat {
     }
 
     private static Vec3d stopAtSolidBlock(EntityPlayerMP player, Vec3d start,
-                                          Vec3d intendedEnd) {
+                                          Vec3d intendedEnd, double radius) {
         Vec3d travel = intendedEnd.subtract(start);
         double length = travel.lengthVector();
         if (length <= 0.0001D) return intendedEnd;
         Vec3d direction = travel.scale(1.0D / length);
         Vec3d side = new Vec3d(-direction.z, 0.0D, direction.x);
-        if (side.lengthSquared() > 0.0001D) side = side.normalize().scale(0.35D);
+        if (side.lengthSquared() > 0.0001D) side = side.normalize().scale(radius);
+        // The ball's outline, slightly inside the drawn size: centre, top, bottom, sides.
         Vec3d[] offsets = {
             new Vec3d(0.0D, 0.0D, 0.0D),
-            new Vec3d(0.0D, -0.45D, 0.0D),
-            new Vec3d(0.0D, 0.35D, 0.0D),
+            new Vec3d(0.0D, -radius, 0.0D),
+            new Vec3d(0.0D, radius, 0.0D),
             side,
             side.scale(-1.0D)
         };
@@ -473,7 +501,8 @@ public final class BallAndChainCombat {
                 closest = Math.min(closest, rayStart.distanceTo(hit.hitVec));
             }
         }
-        return closest < length ? start.add(direction.scale(closest)) : intendedEnd;
+        // Stop with the ball's surface at the block, not its centre inside it.
+        return closest < length ? start.add(direction.scale(Math.max(0.0D, closest - radius))) : intendedEnd;
     }
 
     private static AxisAlignedBB sweptBox(Vec3d start, Vec3d end,

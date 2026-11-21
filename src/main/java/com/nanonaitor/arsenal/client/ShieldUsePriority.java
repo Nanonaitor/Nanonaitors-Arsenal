@@ -21,6 +21,24 @@ public final class ShieldUsePriority {
         }
         return requested(player);
     }
+    /**
+     * The game ignores the use key while a weapon's own use action runs (a Ball
+     * and Chain wind-up or throw, a Morning Star charge), so a Defender could not
+     * be raised mid-attack. Hand the use action over to the Defender; the attack
+     * carries on.
+     */
+    public static void raiseDefenderOverWeapon(Minecraft mc, EntityPlayer player) {
+        net.minecraft.item.ItemStack offhand = player.getHeldItemOffhand();
+        if (!com.nanonaitor.arsenal.combat.AbilityUseRules.defender(offhand)
+            || mc.currentScreen != null || mc.playerController == null
+            || !mc.gameSettings.keyBindUseItem.isKeyDown()
+            || player.getCooldownTracker().hasCooldown(offhand.getItem())
+            || !player.isHandActive() || player.getActiveHand() != net.minecraft.util.EnumHand.MAIN_HAND
+            || !(player.getActiveItemStack().getItem() instanceof com.nanonaitor.arsenal.item.ItemArsenalWeapon)) return;
+        mc.playerController.onStoppedUsingItem(player);
+        mc.playerController.processRightClick(player, mc.world, net.minecraft.util.EnumHand.OFF_HAND);
+    }
+
     public static boolean requested(EntityPlayer player) {
         if (player == Minecraft.getMinecraft().player && ShieldInputHandler.suppressWeaponAttack()) return true;
         Minecraft mc=Minecraft.getMinecraft();

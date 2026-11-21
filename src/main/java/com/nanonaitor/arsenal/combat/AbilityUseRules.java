@@ -25,6 +25,11 @@ public final class AbilityUseRules {
     }
     /** Guarding with a shield that stops weapon abilities: any shield except a Defender. */
     public static boolean activeConventionalShield(EntityPlayer p){return activeShield(p)&&!defender(p.getActiveItemStack());}
+    /** weaponSuppressed, except while guarding with a Defender (built to attack while guarding). */
+    public static boolean suppressedUnlessDefending(EntityPlayer p){
+        if(activeShield(p))return !defender(p.getActiveItemStack());
+        return weaponSuppressed(p);
+    }
     private static final String ATTACK_LOCK = "ArsenalShieldAttackLock";
     public static boolean weaponSuppressed(EntityPlayer p) { return activeShield(p)
         || com.nanonaitor.arsenal.data.TransientData.of(p).getLong(ATTACK_LOCK) > p.world.getTotalWorldTime(); }

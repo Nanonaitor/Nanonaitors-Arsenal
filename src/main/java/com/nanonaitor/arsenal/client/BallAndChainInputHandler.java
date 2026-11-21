@@ -30,6 +30,12 @@ public final class BallAndChainInputHandler {
     private static long awaitingReleaseUntil = Long.MIN_VALUE;
     /** Pose capture tool only: treat the use key as a ball guard. */
     public static boolean debugGuard;
+    /**
+     * Paddle ball: standing with right-click held (no attack), the ball winds up
+     * one turn, flies out and back, and goes again, like spamming attack.
+     */
+    private static boolean paddling;
+    private static long paddleStart = Long.MIN_VALUE;
 
     private BallAndChainInputHandler() {}
     public static void cancelForShield(EntityPlayer player) {
@@ -112,15 +118,28 @@ public final class BallAndChainInputHandler {
         }
         boolean holdingWeapon = player.getHeldItemMainhand().getItem()
             instanceof ItemBallAndChain;
-        if (holdingWeapon) raiseDefenderOverBall(minecraft, player);
+        if (holdingWeapon) ShieldUsePriority.raiseDefenderOverWeapon(minecraft, player);
         if (holdingWeapon && ShieldUsePriority.weaponAttackSuppressed(player)) BallAndChainAnimationHandler.cancelForShield(player);
         boolean retrieving = BallAndChainAnimationHandler.isReleaseAnimationActive(player);
-        boolean canGuard = holdingWeapon
-            && !com.nanonaitor.arsenal.combat.AbilityUseRules.cooling(player,player.getHeldItemMainhand())
-            && !retrieving
+        boolean useHeld = holdingWeapon && minecraft.currentScreen == null
+            && minecraft.gameSettings.keyBindUseItem.isKeyDown()
             && player.getHeldItemOffhand().isEmpty()
-            && minecraft.currentScreen == null
-            && minecraft.gameSettings.keyBindUseItem.isKeyDown();
+            && !com.nanonaitor.arsenal.combat.AbilityUseRules.cooling(player,player.getHeldItemMainhand());
+        // Guarding is crouch + right-click; standing right-click plays paddle ball.
+        boolean canGuard = useHeld && !retrieving && player.isSneaking();
+        long tick = player.world.getTotalWorldTime();
+        paddling = useHeld && !player.isSneaking() && !isAttackPhysicallyDown();
+        boolean paddleSwing = false;
+        if (!paddling) {
+            paddleStart = Long.MIN_VALUE;
+        } else if (!retrieving && !awaitingRelease()) {
+            if (paddleStart == Long.MIN_VALUE) paddleStart = tick;
+            int turn = com.nanonaitor.arsenal.combat.ChainWeaponStats.swingIntervalTicks(
+                player, player.getHeldItemMainhand());
+            // One full turn of wind-up, then let go; the next turn starts once it is back.
+            paddleSwing = tick - paddleStart < turn + 1;
+            if (!paddleSwing) paddleStart = Long.MIN_VALUE;
+        }
         if (!canGuard) {
             guarding = false;
         } else if (!guarding && !wasSwinging
@@ -138,7 +157,7 @@ public final class BallAndChainInputHandler {
             && !retrieving
             && !guarding
             && minecraft.currentScreen == null
-            && isAttackPhysicallyDown();
+            && (isAttackPhysicallyDown() || paddleSwing);
         updateUseSpeed(player, canSwing || retrieving);
         if (retrieving) awaitingReleaseUntil = Long.MIN_VALUE;
         com.nanonaitor.arsenal.data.TransientData.of(player).setBoolean("ArsenalBallAndChainActive",
@@ -171,25 +190,13 @@ public final class BallAndChainInputHandler {
         }
     }
 
-    /**
-     * The game ignores the use key while the ball's own use action runs (wind-up
-     * and throw), so a Defender could not be raised mid-attack. Hand the use
-     * action over to the Defender; the wind-up or throw carries on.
-     */
-    private static void raiseDefenderOverBall(Minecraft mc, EntityPlayer player) {
-        net.minecraft.item.ItemStack offhand = player.getHeldItemOffhand();
-        if (!com.nanonaitor.arsenal.combat.AbilityUseRules.defender(offhand)
-            || mc.currentScreen != null || mc.playerController == null
-            || !mc.gameSettings.keyBindUseItem.isKeyDown()
-            || player.getCooldownTracker().hasCooldown(offhand.getItem())
-            || !player.isHandActive() || player.getActiveHand() != EnumHand.MAIN_HAND
-            || !(player.getActiveItemStack().getItem() instanceof ItemBallAndChain)) return;
-        mc.playerController.onStoppedUsingItem(player);
-        mc.playerController.processRightClick(player, mc.world, EnumHand.OFF_HAND);
-    }
-
     public static boolean isSwinging() {
         return wasSwinging;
+    }
+
+    /** Standing with right-click held: the paddle-ball loop is running. */
+    public static boolean isPaddling() {
+        return paddling;
     }
 
     /** The attack was let go and the throw has not arrived yet (a few ticks at most). */

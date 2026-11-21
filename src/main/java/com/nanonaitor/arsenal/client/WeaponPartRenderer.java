@@ -139,16 +139,25 @@ public final class WeaponPartRenderer {
         GlStateManager.color(1.0F, 1.0F, 1.0F, 1.0F);
     }
 
-    public static void renderChargingMorningStar(ItemStack held, float charge) {
-        float clamped = Math.max(0.0F, Math.min(1.0F, charge));
+    /**
+     * First person while charging: the Morning Star is drawn up and back over
+     * the shoulder as the charge builds (eased), reaching its highest point at
+     * full charge, where it trembles slightly, ready to come down.
+     */
+    public static void renderChargingMorningStar(ItemStack held, float charge, float ageTicks) {
+        float c = Math.max(0.0F, Math.min(1.0F, charge));
+        float e = c * c * (3.0F - 2.0F * c);
+        float shake = c >= 1.0F ? (float) Math.sin(ageTicks * 1.7F) * 1.2F : 0.0F;
         GlStateManager.pushMatrix();
-        GlStateManager.translate(0.30D, -0.34D + clamped * 0.25D,
-            -0.72D + clamped * 0.16D);
-        GlStateManager.rotate(-18.0F - clamped * 72.0F, 1.0F, 0.0F, 0.0F);
-        GlStateManager.rotate(18.0F + clamped * 18.0F, 0.0F, 0.0F, 1.0F);
+        GlStateManager.translate(0.48D - 0.14D * e, -0.52D + 0.60D * e, -0.80D + 0.10D * e);
+        GlStateManager.rotate(-8.0F - 70.0F * e + shake, 1.0F, 0.0F, 0.0F);
+        GlStateManager.rotate(-6.0F + 28.0F * e, 0.0F, 0.0F, 1.0F);
+        GlStateManager.rotate(-12.0F * e, 0.0F, 1.0F, 0.0F);
         GlStateManager.scale(0.85D, 0.85D, 0.85D);
+        RenderHelper.enableStandardItemLighting();
         Minecraft.getMinecraft().getRenderItem().renderItem(
             held, ItemCameraTransforms.TransformType.NONE);
+        RenderHelper.disableStandardItemLighting();
         GlStateManager.popMatrix();
     }
 

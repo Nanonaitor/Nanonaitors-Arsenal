@@ -64,6 +64,8 @@ public final class WeaponPoses {
         public boolean weaponArmLeft;
         /** Ticks since the current motion began (a charge starting, for example). */
         public float segmentAge;
+        /** Morning Star: ticks to a full charge. */
+        public float chargeTicks = 40.0F;
         /** Paired claws: the off-hand's own swing, which can play alongside the main hand's. */
         public float offAttackPhase = -1.0F;
         public int offAttackCount;
@@ -172,6 +174,7 @@ public final class WeaponPoses {
             in.kind = Kind.MORNING_STAR;
             in.active = com.nanonaitor.arsenal.data.TransientData.of(player)
                 .getBoolean("ArsenalMorningCharging");
+            in.chargeTicks = com.nanonaitor.arsenal.combat.ModernBackportCombat.chargeTicks(player.getHeldItemMainhand());
             in.weaponArmLeft = mainIsLeft;
         }
         if (in.kind == Kind.CLAWS) {
@@ -553,9 +556,15 @@ public final class WeaponPoses {
             case BALL: {
                 if (in.throwProgress >= 0.0D) {
                     float p = (float) in.throwProgress;
+                    // Out: the throw. Back: the throwing hand yanks the chain in toward
+                    // the body (the ball is being pulled), then settles to catch it.
                     float rightX = p < 0.15F ? lerp(-2.70F, -1.55F, p / 0.15F)
-                        : p < 0.5F ? -1.55F : lerp(-1.55F, -0.90F, (p - 0.5F) / 0.5F);
+                        : p < 0.5F ? -1.55F
+                        : p < 0.62F ? lerp(-1.55F, -0.15F, (p - 0.5F) / 0.12F)
+                        : lerp(-0.15F, -0.90F, (p - 0.62F) / 0.38F);
+                    float yank = p < 0.5F ? 0.0F : (float) Math.sin(Math.min(1.0F, (p - 0.5F) / 0.24F) * Math.PI);
                     Pose pose = new Pose().right(rightX, -0.10F, 0.0F);
+                    if (yank > 0.0F) pose.bodyY(0.22F * yank);
                     if (in.twoHanded) {
                         // The free hand feeds the chain out, then hauls it back in.
                         pose.left(p < 0.5F ? -0.90F : lerp(-1.20F, -0.35F, (p - 0.5F) / 0.5F),
@@ -602,8 +611,12 @@ public final class WeaponPoses {
 
             case MORNING_STAR:
                 if (in.active) {
-                    float sway = (float) Math.sin(age * 0.5D) * 0.05F;
-                    return new Pose().right(-2.85F + sway, 0.0F, 0.15F);
+                    // Raised gradually as the charge builds, reaching the highest
+                    // point exactly at full charge, then held there with a slight sway.
+                    float k = Math.min(1.0F, in.segmentAge / Math.max(1.0F, in.chargeTicks));
+                    float eased = k * k * (3.0F - 2.0F * k);
+                    float sway = k >= 1.0F ? (float) Math.sin(age * 0.5D) * 0.05F : 0.0F;
+                    return new Pose().right(lerp(-0.45F, -3.0F, eased) + sway, 0.0F, 0.05F + 0.12F * eased);
                 }
                 if (in.attackPhase >= 0.0F && ArsenalConfig.animations.attackSpeedSwings) {
                     float a = in.attackPhase;

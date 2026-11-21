@@ -85,8 +85,9 @@ public final class ShieldCombat {
         if (!(player.getHeldItemMainhand().getItem() instanceof ItemBallAndChain)
             || !player.getHeldItemOffhand().isEmpty()
             || BallAndChainCombat.isThrowing(player)) return false;
+        // The whole wind-up guards; otherwise guarding is crouch + right-click.
         return BallAndChainCombat.isWindingUp(player)
-            || player.isHandActive() && player.getActiveHand() == EnumHand.MAIN_HAND
+            || player.isSneaking() && player.isHandActive() && player.getActiveHand() == EnumHand.MAIN_HAND
                 && player.getActiveItemStack().getItem() instanceof ItemBallAndChain;
     }
 

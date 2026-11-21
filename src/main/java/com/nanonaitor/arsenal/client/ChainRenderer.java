@@ -49,6 +49,8 @@ final class ChainRenderer {
     private static float[] tint = MATERIAL;
     private static TextureAtlasSprite texture;
     private static float alpha = 1.0F;
+    /** Link cross-section scale: the flail's chain is lighter than the Ball and Chain's. */
+    private static double thin = 1.0D;
 
     private ChainRenderer() {}
 
@@ -75,6 +77,7 @@ final class ChainRenderer {
             tint = IRON;
         }
         alpha = 1.0F;
+        thin = item instanceof com.nanonaitor.arsenal.item.ItemFlail ? 0.7D : 1.0D;
         double[] mid = path[path.length / 2];
         applyWorldLight(mid[0], mid[1], mid[2]);
         mc.getTextureManager().bindTexture(TextureMap.LOCATION_BLOCKS_TEXTURE);
@@ -147,11 +150,12 @@ final class ChainRenderer {
 
     /** One oval link: two long side bars and two short end bars around an open centre. */
     private static void link(BufferBuilder buffer, double[] c, double[] axis, double[] across, double[] depth) {
-        double l = LENGTH * 0.5D, w = WIDTH * 0.5D, t = WIRE * 0.5D;
-        box(buffer, c, axis, across, depth, -l, l, w - WIRE, w, -t, t);
-        box(buffer, c, axis, across, depth, -l, l, -w, -w + WIRE, -t, t);
-        box(buffer, c, axis, across, depth, l - WIRE, l, -w + WIRE, w - WIRE, -t, t);
-        box(buffer, c, axis, across, depth, -l, -l + WIRE, -w + WIRE, w - WIRE, -t, t);
+        double wire = WIRE * thin;
+        double l = LENGTH * 0.5D, w = WIDTH * thin * 0.5D, t = wire * 0.5D;
+        box(buffer, c, axis, across, depth, -l, l, w - wire, w, -t, t);
+        box(buffer, c, axis, across, depth, -l, l, -w, -w + wire, -t, t);
+        box(buffer, c, axis, across, depth, l - wire, l, -w + wire, w - wire, -t, t);
+        box(buffer, c, axis, across, depth, -l, -l + wire, -w + wire, w - wire, -t, t);
     }
 
     private static void box(BufferBuilder buffer, double[] c, double[] a, double[] b, double[] n,

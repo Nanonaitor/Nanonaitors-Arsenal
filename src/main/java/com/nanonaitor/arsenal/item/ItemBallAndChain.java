@@ -25,6 +25,7 @@ public final class ItemBallAndChain extends ItemArsenalWeapon {
         addPropertyOverride(new ResourceLocation(NanonaitorsArsenal.MOD_ID,"guarding"),
             (stack,world,entity) -> entity instanceof EntityPlayer
                 && entity.getHeldItemMainhand().getItem()==this && entity.getHeldItemOffhand().isEmpty()
+                && entity.isSneaking()
                 && entity.isHandActive() && entity.getActiveHand()==EnumHand.MAIN_HAND
                 && !com.nanonaitor.arsenal.data.TransientData.of(entity).getBoolean("ArsenalBallAndChainActive") ? 1.0F:0.0F);
         addPropertyOverride(new ResourceLocation(NanonaitorsArsenal.MOD_ID, "animation_part"),
@@ -49,7 +50,8 @@ public final class ItemBallAndChain extends ItemArsenalWeapon {
     public ActionResult<ItemStack> onItemRightClick(World world, EntityPlayer player, EnumHand hand) {
         ItemStack held = player.getHeldItem(hand);
         if(player.getCooldownTracker().hasCooldown(this))return new ActionResult<>(EnumActionResult.PASS,held);
-        if (hand != EnumHand.MAIN_HAND || !player.getHeldItemOffhand().isEmpty()
+        // Crouch + right-click guards; standing right-click plays paddle ball (client input).
+        if (hand != EnumHand.MAIN_HAND || !player.getHeldItemOffhand().isEmpty() || !player.isSneaking()
             || com.nanonaitor.arsenal.data.TransientData.of(player).getBoolean("ArsenalBallAndChainActive"))
             return new ActionResult<>(EnumActionResult.PASS, held);
         player.setActiveHand(hand);
@@ -67,6 +69,7 @@ public final class ItemBallAndChain extends ItemArsenalWeapon {
         if (!ArsenalTooltip.begin(tooltip, TextFormatting.GOLD,
                 "Hold attack to swing; release to throw.")) return;
         tooltip.add(TextFormatting.GRAY + "Higher rotations increase throw reach and damage.");
+        tooltip.add(TextFormatting.GRAY + "Crouch + use to guard. Hold use while standing to keep throwing (paddle ball).");
         tooltip.add(TextFormatting.GRAY + "With an empty offhand, guarding and winding up block every attack.");
         tooltip.add(TextFormatting.GRAY + "A thrown ball smashes projectiles in its path.");
         tooltip.add(TextFormatting.GRAY + "Knockback also shoves back melee attackers you guard against.");

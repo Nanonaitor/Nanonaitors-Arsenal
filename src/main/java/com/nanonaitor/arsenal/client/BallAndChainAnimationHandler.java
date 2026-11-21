@@ -124,6 +124,7 @@ public final class BallAndChainAnimationHandler {
         return player != null
             && player.getHeldItemMainhand().getItem() instanceof ItemBallAndChain
             && player.getHeldItemOffhand().isEmpty()
+            && player.isSneaking()
             && player.isHandActive()
             && player.getActiveHand() == EnumHand.MAIN_HAND
             && !WINDUPS.containsKey(player)
@@ -161,7 +162,7 @@ public final class BallAndChainAnimationHandler {
                 && minecraft.currentScreen == null
                 && !RELEASES.containsKey(player)
                 && !BallAndChainInputHandler.isGuardingInput()
-                && BallAndChainInputHandler.isAttackPhysicallyDown();
+                && BallAndChainInputHandler.isSwinging();
             WindupState state = WINDUPS.get(player);
             if (player==minecraft.player && BallAndChainInputHandler.isGuardingInput()
                 && !RELEASES.containsKey(player)) {
