@@ -1,33 +1,79 @@
 {
-  "type": "minecraft:crafting_shaped",
-  "category": "equipment",
-  "key": {
-    "M": {
-      "tag": "forge:ingots/steel"
-    },
-    "S": {
-      "item": "minecraft:stick"
-    }
-  },
-  "pattern": [
-    "MM ",
-    " S ",
-    " MM"
-  ],
-  "result": {
-    "item": "nanonaitors_arsenal:blade_staff_steel"
-  },
-  "conditions": [
+  "type": "forge:conditional",
+  "recipes": [
     {
-      "type": "forge:not",
-      "value": {
-        "type": "forge:tag_empty",
-        "tag": "forge:ingots/steel"
+      "conditions": [
+        {
+          "type": "forge:not",
+          "value": {
+            "type": "forge:tag_empty",
+            "tag": "forge:ingots/steel"
+          }
+        },
+        {
+          "type": "nanonaitors_arsenal:weapon_enabled",
+          "weapon": "blade_staff"
+        },
+        {
+          "type": "forge:mod_loaded",
+          "modid": "spartanweaponry"
+        }
+      ],
+      "recipe": {
+        "type": "minecraft:crafting_shaped",
+        "category": "equipment",
+        "key": {
+          "M": {
+            "tag": "forge:ingots/steel"
+          },
+          "S": {
+            "item": "spartanweaponry:pole"
+          }
+        },
+        "pattern": [
+          "MM ",
+          " S ",
+          " MM"
+        ],
+        "result": {
+          "item": "nanonaitors_arsenal:blade_staff_steel"
+        }
       }
     },
     {
-      "type": "nanonaitors_arsenal:weapon_enabled",
-      "weapon": "blade_staff"
+      "conditions": [
+        {
+          "type": "forge:not",
+          "value": {
+            "type": "forge:tag_empty",
+            "tag": "forge:ingots/steel"
+          }
+        },
+        {
+          "type": "nanonaitors_arsenal:weapon_enabled",
+          "weapon": "blade_staff"
+        }
+      ],
+      "recipe": {
+        "type": "minecraft:crafting_shaped",
+        "category": "equipment",
+        "key": {
+          "M": {
+            "tag": "forge:ingots/steel"
+          },
+          "S": {
+            "item": "minecraft:stick"
+          }
+        },
+        "pattern": [
+          "MM ",
+          " S ",
+          " MM"
+        ],
+        "result": {
+          "item": "nanonaitors_arsenal:blade_staff_steel"
+        }
+      }
     }
   ]
 }

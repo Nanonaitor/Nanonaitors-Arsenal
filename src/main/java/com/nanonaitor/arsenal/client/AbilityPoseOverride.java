@@ -8,7 +8,20 @@ import net.minecraft.world.entity.HumanoidArm;
 
 /** Only active Arsenal abilities own the final pose; ordinary movement is untouched. */
 public final class AbilityPoseOverride {
+    /** Before the model's own animation pass. */
+    public static void prepare(HumanoidModel<?> model,LivingEntity entity,float partial){
+        if(entity instanceof net.minecraft.world.entity.player.Player player)
+            com.nanonaitor.arsenal.client.pose.WeaponPoses.prepareSwing(model,player,partial);
+    }
+
     public static void apply(HumanoidModel<?> model,LivingEntity entity,float partial){
+        // Full weapon poses take over whenever they are on; the simple ability
+        // poses below remain the fallback when the animations option is off.
+        if(entity instanceof net.minecraft.world.entity.player.Player player
+            && com.nanonaitor.arsenal.client.pose.WeaponPoses.enabled()){
+            if(com.nanonaitor.arsenal.client.pose.WeaponPoses.applyTo(model,player,partial)) copyLayers(model);
+            return;
+        }
         if(!(entity.getMainHandItem().getItem() instanceof ArsenalWeaponItem weapon))return;
         boolean local=entity==Minecraft.getInstance().player;
         boolean using=entity.isUsingItem() && entity.getUseItem()==entity.getMainHandItem();
@@ -40,7 +53,11 @@ public final class AbilityPoseOverride {
             }
             default -> {}
         }
-        if(active && model instanceof PlayerModel<?> player){
+        if(active) copyLayers(model);
+    }
+
+    private static void copyLayers(HumanoidModel<?> model){
+        if(model instanceof PlayerModel<?> player){
             player.rightSleeve.copyFrom(model.rightArm);player.leftSleeve.copyFrom(model.leftArm);
             player.rightPants.copyFrom(model.rightLeg);player.leftPants.copyFrom(model.leftLeg);
             player.jacket.copyFrom(model.body);

@@ -187,5 +187,11 @@
   "item.nanonaitors_arsenal.linked_claws_sentient": "Sentient Linked Claws",
   "item.nanonaitors_arsenal.flail_sentient": "Sentient Flail",
   "item.nanonaitors_arsenal.battering_ram_sentient": "Sentient Battering Ram",
-  "item.nanonaitors_arsenal.ball_and_chain_sentient": "Sentient Ball And Chain"
+  "item.nanonaitors_arsenal.ball_and_chain_sentient": "Sentient Ball And Chain",
+  "subtitles.nanonaitors_arsenal.ball_chain.rattle": "Chain rattles",
+  "subtitles.nanonaitors_arsenal.ball_chain.crash": "Chain clashes",
+  "subtitles.nanonaitors_arsenal.battering_ram.charge": "Battering Ram creaks",
+  "subtitles.nanonaitors_arsenal.battering_ram.impact": "Battering Ram bashes",
+  "subtitles.nanonaitors_arsenal.claws.slash": "Claws slash",
+  "subtitles.nanonaitors_arsenal.claws.ring": "Claws ring"
 }

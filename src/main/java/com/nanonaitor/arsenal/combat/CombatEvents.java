@@ -141,6 +141,7 @@ public final class CombatEvents {
         if (active.getItem() instanceof ArsenalShieldItem shield
             && shield.shieldType() == ArsenalShieldItem.Type.TARTSY) {
             if (!player.level().isClientSide) {
+                ScimitarCounter.blocked(player);
                 damage(active, player, 1);
                 player.getCooldowns().addCooldown(active.getItem(), recoveryCooldown(player, active, 80));
                 player.stopUsingItem();
@@ -155,8 +156,7 @@ public final class CombatEvents {
             blocked = true;
         } else if (active.getItem() instanceof ArsenalWeaponItem weapon
             && weapon.kind() == WeaponKind.BALL_AND_CHAIN
-            && player.getMainHandItem() == active && player.getOffhandItem().isEmpty()
-            && !BALLS.containsKey(player.getUUID()) && directedShieldBlocks(player, source)) {
+            && ballGuarding(player) && directedShieldBlocks(player, source)) {
             blocked = true;
         } else if (active.getItem() instanceof ArsenalWeaponItem weapon
             && weapon.kind() == WeaponKind.SCIMITAR && ParityRules.guarding(player)
@@ -165,6 +165,9 @@ public final class CombatEvents {
         }
         if (!blocked) return false;
         if (!player.level().isClientSide) {
+            ScimitarCounter.blocked(player);
+            if (active.getItem() instanceof ArsenalWeaponItem ball && ball.kind() == WeaponKind.BALL_AND_CHAIN)
+                knockBackMeleeAttacker(player, active, source);
             if (active.getItem() instanceof ArsenalWeaponItem weapon
                 && weapon.kind() == WeaponKind.SCIMITAR && hasDualScimitars(player)) {
                 int wear = ParityRules.blockWear(event.getAmount());
@@ -201,6 +204,44 @@ public final class CombatEvents {
                 SoundSource.PLAYERS, metalGuard ? 1.125F : 0.9F, 0.90F);
         }
         return true;
+    }
+
+    /** Ball and Chain guard: crouch + use with an empty offhand, while no attack is playing. */
+    public static boolean ballGuarding(Player player) {
+        return player.isUsingItem() && player.getUseItem() == player.getMainHandItem()
+            && player.getMainHandItem().getItem() instanceof ArsenalWeaponItem weapon
+            && weapon.kind() == WeaponKind.BALL_AND_CHAIN && player.getOffhandItem().isEmpty()
+            && player.isShiftKeyDown() && !BALLS.containsKey(player.getUUID());
+    }
+
+    /** Push strength for a Knockback level on the Ball and Chain guard (0 = none). */
+    public static float guardKnockback(int level) {
+        return level <= 0 ? 0.0F : 0.4F + 0.5F * level;
+    }
+
+    /**
+     * Knockback on a Ball and Chain also shoves back a melee attacker whose hit
+     * the guard blocks, without hurting it, like a shield bash with the ball.
+     */
+    private static void knockBackMeleeAttacker(Player defender, ItemStack ball, DamageSource source) {
+        if (!(source.getEntity() instanceof LivingEntity attacker) || !isDirectMelee(source)) return;
+        float strength = guardKnockback(EnchantmentHelper.getItemEnchantmentLevel(
+            net.minecraft.world.item.enchantment.Enchantments.KNOCKBACK, ball));
+        if (strength <= 0.0F) return;
+        attacker.knockback(strength, defender.getX() - attacker.getX(), defender.getZ() - attacker.getZ());
+        attacker.hurtMarked = true;
+    }
+
+    /** Defenders (the Defenders mod) are built to attack while guarding. */
+    public static boolean isDefender(ItemStack stack) {
+        if (stack.isEmpty()) return false;
+        ResourceLocation id = BuiltInRegistries.ITEM.getKey(stack.getItem());
+        return id != null && "defenders".equals(id.getNamespace());
+    }
+
+    /** A shield is up that stops weapon abilities: any shield except a raised Defender. */
+    public static boolean conventionalShieldOwnsInput(Player player) {
+        return shieldOwnsInput(player) && !(player.isUsingItem() && isDefender(player.getUseItem()));
     }
 
     public static void onLivingHurt(LivingHurtEvent event) {
@@ -250,8 +291,9 @@ public final class CombatEvents {
             if (attacker.level() instanceof ServerLevel level) VisualEffects.armorFracture(level, target, next);
         }
         if (arsenal.kind() == WeaponKind.SCIMITAR) {
+            // Optional, empty by default; "tier" levels keep the old Weakness level rule.
             int amplifier = TierEffects.weakness(attacker, arsenal.tier());
-            com.nanonaitor.arsenal.config.ConfiguredEffects.apply(target,"scimitarHit",200,amplifier);
+            com.nanonaitor.arsenal.config.ConfiguredEffects.apply(target,"scimitarHitExtra",200,amplifier);
         }
     }
 
@@ -384,7 +426,10 @@ public final class CombatEvents {
         if (player.isSpectator()) return;
         if (action == ModNetwork.CANCEL_WEAPON_INPUTS) { cancelWeaponInputs(player); return; }
         if(!levelAllowsControl(player,action,active))return;
-        if (shieldOwnsInput(player)) {
+        boolean defenderAttack = !conventionalShieldOwnsInput(player)
+            && (action == ModNetwork.BALL_CHAIN || action == ModNetwork.BALL_WIND_BOOST
+                || action == ModNetwork.MORNING_STAR || action == ModNetwork.FLAIL);
+        if (shieldOwnsInput(player) && !defenderAttack) {
             cancelWeaponInputs(player);
             if (action != ModNetwork.TARTSY_BASH && action != ModNetwork.BULWARK_BASH
                 && action != ModNetwork.BULWARK_MENU_GUARD) return;
@@ -532,7 +577,7 @@ public final class CombatEvents {
             EnchantmentBridge.doPostAttackEffectsWithItemSource(level, target, source, linkedStack);
             player.getMainHandItem().hurtAndBreak(1, player, e -> e.broadcastBreakEvent(EquipmentSlot.MAINHAND));
             syncClawPair(player);
-            level.playSound(null, player.blockPosition(), SoundEvents.PLAYER_ATTACK_STRONG, SoundSource.PLAYERS, 1.0F, 1.15F);
+            ClawSounds.slash(player);
         } else target.invulnerableTime=oldInvulnerability;
     }
 
@@ -733,7 +778,8 @@ public final class CombatEvents {
                     stack.getOrCreateTag().putInt("ArsenalGuardStrain",Math.max(0,stack.getOrCreateTag().getInt("ArsenalGuardStrain")-1));
             }
         }
-        if (shieldOwnsInput(player)) cancelWeaponInputs(server);
+        if (conventionalShieldOwnsInput(player)) cancelWeaponInputs(server);
+        stopBallGuardWhenStanding(server);
         updateBall(server);
         updateRam(server);
         updateMorningStar(server);
@@ -861,7 +907,7 @@ public final class CombatEvents {
         return ticks;
     }
 
-    private static int morningStarChargeTicks(ItemStack stack, Player player) {
+    public static int morningStarChargeTicks(ItemStack stack, Player player) {
         int luna=ModEnchantments.level(player,stack,ModEnchantments.LUNA);
         return Math.max(1, (int)Math.ceil(ArsenalConfig.MORNING_STAR_CHARGE_SECONDS.get() * 20.0D * (1.0D-.25D*luna)));
     }
@@ -878,7 +924,8 @@ public final class CombatEvents {
             if (player.getAttackStrengthScale(0.5F) < 1.0F) return;
             state = new MorningStarState(player.level().getGameTime(), weapon.tier());
             MORNING_STARS.put(player.getUUID(), state);
-            player.startUsingItem(InteractionHand.MAIN_HAND);
+            // A raised Defender keeps guarding while the charge builds.
+            if (!player.isUsingItem()) player.startUsingItem(InteractionHand.MAIN_HAND);
         }
         state.lastHeartbeat = player.level().getGameTime();
     }
@@ -905,6 +952,20 @@ public final class CombatEvents {
         }
     }
 
+    /** Ends only this weapon's own use action, never a raised Defender or shield. */
+    private static void stopWeaponUse(Player player, WeaponKind kind) {
+        if (player.isUsingItem() && player.getUseItem().getItem() instanceof ArsenalWeaponItem used
+            && used.kind() == kind) player.stopUsingItem();
+    }
+
+    /** Ball and Chain guarding is crouch + use: standing up lowers the guard. */
+    private static void stopBallGuardWhenStanding(ServerPlayer player) {
+        if (!player.isShiftKeyDown() && !BALLS.containsKey(player.getUUID()) && player.isUsingItem()
+            && player.getUseItem() == player.getMainHandItem()
+            && player.getUseItem().getItem() instanceof ArsenalWeaponItem ball
+            && ball.kind() == WeaponKind.BALL_AND_CHAIN) player.stopUsingItem();
+    }
+
     private static void cancelMorningStar(ServerPlayer player) {
         MORNING_STARS.remove(player.getUUID());
         if (player.isUsingItem() && player.getUseItem().getItem() instanceof ArsenalWeaponItem weapon
@@ -916,7 +977,7 @@ public final class CombatEvents {
         if (state == null) return;
         if (!(player.getMainHandItem().getItem() instanceof ArsenalWeaponItem weapon)
             || weapon.kind() != WeaponKind.MORNING_STAR || weapon.tier() != state.tier) {
-            player.stopUsingItem();
+            stopWeaponUse(player, WeaponKind.MORNING_STAR);
             return;
         }
         long elapsed = Math.max(0L, player.level().getGameTime() - state.started);
@@ -983,7 +1044,7 @@ public final class CombatEvents {
             }
         }
         player.swing(InteractionHand.MAIN_HAND, true);
-        player.stopUsingItem();
+        stopWeaponUse(player, WeaponKind.MORNING_STAR);
         player.resetAttackStrengthTicker();
         if (sweepRange > 0.0D) VisualEffects.morningStarSweep(level, player, weapon.tier(),
             sweepRange, reach);
@@ -1098,7 +1159,7 @@ public final class CombatEvents {
         BallState state = BALLS.get(player.getUUID());
         if (state == null) return;
         if (state.releasing) { updateBallRelease(player, state); return; }
-        if (shieldOwnsInput(player)) {
+        if (conventionalShieldOwnsInput(player)) {
             cancelBall(player); return;
         }
         if (!player.getOffhandItem().isEmpty()) ballWindBoost(player, false);
@@ -1120,6 +1181,7 @@ public final class CombatEvents {
                 0.3F, false, true, weapon.tier());
             ((ServerLevel)player.level()).playSound(null, player.blockPosition(), SoundEvents.PLAYER_ATTACK_SWEEP,
                 SoundSource.PLAYERS, 0.65F, 0.72F);
+            chainRattle(player);
             if (previousCharge < maxCharges && state.charge == maxCharges) {
                 ((ServerLevel)player.level()).playSound(null, player.blockPosition(), SoundEvents.PLAYER_LEVELUP,
                     SoundSource.PLAYERS, 0.55F, 1.55F);
@@ -1132,7 +1194,7 @@ public final class CombatEvents {
     private static void releaseBall(ServerPlayer player) {
         BallState state = BALLS.get(player.getUUID());
         if (state == null || state.releasing) return;
-        if (state.charge <= 0 || shieldOwnsInput(player)) {
+        if (state.charge <= 0 || conventionalShieldOwnsInput(player)) {
             cancelBall(player); return;
         }
         if (!(player.getMainHandItem().getItem() instanceof ArsenalWeaponItem weapon)
@@ -1140,19 +1202,24 @@ public final class CombatEvents {
             ) {
             cancelBall(player); return;
         }
-        state.releasing = true; state.releaseTick = player.level().getGameTime();
-        state.releaseDuration = ChainWeaponStats.ballReleaseAnimationTicks(player, player.getMainHandItem());
-        state.direction = player.getLookAngle().normalize();
+        ServerLevel level = (ServerLevel)player.level();
+        state.releasing = true; state.releaseTick = level.getGameTime();
         WeaponTier tier = state.tier;
-        int maxCharges = TierEffects.maxBallCharges(player, tier);
         int effectiveCharge = TierEffects.effectiveCharge(player, tier, state.charge);
         double configuredReach = ChainWeaponStats.ballThrowReach(player,
             player.getMainHandItem(), effectiveCharge);
         Vec3 requestedPath = horizontalLongChainPath(player, player.getMainHandItem(), configuredReach);
         state.direction = requestedPath.normalize();
         double requestedDistance = requestedPath.length();
-        state.distance = stopDistance((ServerLevel)player.level(), player.getEyePosition(), state.direction,
-            requestedDistance);
+        // The drawn ball stops with its surface at a wall; its centre path starts at the hand.
+        state.distance = BallPath.stopDistance(level, BallPath.origin(player), state.direction,
+            requestedDistance, BallPath.crashRadius(state.charge));
+        state.cutShort = BallPath.cutShort(state.distance, requestedDistance);
+        // A throw cut short by a block keeps its speed instead of slowing down.
+        state.releaseDuration = BallPath.throwDuration(
+            ChainWeaponStats.ballReleaseAnimationTicks(player, player.getMainHandItem()),
+            state.distance, requestedDistance);
+        state.lastBall = BallPath.origin(player);
         var visual=player.getMainHandItem().getOrCreateTag();
         visual.putBoolean("ArsenalBallThrown",true);
         visual.putInt("ArsenalBallCharge",state.charge);
@@ -1162,14 +1229,9 @@ public final class CombatEvents {
         visual.putDouble("ArsenalBallX",state.direction.x);
         visual.putDouble("ArsenalBallY",state.direction.y);
         visual.putDouble("ArsenalBallZ",state.direction.z);
-        AttackImpact impact = lineAttackAlong(player, state.direction, state.distance,
-            ballDamageMultiplier(player, tier, state.charge),
-            ballKnockback(tier, state.charge), state.charge >= maxCharges, true, tier);
-        boolean hitBlock = state.distance + 0.05D < requestedDistance;
-        Vec3 blockImpact = player.getEyePosition().add(state.direction.scale(state.distance));
-        playBallImpact(player, impact, hitBlock, blockImpact);
-        ((ServerLevel)player.level()).playSound(null, player.blockPosition(), SoundEvents.TRIDENT_THROW,
+        level.playSound(null, player.blockPosition(), SoundEvents.TRIDENT_THROW,
             SoundSource.PLAYERS, 0.9F, 0.72F);
+        chainRattle(player);
     }
 
     private static void updateBallRelease(ServerPlayer player, BallState state) {
@@ -1179,26 +1241,87 @@ public final class CombatEvents {
             cancelBall(player); return;
         }
         long age = player.level().getGameTime() - state.releaseTick;
-        if (age >= state.releaseDuration / 2 && !state.returned) {
+        double progress = Math.min(1.0D, age / (double)Math.max(1, state.releaseDuration));
+        // Hits follow the ball as drawn: each tick checks only the stretch the
+        // ball travelled this tick, outbound first, then on the way back.
+        Vec3 ball = BallPath.origin(player).add(state.direction.scale(BallPath.travel(state.distance, progress)));
+        hitAlongPath(player, state, state.lastBall, ball, age * 2L > state.releaseDuration);
+        state.lastBall = ball;
+        if (age * 2L >= state.releaseDuration && !state.returned) {
             state.returned = true;
-            WeaponTier tier = state.tier;
-            AttackImpact impact = lineAttackAlong(player, state.direction, state.distance,
-                ballDamageMultiplier(player, tier, state.charge),
-                ballKnockback(tier, state.charge), false, true, tier);
-            playBallImpact(player, impact, false, Vec3.ZERO);
+            if (state.cutShort) crashFeedback(player, state);
             ((ServerLevel)player.level()).playSound(null, player.blockPosition(), SoundEvents.TRIDENT_RETURN,
                 SoundSource.PLAYERS, 0.9F, 0.78F);
         }
         if (age >= state.releaseDuration) {
             BALLS.remove(player.getUUID());
-            setFlailFlag(player.getMainHandItem(), false); player.stopUsingItem();
+            setFlailFlag(player.getMainHandItem(), false);
+            stopWeaponUse(player, WeaponKind.BALL_AND_CHAIN);
             player.getMainHandItem().getOrCreateTag().putBoolean("ArsenalBallThrown",false);
         }
-        else {
-            WeaponTier tier = state.tier;
-            double progress = age / (double)state.releaseDuration;
-            VisualEffects.ballRelease((ServerLevel)player.level(), player, tier, state, progress);
+        else VisualEffects.ballRelease((ServerLevel)player.level(), ball);
+    }
+
+    /** Damages targets the ball touches between two of its tick positions, once per direction. */
+    private static void hitAlongPath(ServerPlayer player, BallState state, Vec3 from, Vec3 to, boolean returning) {
+        ServerLevel level = (ServerLevel)player.level();
+        Set<Integer> already = returning ? state.hitReturning : state.hitOutbound;
+        double radius = BallPath.hitRadius(state.charge);
+        WeaponTier tier = state.tier;
+        boolean full = state.charge >= TierEffects.maxBallCharges(player, tier);
+        float multiplier = ballDamageMultiplier(player, tier, state.charge);
+        float knockback = ballKnockback(tier, state.charge);
+        Vec3 push = returning ? state.direction.scale(-1.0D) : state.direction;
+        ItemStack weapon = player.getMainHandItem();
+        DamageSource source = player.damageSources().playerAttack(player);
+        float base = (float)player.getAttributeValue(Attributes.ATTACK_DAMAGE) * multiplier;
+        AABB search = new AABB(from, to).inflate(radius + 1.0D);
+        List<LivingEntity> targets = level.getEntitiesOfClass(LivingEntity.class, search,
+            target -> validTarget(player, target) && !already.contains(target.getId()));
+        targets.sort(Comparator.comparingDouble(target -> target.distanceToSqr(from)));
+        for (LivingEntity target : targets) {
+            AABB box = target.getBoundingBox().inflate(radius);
+            if (!box.contains(from) && !box.contains(to) && box.clip(from, to).isEmpty()) continue;
+            already.add(target.getId());
+            target.invulnerableTime = 0;
+            float damage = EnchantmentBridge.modifyDamage(level, weapon, target, source, base);
+            float finalKnockback = EnchantmentBridge.modifyKnockback(level, weapon, target, source, knockback);
+            if (full) damage = compensateForArmor(target, damage, tier.armorPiercePercent() / 100.0F);
+            if (!target.hurt(source, damage)) continue;
+            target.knockback(finalKnockback, -push.x, -push.z);
+            EnchantmentBridge.doPostAttackEffectsWithItemSource(level, target, source, weapon);
+            weapon.hurtAndBreak(1, player, e -> e.broadcastBreakEvent(EquipmentSlot.MAINHAND));
+            if (full && !returning) fractureArmor(target, tier);
+            level.playSound(null, target.blockPosition(), SoundEvents.PLAYER_ATTACK_STRONG,
+                SoundSource.PLAYERS, 1.0F, 0.78F);
         }
+    }
+
+    /** The ball hits a block: heavy thud, a louder chain clash, and a burst of dust and sparks. */
+    private static void crashFeedback(ServerPlayer player, BallState state) {
+        ServerLevel level = (ServerLevel)player.level();
+        Vec3 at = BallPath.origin(player).add(state.direction.scale(state.distance));
+        BlockPos pos = BlockPos.containing(at);
+        level.playSound(null, pos, SoundEvents.IRON_GOLEM_ATTACK, SoundSource.PLAYERS,
+            0.8F, 0.75F + state.charge * 0.08F);
+        level.playSound(null, pos, ModSounds.BALL_CHAIN_CRASH.get(), SoundSource.PLAYERS,
+            1.0F, 0.85F + player.getRandom().nextFloat() * 0.1F);
+        // Chips burst off the block face; sparks and a puff come off the ball itself.
+        Vec3 face = at.add(state.direction.scale(BallPath.visualBallRadius(state.charge) + 0.1D));
+        BlockState block = level.getBlockState(BlockPos.containing(face));
+        if (!block.isAir()) {
+            var particle = new net.minecraft.core.particles.BlockParticleOption(ParticleTypes.BLOCK, block);
+            level.sendParticles(particle, face.x, face.y, face.z, 30 + state.charge * 12, 0.3D, 0.3D, 0.3D, 0.15D);
+        }
+        level.sendParticles(ParticleTypes.CRIT, at.x, at.y, at.z, 14 + state.charge * 6, 0.15D, 0.15D, 0.15D, 0.55D);
+        level.sendParticles(ParticleTypes.FIREWORK, at.x, at.y, at.z, 6 + state.charge * 3, 0.1D, 0.1D, 0.1D, 0.12D);
+        level.sendParticles(ParticleTypes.POOF, at.x, at.y, at.z, 2 + state.charge, 0.1D, 0.1D, 0.1D, 0.02D);
+    }
+
+    /** The chain itself rattles with every swing and throw, a little under the swing's level. */
+    private static void chainRattle(ServerPlayer player) {
+        player.level().playSound(null, player.blockPosition(), ModSounds.BALL_CHAIN_RATTLE.get(),
+            SoundSource.PLAYERS, 0.55F, 0.9F + player.getRandom().nextFloat() * 0.2F);
     }
 
     private static void cancelBall(ServerPlayer player) {
@@ -1222,7 +1345,8 @@ public final class CombatEvents {
         ServerLevel level = (ServerLevel) player.level();
         Vec3 start = player.getEyePosition().add(0, -0.55D, 0);
         Vec3 direction = requestedDirection.normalize();
-        Vec3 end = start.add(direction.scale(stopDistance(level, start, direction, distance)));
+        Vec3 end = start.add(direction.scale(BallPath.stopDistance(level, start, direction, distance,
+            BallPath.crashRadius(1))));
         AABB box = new AABB(start, end).inflate(0.75D, 1.0D, 0.75D);
         float attributeDamage = (float)player.getAttributeValue(Attributes.ATTACK_DAMAGE);
         float base = attributeDamage * multiplier;
@@ -1253,19 +1377,6 @@ public final class CombatEvents {
             }
         }
         return new AttackImpact(firstHit);
-    }
-
-    private static void playBallImpact(ServerPlayer player, AttackImpact impact, boolean hitBlock,
-            Vec3 blockImpact) {
-        ServerLevel level = (ServerLevel)player.level();
-        if (impact.position != null) {
-            level.playSound(null, BlockPos.containing(impact.position), SoundEvents.PLAYER_ATTACK_STRONG,
-                SoundSource.PLAYERS, 1.0F, 0.78F);
-        }
-        if (hitBlock) {
-            level.playSound(null, BlockPos.containing(blockImpact), SoundEvents.ANVIL_LAND,
-                SoundSource.PLAYERS, 0.525F, 1.25F);
-        }
     }
 
     public static float compensateForArmor(LivingEntity target, float damage, float piercing) {
@@ -1310,6 +1421,9 @@ public final class CombatEvents {
             // A held ram is one continuous attack. Snapshot its strength first,
             // then consume the cooldown exactly once when that ram begins.
             player.resetAttackStrengthTicker();
+            // The log creaks as the charge starts.
+            player.level().playSound(null, player.blockPosition(), ModSounds.RAM_CHARGE.get(), SoundSource.PLAYERS,
+                0.8F, 0.55F + player.getRandom().nextFloat() * 0.1F);
         }
         state.lastHeartbeat = player.level().getGameTime();
     }
@@ -1327,7 +1441,11 @@ public final class CombatEvents {
         Vec3 forward = Vec3.directionFromRotation(0.0F, state.yaw).normalize();
         player.setDeltaMovement(forward.x * 0.32D, player.getDeltaMovement().y, forward.z * 0.32D);
         player.hurtMarked = true;
-        breakRamBlocks(player, weapon.tier(), forward);
+        int broken = breakRamBlocks(player, weapon.tier(), forward);
+        long now = player.level().getGameTime();
+        if (broken > 0) ramImpact(player, state, now, 1.2F, 0.75F);
+        // Ramming a wall it cannot break: a heavy bash, not repeated every tick.
+        else if (player.horizontalCollision) ramImpact(player, state, now, 0.9F, 0.85F);
         for (LivingEntity target : ((ServerLevel)player.level()).getEntitiesOfClass(LivingEntity.class,
                 player.getBoundingBox().move(forward.scale(0.8D)).inflate(0.7D, 0.4D, 0.7D), target -> validTarget(player, target))) {
             boolean magicLog=ModEnchantments.level(player,player.getMainHandItem(),ModEnchantments.MAGIC_LOG)>0;
@@ -1335,11 +1453,23 @@ public final class CombatEvents {
             if (state.hit.add(target.getId()) && target.hurt(ramSource,
                     (float)player.getAttributeValue(Attributes.ATTACK_DAMAGE) * state.damageMultiplier)) {
                 damage(player.getMainHandItem(), player, 1); player.causeFoodExhaustion(magicLog?0.25F:0.5F);
+                ramImpact(player, state, player.level().getGameTime(), 1.0F, 0.9F);
             }
         }
     }
 
-    private static void breakRamBlocks(ServerPlayer player, WeaponTier tier, Vec3 forward) {
+    /** Bash sound and a recoil swing (the arms kick back), at most every 8 ticks. */
+    private static void ramImpact(ServerPlayer player, RamState state, long now, float volume, float pitch) {
+        if (now - state.lastImpact < 8L) return;
+        state.lastImpact = now;
+        player.level().playSound(null, player.blockPosition(), ModSounds.RAM_IMPACT.get(), SoundSource.PLAYERS,
+            volume, pitch + player.getRandom().nextFloat() * 0.1F);
+        player.swing(InteractionHand.MAIN_HAND, true);
+    }
+
+    /** @return how many blocks broke this tick */
+    private static int breakRamBlocks(ServerPlayer player, WeaponTier tier, Vec3 forward) {
+        int broken = 0;
         ServerLevel level = (ServerLevel) player.level();
         Vec3 right = new Vec3(-forward.z, 0, forward.x), center = player.position().add(forward.scale(1.25D));
         Set<BlockPos> positions = new HashSet<>();
@@ -1351,11 +1481,13 @@ public final class CombatEvents {
             if (net.minecraftforge.common.ForgeHooks.onBlockBreakEvent(level, player.gameMode.getGameModeForPlayer(), player, pos) < 0) continue;
             if (!player.mayInteract(level,pos) || !player.mayUseItemAt(pos,net.minecraft.core.Direction.UP,player.getMainHandItem())) continue;
             if (level.destroyBlock(pos, true, player)) {
+                broken++;
                 boolean magicLog=ModEnchantments.level(player,player.getMainHandItem(),ModEnchantments.MAGIC_LOG)>0;
                 damage(player.getMainHandItem(), player, 1); player.causeFoodExhaustion(magicLog?0.175F:0.35F);
-                if (player.getMainHandItem().isEmpty()) return;
+                if (player.getMainHandItem().isEmpty()) return broken;
             }
         }
+        return broken;
     }
 
     private static boolean ramCanBreak(BlockState state, WeaponTier tier) {
@@ -1524,55 +1656,6 @@ public final class CombatEvents {
             && !player.isAlliedTo(target) && (!(target instanceof Player other)
                 || player.canHarmPlayer(other) && (player.getServer()==null || player.getServer().isPvpAllowed()));
     }
-    private static double stopDistance(ServerLevel level, Vec3 start, Vec3 direction, double distance) {
-        Vec3 normalized = direction.normalize();
-        Vec3 side = new Vec3(-normalized.z, 0.0D, normalized.x);
-        if (side.lengthSqr() > 0.0001D) side = side.normalize().scale(0.35D);
-        Vec3[] offsets = {
-            Vec3.ZERO,
-            new Vec3(0.0D, -0.45D, 0.0D),
-            new Vec3(0.0D, 0.35D, 0.0D),
-            side,
-            side.scale(-1.0D)
-        };
-        double closest = distance;
-        for (Vec3 offset : offsets) {
-            Vec3 rayStart = start.add(offset);
-            closest = Math.min(closest,
-                blockingDistance(level, rayStart, normalized, distance));
-        }
-        return closest;
-    }
-
-    /**
-     * Finds the first meaningful obstruction while allowing chain attacks to
-     * pass through grass, flowers and other replaceable/non-colliding plants.
-     * Re-clipping from just beyond an ignored shape preserves collision with a
-     * real wall immediately behind it.
-     */
-    private static double blockingDistance(ServerLevel level, Vec3 start,
-            Vec3 direction, double distance) {
-        Vec3 end = start.add(direction.scale(distance));
-        Vec3 cursor = start;
-        for (int ignored = 0; ignored < 16 && cursor.distanceToSqr(end) > 0.0001D;
-             ignored++) {
-            HitResult hit = level.clip(new net.minecraft.world.level.ClipContext(cursor,
-                end, net.minecraft.world.level.ClipContext.Block.COLLIDER,
-                net.minecraft.world.level.ClipContext.Fluid.NONE,
-                (net.minecraft.world.entity.Entity)null));
-            if (!(hit instanceof BlockHitResult block)) return distance;
-            BlockState state = level.getBlockState(block.getBlockPos());
-            if (!state.canBeReplaced()
-                && !state.getCollisionShape(level, block.getBlockPos()).isEmpty()) {
-                return start.distanceTo(block.getLocation());
-            }
-            cursor = block.getLocation().add(direction.scale(0.05D));
-        }
-        return distance;
-    }
-    private static net.minecraft.world.phys.shapes.CollisionContext playerForClip(Vec3 start, ServerLevel level) {
-        return net.minecraft.world.phys.shapes.CollisionContext.empty();
-    }
     private static float bladeStaffReflection(Player player, WeaponTier tier, LivingEntity attacker, float incoming) {
         if(tier==WeaponTier.WOOD)return 1.0F;
         if(tier==WeaponTier.SILVER && attacker.getMobType()==net.minecraft.world.entity.MobType.UNDEAD)return incoming*2.0F;
@@ -1615,14 +1698,16 @@ public final class CombatEvents {
     public static final class BallState {
         final WeaponTier tier;
         long started, lastHeartbeat, nextSwing, releaseTick; int charge, releaseDuration = 16;
-        boolean releasing, returned, windBoost; double distance; Vec3 direction;
+        boolean releasing, returned, windBoost, cutShort; double distance; Vec3 direction, lastBall;
+        final Set<Integer> hitOutbound = new HashSet<>(), hitReturning = new HashSet<>();
         BallState(long tick, WeaponTier tier) { started = lastHeartbeat = nextSwing = tick; this.tier = tier; }
         public int charge() { return charge; }
         public double distance() { return distance; }
     }
     private record AttackImpact(Vec3 position) {}
     private static final class RamState {
-        final float yaw, pitch, damageMultiplier; long lastHeartbeat; final Set<Integer> hit = new HashSet<>();
+        final float yaw, pitch, damageMultiplier; long lastHeartbeat, lastImpact = Long.MIN_VALUE / 2;
+        final Set<Integer> hit = new HashSet<>();
         RamState(float yaw, float pitch, float damageMultiplier) {
             this.yaw = yaw;
             this.pitch = pitch;

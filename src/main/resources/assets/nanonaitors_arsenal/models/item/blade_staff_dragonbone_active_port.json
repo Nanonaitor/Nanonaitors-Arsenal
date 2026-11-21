@@ -29,5 +29,8 @@
         0
       ]
     }
+  },
+  "textures": {
+    "layer0": "nanonaitors_arsenal:item/blade_staff_dragonbone_spin"
   }
 }

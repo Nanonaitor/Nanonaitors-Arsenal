@@ -78,8 +78,14 @@ public class ArsenalWeaponItem extends net.minecraft.world.item.SwordItem {
     @Override public net.minecraft.world.InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
         if(!com.nanonaitor.arsenal.compat.LevelRequirements.canUse(player,player.getItemInHand(hand),true))
             return net.minecraft.world.InteractionResultHolder.fail(player.getItemInHand(hand));
+        // Any shield-type off-hand item (vanilla, Tartsy, Bulwark, modded) gets the
+        // right-click over a main-hand Arsenal weapon.
+        if (hand == InteractionHand.MAIN_HAND && offhandGuard(player))
+            return net.minecraft.world.InteractionResultHolder.pass(player.getItemInHand(hand));
+        // Crouch + use guards; standing use does nothing by itself (held during a
+        // wind-up it speeds the spin, handled by the attack controls).
         if (kind == WeaponKind.BALL_AND_CHAIN && hand == InteractionHand.MAIN_HAND
-            && player.getOffhandItem().isEmpty()) {
+            && player.getOffhandItem().isEmpty() && player.isShiftKeyDown()) {
             player.startUsingItem(hand);
             return net.minecraft.world.InteractionResultHolder.consume(player.getItemInHand(hand));
         }
@@ -100,6 +106,13 @@ public class ArsenalWeaponItem extends net.minecraft.world.item.SwordItem {
         return net.minecraft.world.InteractionResultHolder.pass(player.getItemInHand(hand));
     }
 
+    /** The off-hand holds something that guards: any shield-type item. */
+    public static boolean offhandGuard(Player player) {
+        ItemStack off = player.getOffhandItem();
+        return !off.isEmpty() && (off.getItem() instanceof net.minecraft.world.item.ShieldItem
+            || off.canPerformAction(net.minecraftforge.common.ToolActions.SHIELD_BLOCK));
+    }
+
     @Override public int getUseDuration(ItemStack stack) {
         return kind == WeaponKind.BALL_AND_CHAIN || kind == WeaponKind.BATTERING_RAM
             || kind == WeaponKind.FLAIL || kind == WeaponKind.MORNING_STAR
@@ -114,8 +127,10 @@ public class ArsenalWeaponItem extends net.minecraft.world.item.SwordItem {
     }
 
     @Override public boolean hurtEnemy(ItemStack stack, LivingEntity target, LivingEntity attacker) {
-        if(kind==WeaponKind.CLAWS && attacker instanceof Player player && !player.level().isClientSide)
+        if(kind==WeaponKind.CLAWS && attacker instanceof Player player && !player.level().isClientSide) {
             com.nanonaitor.arsenal.combat.CombatEvents.confirmClawHit(player,target);
+            com.nanonaitor.arsenal.combat.ClawSounds.slash(player);
+        }
         if (kind == WeaponKind.BATTERING_RAM && !attacker.level().isClientSide) {
             target.knockback(.5D, Math.sin(Math.toRadians(attacker.getYRot())),
                 -Math.cos(Math.toRadians(attacker.getYRot())));
@@ -130,7 +145,7 @@ public class ArsenalWeaponItem extends net.minecraft.world.item.SwordItem {
         boolean expanded=com.nanonaitor.arsenal.client.ClientTooltip.expanded();
         WeaponTooltipLayout.heading(lines,expanded,switch(kind) {
             case MORNING_STAR -> "Charged Strike, Armor Fracture";
-            case SCIMITAR -> "Weakening, Dual Wield, Cross-Guard";
+            case SCIMITAR -> "Block Counter, Dual Wield, Cross-Guard";
             case CLAWS -> "Paired Claws, I-Frame Piercing";
             case LINKED_CLAWS -> "Linked Equipment";
             case FLAIL -> "Spinning Strike";
@@ -148,8 +163,9 @@ public class ArsenalWeaponItem extends net.minecraft.world.item.SwordItem {
                 lines.add(Component.literal("Caps at " + tier.fractureCap + " stacks; 30 secs on mobs, 10 secs on players.").withStyle(ChatFormatting.GRAY));
             }
             case SCIMITAR -> {
-                lines.add(Component.literal("Hits inflict Weakness "
-                    + tier.weaknessLevel() + " for 10 secs by default.")
+                lines.add(Component.literal("Blocking an attack empowers your next hit or bash (x"
+                    + com.nanonaitor.arsenal.config.ArsenalConfig.SCIMITAR_COUNTER_MULTIPLIER.get() + ", "
+                    + com.nanonaitor.arsenal.config.ArsenalConfig.SCIMITAR_COUNTER_SECONDS.get() + " secs).")
                     .withStyle(ChatFormatting.DARK_PURPLE));
                 lines.add(Component.literal("Can attack from either hand; dual wield to auto-alternate.")
                     .withStyle(ChatFormatting.GOLD));
@@ -181,6 +197,10 @@ public class ArsenalWeaponItem extends net.minecraft.world.item.SwordItem {
                 lines.add(Component.literal("Full charge with " + charges
                     + " swings: " + tier.armorPiercePercent() + "% armor piercing.")
                     .withStyle(ChatFormatting.GOLD));
+                lines.add(Component.literal("Crouch + use to guard. Hold use while winding up to spin faster.")
+                    .withStyle(ChatFormatting.AQUA));
+                lines.add(Component.literal("Knockback also shoves back melee attackers you guard against.")
+                    .withStyle(ChatFormatting.GRAY));
                 lines.add(Component.literal("An occupied offhand halves rotation speed.")
                     .withStyle(ChatFormatting.DARK_RED));
             }
@@ -211,7 +231,7 @@ public class ArsenalWeaponItem extends net.minecraft.world.item.SwordItem {
     private String summary() {
         return switch (kind) {
             case MORNING_STAR -> "Hold attack to charge a sweeping strike.";
-            case SCIMITAR -> "Fast blade that inflicts Weakness.";
+            case SCIMITAR -> "Fast blade that counters after a block.";
             case CLAWS -> "Hold left/right click to auto-attack.";
             case LINKED_CLAWS -> "Linked to the matching main-hand claws.";
             case FLAIL -> "Hold attack to strike every target within 4 blocks.";

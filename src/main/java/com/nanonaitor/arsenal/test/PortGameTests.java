@@ -59,9 +59,14 @@ public final class PortGameTests {
   player.setItemSlot(EquipmentSlot.MAINHAND,new net.minecraft.world.item.ItemStack(ModItems.get(WeaponKind.SCIMITAR,WeaponTier.DIAMOND).get()));
   var off=new net.minecraft.world.item.ItemStack(ModItems.get(WeaponKind.SCIMITAR,WeaponTier.WOOD).get());player.setItemSlot(EquipmentSlot.OFFHAND,off);
   var target=h.spawn(EntityType.ZOMBIE,1,2,1);
-  h.assertTrue(com.nanonaitor.arsenal.combat.TierEffects.hurtWithStack(off,target,player.damageSources().playerAttack(player),2),"Offhand hit accepted");
-  var weakness=target.getEffect(net.minecraft.world.effect.MobEffects.WEAKNESS);
-  h.assertTrue(weakness!=null && weakness.getAmplifier()==0,"Wood offhand must not inherit diamond main-hand Weakness II");
+  // Weakness is optional since the block counter; restore the old default for this check.
+  var extra=com.nanonaitor.arsenal.config.ArsenalConfig.EFFECTS.get("scimitarHitExtra");var saved=extra.get();
+  extra.set(java.util.List.of("minecraft:weakness@tier@10"));
+  try {
+   h.assertTrue(com.nanonaitor.arsenal.combat.TierEffects.hurtWithStack(off,target,player.damageSources().playerAttack(player),2),"Offhand hit accepted");
+   var weakness=target.getEffect(net.minecraft.world.effect.MobEffects.WEAKNESS);
+   h.assertTrue(weakness!=null && weakness.getAmplifier()==0,"Wood offhand must not inherit diamond main-hand Weakness II");
+  } finally { extra.set(saved); }
   player.getInventory().clearContent();h.succeed();
  }
  @GameTest(template="empty",templateNamespace="forge")

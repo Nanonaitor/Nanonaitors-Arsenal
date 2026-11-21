@@ -14,7 +14,7 @@ public final class BallChainClientExtensions implements IClientItemExtensions {
         "NANONAITORS_BALL_CHAIN_GUARD", true, BallChainClientExtensions::poseGuard);
 
     @Override public HumanoidModel.ArmPose getArmPose(LivingEntity entity, InteractionHand hand, ItemStack stack) {
-        if (!entity.isUsingItem() || entity.getUseItem() != stack || !entity.getOffhandItem().isEmpty()
+        if (!entity.isUsingItem() || entity.getUseItem() != stack || !entity.getOffhandItem().isEmpty() || !entity.isCrouching()
             || attackVisualActive(stack)) return null;
         return GUARD;
     }

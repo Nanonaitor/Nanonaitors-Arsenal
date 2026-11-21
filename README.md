@@ -1,6 +1,6 @@
 # Nanonaitor's Arsenal — Forge 1.20.1
 
-Version **0.1.5**. Independent port targeting **Java 17 / Forge 47.4.18**,
+Version **0.1.8**. Independent port targeting **Java 17 / Forge 47.4.18**,
 the Forge version installed in Restless Horizons. Core mechanics are based on
 Arsenal 1.12.2, with fixes reviewed through 2.0.6. See [PARITY-0.1.1.md](PARITY-0.1.1.md) for changes, tests and compatibility limits.
 
@@ -13,7 +13,7 @@ This branch is independent of the 1.12.2 and 26.1.2 source trees.
 
 1. Back up your test world's folder before adding a new mod.
 2. Use a **Minecraft Java 1.20.1 Forge** profile with Forge 47.4.18 or later 47.x.
-3. Copy `build/libs/nanonaitors-arsenal-1.20.1-0.1.0.jar` into that profile's `mods` folder.
+3. Copy `build/libs/nanonaitors-arsenal-1.20.1-0.1.8.jar` into that profile's `mods` folder.
 4. Do not include a 1.12.2/26.1.2 Arsenal JAR or a second version of this port.
 5. Start Minecraft and find the **Arsenal** creative tab. A new world is not required,
    but a disposable creative world is recommended for the first tests.
@@ -29,11 +29,11 @@ Controls below use the default attack/use bindings (left/right mouse).
 | Weapon | Behavior / controls |
 | --- | --- |
 | Morning Star | Hold Attack to charge, release to sweep. Full charge applies stacking Armor Fracture and a 20% Stunned chance. |
-| Scimitar | Weakness on hits. Paired blades alternate attacks; hold Use to cross-guard. A lone offhand Scimitar can attack with Use. |
+| Scimitar | Blocking an attack while holding a scimitar (cross-guard or any shield) makes the next scimitar hit or bash deal x1.3 for 5 seconds. Paired blades alternate attacks; hold Use to cross-guard; Attack while guarding to bash. A lone offhand Scimitar can attack with Use. |
 | Claws | Empty offhand creates a linked matching claw. Attack/Use drive each hand; fully charged paired hits bypass normal hit immunity with a shared four-tick minimum per player/target. No guaranteed combo critical. |
 | Flail | Hold Attack for timed area strikes and the rendered chain/spike-ball orbit. |
 | Battering Ram | Hold Use with an empty offhand to charge forward and crush eligible blocks. Attack normally for extra knockback. Hunger must exceed three bars; charge direction is locked. |
-| Ball & Chain | Hold Attack to wind, release to throw/return. Hold Use while winding for faster rotation. Use while idle with an empty offhand to guard. |
+| Ball & Chain | Hold Attack to wind, release to throw/return. Hold Use while winding for faster rotation. Crouch + Use with an empty offhand to guard; Knockback shoves blocked melee attackers. A raised Defender keeps the wind-up and throw going. |
 | Blade Staff | Normal attack controls; hits splash nearby enemies. Use for a one-second combat reflection window. Does not block environmental damage. |
 | Tartsy Shield | Use to guard; Attack while guarding to dash. A confirmed dash hit primes a critical hit. |
 | Sun-War Bulwark | Two-handed guard, armor-scaled bash, passive mitigation and movement penalties. |
@@ -88,11 +88,19 @@ Generated on first launch: `config/nanonaitors_arsenal-common.toml`.
 - `morningStar`: full-charge duration.
 - `compatibility`: shield enchanting, matching armor bonuses, Stunned blacklist,
   and living evolution health threshold.
+- `scimitars`: `counterMultiplier` (1.3) and `counterWindowSeconds` (5) for the block counter.
 - `effects`: lists such as `"minecraft:weakness@2@10"` (level II, ten seconds).
+  `scimitarHitExtra` is empty by default; add `"minecraft:weakness@tier@10"` to restore
+  the pre-0.1.8 Weakness on scimitar hits.
   `tier` uses the weapon's computed default; an empty list disables that proc.
   Missing optional effects are skipped instead of preventing startup.
 
-Restart after changing these options. Recipe toggles can also take effect on a
+Client options (`config/nanonaitors_arsenal-client.toml`, each player sets their own,
+applied immediately): `animations.weaponPoses`, `animations.attackSpeedSwings`,
+`animations.chainMaterialColors` (off: iron chains, red for Living/Sentient) and
+`sounds.volume` (0 to 2) for Arsenal's own sounds.
+
+Restart after changing the common options. Recipe toggles can also take effect on a
 datapack reload; clients must use matching combat settings for accurate prediction.
 Enchantment toggles suppress new availability and Arsenal's effect without deleting
 the registry entry or existing saved enchantment data.
@@ -130,6 +138,7 @@ With Java 17 selected:
 .\gradlew.bat build
 .\gradlew.bat runGameTestServer
 .\gradlew.bat runClient -PclientSmokeTest
+.\gradlew.bat runClient -PposeCapture   # dev only: photographs every weapon pose
 python audit_resources.py
 ```
 

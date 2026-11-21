@@ -57,11 +57,8 @@ public final class VisualEffects {
         level.sendParticles(ParticleTypes.ENCHANTED_HIT, player.getX(), player.getY() + 1.1D,
             player.getZ(), 24, 0.65D, 0.55D, 0.65D, 0.16D);
     }
-    public static void ballRelease(ServerLevel level, ServerPlayer player, WeaponTier tier,
-            CombatEvents.BallState state, double progress) {
-        double distance = state.distance() * Math.sin(Math.PI * progress);
-        Vec3 point = player.getEyePosition().add(player.getLookAngle().scale(distance));
-        level.sendParticles(ParticleTypes.CRIT, point.x, point.y, point.z, 5, 0.12D, 0.12D, 0.12D, 0.02D);
+    public static void ballRelease(ServerLevel level, Vec3 ball) {
+        level.sendParticles(ParticleTypes.CRIT, ball.x, ball.y, ball.z, 5, 0.12D, 0.12D, 0.12D, 0.02D);
     }
     private VisualEffects() {}
 }

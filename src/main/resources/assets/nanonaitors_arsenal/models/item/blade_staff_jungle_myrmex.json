@@ -16,9 +16,9 @@
         0
       ],
       "scale": [
-        1.5,
-        1.5,
-        1.5
+        1.65,
+        1.65,
+        1.65
       ]
     },
     "thirdperson_lefthand": {
@@ -33,9 +33,9 @@
         0
       ],
       "scale": [
-        1.5,
-        1.5,
-        1.5
+        1.65,
+        1.65,
+        1.65
       ]
     },
     "firstperson_righthand": {
@@ -50,9 +50,9 @@
         1.13
       ],
       "scale": [
-        1.875,
-        1.875,
-        1.875
+        2.0625,
+        2.0625,
+        2.0625
       ]
     },
     "firstperson_lefthand": {
@@ -67,13 +67,19 @@
         1.13
       ],
       "scale": [
-        1.875,
-        1.875,
-        1.875
+        2.0625,
+        2.0625,
+        2.0625
       ]
     }
   },
   "overrides": [
+    {
+      "predicate": {
+        "nanonaitors_arsenal:posed": 1
+      },
+      "model": "nanonaitors_arsenal:item/blade_staff_jungle_myrmex_posed"
+    },
     {
       "predicate": {
         "nanonaitors_arsenal:active": 1

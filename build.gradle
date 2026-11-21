@@ -3,7 +3,7 @@ plugins {
     id 'net.minecraftforge.gradle' version '[6.0,6.2)'
     id 'org.spongepowered.mixin' version '0.7.+'
 }
-version = '0.1.7'
+version = '0.1.8'
 group = 'com.nanonaitor.arsenal'
 base.archivesName = 'nanonaitors-arsenal-1.20.1'
 java.toolchain.languageVersion = JavaLanguageVersion.of(17)
@@ -17,6 +17,7 @@ minecraft {
         }
         client {
             if (project.hasProperty('clientSmokeTest')) property 'arsenal.clientSmokeTest', 'true'
+            if (project.hasProperty('poseCapture')) property 'arsenal.poseCapture', 'true'
         }
         server { args '--nogui' }
         gameTestServer { property 'forge.enabledGameTestNamespaces', 'nanonaitors_arsenal,forge' }
@@ -30,7 +31,11 @@ mixin {
     add sourceSets.main, 'arsenal.refmap.json'
     config 'arsenal.mixins.json'
 }
-jar { manifest { attributes 'MixinConfigs': 'arsenal.mixins.json' } }
+jar {
+    manifest { attributes 'MixinConfigs': 'arsenal.mixins.json' }
+    // The pose-capture tool (com.nanonaitor.arsenal.dev) is development-only.
+    exclude 'com/nanonaitor/arsenal/dev/**'
+}
 tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }
 processResources {
     inputs.property 'version', project.version

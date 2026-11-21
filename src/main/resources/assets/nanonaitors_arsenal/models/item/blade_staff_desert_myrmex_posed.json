@@ -1,0 +1,39 @@
+{
+  "parent": "nanonaitors_arsenal:item/blade_staff_desert_myrmex_idle",
+  "display": {
+    "thirdperson_righthand": {
+      "rotation": [
+        0,
+        0,
+        -45
+      ],
+      "translation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1.65,
+        1.65,
+        1.65
+      ]
+    },
+    "thirdperson_lefthand": {
+      "rotation": [
+        0,
+        0,
+        45
+      ],
+      "translation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1.65,
+        1.65,
+        1.65
+      ]
+    }
+  }
+}

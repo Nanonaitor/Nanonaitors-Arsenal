@@ -22,3 +22,15 @@ coverage, and the deliberately documented compatibility differences.
 Successive test builds have been installed into Restless Horizons for user
 playtesting. Development-client checks run separately, without using user worlds.
 Full-modpack compatibility and visual checks remain ongoing before a stable release.
+
+## 0.1.8: 1.12.2 2.0.21 to 2.0.26
+
+Ported, adapted to this build's architecture: third-person weapon poses
+(`client/pose`, applied around `setupAnim` by `AbilityPoseMixin`), 3D chains and the
+new ball head (`ChainRenderer`, `ClientWeaponRenderer`), claw slash streaks, the
+scimitar block counter, Ball and Chain guard/throw rules (`BallPath`), Defender
+hand-off, ram/claw/chain sounds with a client volume option, the new Blade Staff
+art and pole recipes, and the world-equipment rule for designed gear.
+Not applicable here: the Mo' Bends skeleton path (a 1.12.2-specific hook; here poses
+run after any animation mod's own pass) and the loot-table swap (this build only re-equips
+spawning mobs, it never edits loot tables). See CURSEFORGE-0.1.8.md.

@@ -12,6 +12,8 @@ public final class ArsenalConfig {
     public static final ForgeConfigSpec.DoubleValue MOB_REPLACEMENT_CHANCE;
     public static final ForgeConfigSpec.ConfigValue<java.util.List<? extends String>> STUN_BLACKLIST;
     public static final ForgeConfigSpec.IntValue EVOLUTION_THRESHOLD;
+    public static final ForgeConfigSpec.DoubleValue SCIMITAR_COUNTER_MULTIPLIER;
+    public static final ForgeConfigSpec.IntValue SCIMITAR_COUNTER_SECONDS;
     public static final java.util.Map<String,ForgeConfigSpec.BooleanValue> WEAPONS=new java.util.LinkedHashMap<>(), ENCHANTMENTS=new java.util.LinkedHashMap<>();
     public static final java.util.Map<String,ForgeConfigSpec.ConfigValue<java.util.List<? extends String>>> EFFECTS=new java.util.LinkedHashMap<>();
     public static final ForgeConfigSpec SPEC;
@@ -32,12 +34,19 @@ public final class ArsenalConfig {
             "Seconds required for a Morning Star to reach full charge. The attack gains one 10% damage step per quarter charge.")
             .defineInRange("fullChargeSeconds", 2.0D, 0.25D, 60.0D);
         BUILDER.pop();
+        BUILDER.push("scimitars");
+        SCIMITAR_COUNTER_MULTIPLIER=BUILDER.comment(
+            "Scimitar counter: blocking an attack while holding a scimitar (dual-scimitar guard or any shield) multiplies the next scimitar hit or shield bash by this. The bash multiplies its combined dual-wield damage.")
+            .defineInRange("counterMultiplier",1.3D,1.0D,5.0D);
+        SCIMITAR_COUNTER_SECONDS=BUILDER.comment("Seconds a block's counter stays ready before fading.")
+            .defineInRange("counterWindowSeconds",5,1,60);
+        BUILDER.pop();
         BUILDER.push("weapons");
         for(String id:new String[]{"morning_star","scimitar","blade_staff","claws","flail","battering_ram","ball_and_chain","sun_war_bulwark","tartsy_shield"})
             WEAPONS.put(id,BUILDER.comment("False disables crafting only; existing items remain usable.").define(id,true));
         BUILDER.pop();
         BUILDER.push("worldEquipment");
-        MOB_EQUIPMENT=BUILDER.comment("Allow newly spawned vanilla humanoids already carrying a vanilla melee weapon to use a same-tier Arsenal weapon.").define("mobEquipment",true);
+        MOB_EQUIPMENT=BUILDER.comment("Allow newly spawned vanilla humanoids already carrying a vanilla melee weapon to use a same-tier Arsenal weapon. Named mobs and named, lore, attribute or otherwise customized gear are never replaced.").define("mobEquipment",true);
         MOB_REPLACEMENT_CHANCE=BUILDER.defineInRange("mobReplacementChance",.25D,0D,1D);
         BUILDER.pop();
         BUILDER.push("reach");
@@ -52,7 +61,9 @@ public final class ArsenalConfig {
         EVOLUTION_THRESHOLD=BUILDER.comment("Living weapons evolve after accumulating more than this much slain srparasites mob maximum health. No evolution occurs without parasite entities.").defineInRange("livingEvolutionHealth",1000,1,10000000);
         BUILDER.pop();
         BUILDER.push("effects");
-        effect("scimitarHit","minecraft:weakness@tier@10");
+        // Optional effects on each scimitar hit. Empty by default: the scimitar's ability is the
+        // block counter (see scimitars). The old default was minecraft:weakness@tier@10.
+        effect("scimitarHitExtra");
         effect("morningStarFracture","nanonaitors_arsenal:armor_fracture@tier@tier");
         effect("morningStarStun","nanonaitors_arsenal:stunned@1@3");
         effect("ballPlayerFracture","nanonaitors_arsenal:armor_fracture@tier@10");

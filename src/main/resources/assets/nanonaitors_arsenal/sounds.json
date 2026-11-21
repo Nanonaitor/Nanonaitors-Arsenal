@@ -1,11 +1,69 @@
 {
   "reverso_heal": {
-    "sounds": ["nanonaitors_arsenal:reverso_heal"]
+    "sounds": [
+      "nanonaitors_arsenal:reverso_heal"
+    ]
   },
   "blade_staff_reflect": {
-    "sounds": ["nanonaitors_arsenal:blade_staff_reflect"]
+    "sounds": [
+      "nanonaitors_arsenal:blade_staff_reflect"
+    ]
   },
   "scimitar_bash": {
-    "sounds": ["nanonaitors_arsenal:scimitar_bash"]
+    "sounds": [
+      "nanonaitors_arsenal:scimitar_bash"
+    ]
+  },
+  "ball_chain.rattle": {
+    "subtitle": "subtitles.nanonaitors_arsenal.ball_chain.rattle",
+    "sounds": [
+      "nanonaitors_arsenal:ball_chain_swing1",
+      "nanonaitors_arsenal:ball_chain_swing2",
+      "nanonaitors_arsenal:ball_chain_swing3",
+      "nanonaitors_arsenal:ball_chain_swing4"
+    ]
+  },
+  "ball_chain.crash": {
+    "subtitle": "subtitles.nanonaitors_arsenal.ball_chain.crash",
+    "sounds": [
+      "nanonaitors_arsenal:ball_chain_crash1",
+      "nanonaitors_arsenal:ball_chain_crash2"
+    ]
+  },
+  "battering_ram.charge": {
+    "subtitle": "subtitles.nanonaitors_arsenal.battering_ram.charge",
+    "sounds": [
+      {
+        "name": "minecraft:block.wooden_trapdoor.open",
+        "type": "event"
+      }
+    ]
+  },
+  "battering_ram.impact": {
+    "subtitle": "subtitles.nanonaitors_arsenal.battering_ram.impact",
+    "sounds": [
+      {
+        "name": "minecraft:entity.zombie.attack_wooden_door",
+        "type": "event"
+      }
+    ]
+  },
+  "claws.slash": {
+    "subtitle": "subtitles.nanonaitors_arsenal.claws.slash",
+    "sounds": [
+      {
+        "name": "minecraft:entity.player.attack.sweep",
+        "type": "event"
+      }
+    ]
+  },
+  "claws.ring": {
+    "subtitle": "subtitles.nanonaitors_arsenal.claws.ring",
+    "sounds": [
+      {
+        "name": "minecraft:block.anvil.land",
+        "type": "event"
+      }
+    ]
   }
 }

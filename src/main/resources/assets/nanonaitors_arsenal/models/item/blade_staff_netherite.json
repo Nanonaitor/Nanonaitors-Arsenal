@@ -6,34 +6,40 @@
   "display": {
     "thirdperson_righthand": {
       "scale": [
-        1.5,
-        1.5,
-        1.5
+        1.65,
+        1.65,
+        1.65
       ]
     },
     "thirdperson_lefthand": {
       "scale": [
-        1.5,
-        1.5,
-        1.5
+        1.65,
+        1.65,
+        1.65
       ]
     },
     "firstperson_righthand": {
       "scale": [
-        1.875,
-        1.875,
-        1.875
+        2.0625,
+        2.0625,
+        2.0625
       ]
     },
     "firstperson_lefthand": {
       "scale": [
-        1.875,
-        1.875,
-        1.875
+        2.0625,
+        2.0625,
+        2.0625
       ]
     }
   },
   "overrides": [
+    {
+      "predicate": {
+        "nanonaitors_arsenal:posed": 1
+      },
+      "model": "nanonaitors_arsenal:item/blade_staff_netherite_posed"
+    },
     {
       "predicate": {
         "nanonaitors_arsenal:active": 1

@@ -27,7 +27,8 @@ public final class WorldEquipmentCompat {
         ResourceLocation entityId=BuiltInRegistries.ENTITY_TYPE.getKey(mob.getType());
         if(!"minecraft".equals(entityId.getNamespace()) || !HUMANOIDS.contains(entityId.getPath()))return;
         ItemStack held=mob.getMainHandItem();
-        if(held.isEmpty() || held.hasCustomHoverName())return;
+        // Named mobs and designed gear (names, lore, attributes, unbreakable, other data) keep their weapons.
+        if(held.isEmpty() || mob.hasCustomName() || isSpecialStack(held))return;
         WeaponTier tier=tierFor(held);
         if(tier==null || mob.getRandom().nextDouble()>=ArsenalConfig.MOB_REPLACEMENT_CHANCE.get())return;
         List<ItemStack> choices=new ArrayList<>();
@@ -38,6 +39,19 @@ public final class WorldEquipmentCompat {
         if(replacement.isDamageableItem() && held.isDamageableItem())replacement.setDamageValue(Math.min(replacement.getMaxDamage()-1,
             Math.round((float)held.getDamageValue()/Math.max(1,held.getMaxDamage())*replacement.getMaxDamage())));
         mob.setItemSlot(EquipmentSlot.MAINHAND,replacement);
+    }
+
+    /**
+     * True for gear that was given an identity: a name or lore, attribute
+     * modifiers, unbreakable, or any data beyond enchantments, wear and repair cost.
+     * Such items are a modpack's or a player's designed gear and are never replaced.
+     */
+    public static boolean isSpecialStack(ItemStack stack){
+        var tag=stack.getTag();
+        if(tag==null)return false;
+        for(String key:tag.getAllKeys())
+            if(!key.equals("Enchantments") && !key.equals("RepairCost") && !key.equals("Damage"))return true;
+        return false;
     }
 
     private static WeaponTier tierFor(ItemStack stack){

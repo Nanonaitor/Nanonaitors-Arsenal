@@ -13,6 +13,18 @@
         "nanonaitors_arsenal:active": 1
       },
       "model": "nanonaitors_arsenal:item/battering_ram_dragonbone_active_port"
+    },
+    {
+      "predicate": {
+        "nanonaitors_arsenal:hip": 1
+      },
+      "model": "nanonaitors_arsenal:item/battering_ram_dragonbone_hip"
+    },
+    {
+      "predicate": {
+        "nanonaitors_arsenal:hip": 2
+      },
+      "model": "nanonaitors_arsenal:item/battering_ram_dragonbone_hip2"
     }
   ]
 }

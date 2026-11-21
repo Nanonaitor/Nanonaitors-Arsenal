@@ -1,0 +1,39 @@
+{
+  "parent": "nanonaitors_arsenal:item/battering_ram_bronze_idle",
+  "display": {
+    "thirdperson_righthand": {
+      "rotation": [
+        75,
+        0,
+        180
+      ],
+      "translation": [
+        -2,
+        4.68,
+        -4.01
+      ],
+      "scale": [
+        0.62,
+        0.62,
+        0.62
+      ]
+    },
+    "thirdperson_lefthand": {
+      "rotation": [
+        75,
+        180,
+        180
+      ],
+      "translation": [
+        2,
+        4.68,
+        -4.01
+      ],
+      "scale": [
+        0.62,
+        0.62,
+        0.62
+      ]
+    }
+  }
+}

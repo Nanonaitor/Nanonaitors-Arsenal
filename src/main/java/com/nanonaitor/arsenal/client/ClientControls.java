@@ -67,6 +67,8 @@ public final class ClientControls {
             (net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent event) -> event.enqueueWork(ClientModels::register));
         net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener((TickEvent.ClientTickEvent e) -> { if(e.phase==TickEvent.Phase.END) tick(e); });
         net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener((InputEvent.InteractionKeyMappingTriggered e) -> { if(interaction(e)) e.setCanceled(true); });
+        net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(net.minecraftforge.eventbus.api.EventPriority.LOW,
+            ArsenalSoundVolume::onPlay);
         net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(ClientWeaponRenderer::render);
         net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(ScimitarClientExtensions::beforeRender);
         net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(ClientWeaponRenderer::renderWorld);
@@ -77,6 +79,8 @@ public final class ClientControls {
 
     private static void tick(TickEvent.ClientTickEvent event) {
         ClientSmokeTest.tick();
+        com.nanonaitor.arsenal.client.pose.AttackTiming.tick();
+        devCapture();
         Minecraft minecraft = Minecraft.getInstance();
         LocalPlayer player = minecraft.player;
         if (player == null) { activePlayer = null; clearFlailSprite(); clearBallSprite(); ballWasDown = false; flailWasDown = false;
@@ -130,6 +134,7 @@ public final class ClientControls {
             }
             return;
         }
+        raiseDefenderOverWeapon(minecraft, player);
         tickOffhandWeapons(minecraft, player, attack);
         if(!com.nanonaitor.arsenal.compat.LevelRequirements.canUse(player,player.getMainHandItem(),
             attack || minecraft.options.keyUse.isDown())) {
@@ -161,7 +166,7 @@ public final class ClientControls {
                 morningStarCharging = true;
                 morningStarStarted = now;
                 lastMorningStarHeartbeat = now;
-                player.startUsingItem(net.minecraft.world.InteractionHand.MAIN_HAND);
+                if (!player.isUsingItem()) player.startUsingItem(net.minecraft.world.InteractionHand.MAIN_HAND);
                 ModNetwork.send(ModNetwork.MORNING_STAR, true);
             }
             if (morningStarCharging && attack
@@ -173,7 +178,7 @@ public final class ClientControls {
                 morningStarFullSwing = morningStarChargeProgress(now) >= 1.0F;
                 morningStarSwingStarted = now;
                 morningStarCharging = false;
-                player.stopUsingItem();
+                stopUsing(player, WeaponKind.MORNING_STAR);
                 player.swing(net.minecraft.world.InteractionHand.MAIN_HAND, true);
                 // The custom release bypasses Minecraft's normal local attack path,
                 // so consume the client cooldown here as well as on the server.
@@ -182,7 +187,7 @@ public final class ClientControls {
             }
         } else if (morningStarCharging) {
             morningStarCharging = false;
-            player.stopUsingItem();
+            stopUsing(player, WeaponKind.MORNING_STAR);
             ModNetwork.send(ModNetwork.MORNING_STAR, false);
         }
         boolean flailDown = weapon.kind() == WeaponKind.FLAIL && attack
@@ -203,7 +208,12 @@ public final class ClientControls {
         flailWasDown = flailDown;
         if (weapon.kind() == WeaponKind.BALL_AND_CHAIN) {
             boolean releasing = within(now, ballReleaseStarted, ballReleaseDuration);
-            boolean down = attack && !releasing && (!player.isUsingItem() || ballWasDown);
+            // The guard is crouch + use: standing up lowers it.
+            if (!ballWasDown && !releasing && !player.isShiftKeyDown() && player.isUsingItem()
+                && player.getUseItem() == player.getMainHandItem()) player.stopUsingItem();
+            // A raised Defender guards alongside the wind-up instead of blocking it.
+            boolean down = attack && !releasing && (!player.isUsingItem() || ballWasDown
+                || isDefender(player.getUseItem()));
             boolean windBoost = down && emptyOffhand && minecraft.options.keyUse.isDown();
             if (windBoost != ballWindBoostWasDown) {
                 ModNetwork.send(ModNetwork.BALL_WIND_BOOST, windBoost);
@@ -232,9 +242,14 @@ public final class ClientControls {
                 Vec3 path = horizontalLongChainPath(player, player.getMainHandItem(),
                     ChainWeaponStats.ballThrowReach(player, player.getMainHandItem(), effectiveCharge));
                 releasedDirection = path.normalize();
-                releasedDistance = visibleThrowDistance(player, releasedDirection, path.length());
-                ballReleaseDuration = ChainWeaponStats.ballReleaseAnimationTicks(player,
-                    player.getMainHandItem());
+                // Same rules as the server: the ball stops with its surface at a wall,
+                // and a throw cut short keeps its speed.
+                releasedDistance = com.nanonaitor.arsenal.combat.BallPath.stopDistance(player.level(),
+                    com.nanonaitor.arsenal.combat.BallPath.origin(player), releasedDirection, path.length(),
+                    com.nanonaitor.arsenal.combat.BallPath.crashRadius(releasedCharge));
+                ballReleaseDuration = com.nanonaitor.arsenal.combat.BallPath.throwDuration(
+                    ChainWeaponStats.ballReleaseAnimationTicks(player, player.getMainHandItem()),
+                    releasedDistance, path.length());
                 ballReleaseStarted = now;
                 ModNetwork.send(ModNetwork.BALL_CHAIN, false);
             }
@@ -279,6 +294,19 @@ public final class ClientControls {
             ramLocked = false;
         }
     }
+    private static java.lang.reflect.Method devCapture;
+
+    /** Development-only pose capture; its classes are absent from release jars. */
+    private static void devCapture() {
+        if (!Boolean.getBoolean("arsenal.poseCapture")) return;
+        try {
+            if (devCapture == null) devCapture = Class.forName("com.nanonaitor.arsenal.dev.PoseCapture").getMethod("tick");
+            devCapture.invoke(null);
+        } catch (ReflectiveOperationException error) {
+            throw new IllegalStateException("Pose capture failed", error);
+        }
+    }
+
     private static boolean interaction(InputEvent.InteractionKeyMappingTriggered event) {
         var current = Minecraft.getInstance().player;
         if(current != null && event.isUseItem()
@@ -406,8 +434,25 @@ public final class ClientControls {
     private static void requestScimitarBash(LocalPlayer player) {
         if (!scimitarBashLatched && com.nanonaitor.arsenal.combat.ParityRules.guarding(player)) {
             scimitarBashLatched = true;
+            // Both blades uncross and slash outward (first and third person).
+            scimitarBashStarted = player.level().getGameTime();
             ModNetwork.send(ModNetwork.SCIMITAR_BASH,true);
         }
+    }
+
+    private static long scimitarBashStarted = Long.MIN_VALUE;
+    /** Ticks the outward double slash of a scimitar shield bash takes. */
+    public static final int SCIMITAR_BASH_TICKS = 12;
+    /** Capture tool only: a fixed bash progress (-1 = off). */
+    public static float debugScimitarBash = -1.0F;
+
+    /** Local scimitar shield-bash progress 0..1, or -1 when no bash is playing. */
+    public static float scimitarBashPhase(float partial) {
+        if (debugScimitarBash >= 0.0F) return debugScimitarBash;
+        var player = Minecraft.getInstance().player;
+        if (player == null || scimitarBashStarted == Long.MIN_VALUE) return -1.0F;
+        float phase = (player.level().getGameTime() - scimitarBashStarted + partial) / SCIMITAR_BASH_TICKS;
+        return phase >= 0.0F && phase < 1.0F ? phase : -1.0F;
     }
 
     private static void tickOffhandWeapons(Minecraft minecraft, LocalPlayer player, boolean attack) {
@@ -483,7 +528,11 @@ public final class ClientControls {
             player.startUsingItem(InteractionHand.MAIN_HAND);
     }
 
+    /** Capture tool only: show the reflection spin. */
+    public static boolean debugReflect;
+
     public static boolean bladeStaffReflecting(long now) {
+        if (debugReflect) return true;
         return bladeStaffReflectUntil != Long.MIN_VALUE && now <= bladeStaffReflectUntil;
     }
 
@@ -551,11 +600,13 @@ public final class ClientControls {
         // charged. Continued holding only repeats after the hand is fully ready.
         if (mainDown && !mainClawWasDown) {
             player.swing(net.minecraft.world.InteractionHand.MAIN_HAND, true);
+            com.nanonaitor.arsenal.client.pose.AttackTiming.noteSwing(player, InteractionHand.MAIN_HAND);
             ModNetwork.send(ModNetwork.CLAW_MAIN, true);
             lastMainClawAttack = now;
             player.resetAttackStrengthTicker();
         } else if (mainDown && fullyCharged && elapsed(now, lastMainClawAttack, cooldown)) {
             player.swing(net.minecraft.world.InteractionHand.MAIN_HAND, true);
+            com.nanonaitor.arsenal.client.pose.AttackTiming.noteSwing(player, InteractionHand.MAIN_HAND);
             ModNetwork.send(ModNetwork.CLAW_MAIN, true);
             lastMainClawAttack = now;
             player.resetAttackStrengthTicker();
@@ -563,10 +614,12 @@ public final class ClientControls {
 
         if (offhandDown && !offhandClawWasDown) {
             player.swing(net.minecraft.world.InteractionHand.OFF_HAND, true);
+            com.nanonaitor.arsenal.client.pose.AttackTiming.noteSwing(player, InteractionHand.OFF_HAND);
             ModNetwork.send(ModNetwork.CLAW, true);
             lastOffhandClawAttack = now;
         } else if (offhandDown && elapsed(now, lastOffhandClawAttack, cooldown)) {
             player.swing(net.minecraft.world.InteractionHand.OFF_HAND, true);
+            com.nanonaitor.arsenal.client.pose.AttackTiming.noteSwing(player, InteractionHand.OFF_HAND);
             ModNetwork.send(ModNetwork.CLAW, true);
             lastOffhandClawAttack = now;
         }
@@ -580,57 +633,70 @@ public final class ClientControls {
         return player.getOffhandItem().getItem() instanceof ArsenalWeaponItem linked
             && linked.kind() == WeaponKind.LINKED_CLAWS && linked.tier() == claws.tier();
     }
-    static boolean flailVisual(long now) { return now <= flailVisualUntil; }
-    static boolean flailActive() { return flailWasDown; }
-    static boolean ramActive() { return ramLocked; }
-    static boolean morningStarCharging() { return morningStarCharging; }
-    static float morningStarChargeProgress(long now) {
-        if (!morningStarCharging || morningStarStarted == Long.MIN_VALUE) return 0.0F;
-        double seconds = com.nanonaitor.arsenal.config.ArsenalConfig.MORNING_STAR_CHARGE_SECONDS.get();
-        return (float)Math.min(1.0D, Math.max(0.0D, (now - morningStarStarted) / (seconds * 20.0D)));
+    public static boolean flailVisual(long now) { return now <= flailVisualUntil; }
+    public static boolean flailActive() { return flailWasDown; }
+    public static boolean ramActive() { return ramLocked; }
+    public static boolean morningStarCharging() { return morningStarCharging || debugMorningCharge >= 0.0F; }
+    /** Capture tool only: a fixed charge (-1 = off). */
+    public static float debugMorningCharge = -1.0F;
+
+    public static float morningStarChargeProgress(long now) {
+        return morningStarChargeProgress(now, Minecraft.getInstance().getFrameTime());
     }
-    static boolean morningStarSwing(long now) {
+
+    public static float morningStarChargeProgress(long now, float partial) {
+        if (debugMorningCharge >= 0.0F) return debugMorningCharge;
+        var player = Minecraft.getInstance().player;
+        if (!morningStarCharging || morningStarStarted == Long.MIN_VALUE || player == null) return 0.0F;
+        int ticks = com.nanonaitor.arsenal.combat.CombatEvents.morningStarChargeTicks(player.getMainHandItem(), player);
+        return (float)Math.min(1.0D, Math.max(0.0D, (now - morningStarStarted + partial) / ticks));
+    }
+    public static boolean morningStarSwing(long now) {
         return morningStarSwingStarted != Long.MIN_VALUE && now >= morningStarSwingStarted
             && now - morningStarSwingStarted < 7L;
     }
-    static boolean morningStarFullSwing(long now) {
+    public static boolean morningStarFullSwing(long now) {
         return morningStarFullSwing && morningStarSwing(now);
     }
-    static float morningStarSwingProgress(long now, float partial) {
+    public static float morningStarSwingProgress(long now, float partial) {
         if (!morningStarSwing(now)) return 0.0F;
         return Math.min(1.0F, (now - morningStarSwingStarted + partial) / 7.0F);
     }
-    static boolean ballWindup(long now) { return ballWasDown && !within(now, ballReleaseStarted, ballReleaseDuration); }
-    static boolean ballWindBoost() { return ballWasDown && ballWindBoostWasDown; }
-    static long ballStarted() { return ballStarted; }
-    static boolean ballRelease(long now) { return within(now, ballReleaseStarted, ballReleaseDuration); }
-    static long ballReleaseStarted() { return ballReleaseStarted; }
-    static int ballReleaseDuration() { return ballReleaseDuration; }
-    static int releasedCharge() { return releasedCharge; }
-    static double releasedDistance() { return releasedDistance; }
-    static Vec3 releasedDirection() { return releasedDirection; }
+    public static boolean ballWindup(long now) { return ballWasDown && !within(now, ballReleaseStarted, ballReleaseDuration); }
+    public static boolean ballWindBoost() { return ballWasDown && ballWindBoostWasDown; }
+    public static long ballStarted() { return ballStarted; }
+    public static boolean ballRelease(long now) { return within(now, ballReleaseStarted, ballReleaseDuration); }
+    public static long ballReleaseStarted() { return ballReleaseStarted; }
+    public static int ballReleaseDuration() { return ballReleaseDuration; }
+    public static int releasedCharge() { return releasedCharge; }
+    public static double releasedDistance() { return releasedDistance; }
+    public static Vec3 releasedDirection() { return releasedDirection; }
     private static boolean within(long now, long started, long duration) {
         return started != Long.MIN_VALUE && now >= started && now - started < duration;
     }
-    private static double visibleThrowDistance(LocalPlayer player, Vec3 direction, double requested) {
-        Vec3 start = player.getEyePosition();
-        Vec3 normalized = direction.normalize();
-        Vec3 side = new Vec3(-normalized.z, 0.0D, normalized.x);
-        if (side.lengthSqr() > 0.0001D) side = side.normalize().scale(0.35D);
-        Vec3[] offsets = { Vec3.ZERO, new Vec3(0.0D, -0.45D, 0.0D),
-            new Vec3(0.0D, 0.35D, 0.0D), side, side.scale(-1.0D) };
-        double closest = requested;
-        for (Vec3 offset : offsets) {
-            Vec3 rayStart = start.add(offset);
-            BlockHitResult hit = player.level().clip(new ClipContext(rayStart,
-                rayStart.add(normalized.scale(requested)), ClipContext.Block.COLLIDER,
-                ClipContext.Fluid.NONE, player));
-            if (hit.getType() == HitResult.Type.BLOCK) {
-                closest = Math.min(closest, rayStart.distanceTo(hit.getLocation()));
-            }
-        }
-        return closest;
+    /**
+     * The game ignores the use key while a weapon's own use action runs (a Ball
+     * and Chain wind-up or throw, a Morning Star charge), so a Defender could not
+     * be raised mid-attack. Hand the use action to the Defender; the attack goes on.
+     */
+    private static void raiseDefenderOverWeapon(Minecraft minecraft, LocalPlayer player) {
+        ItemStack offhand = player.getOffhandItem();
+        if (!isDefender(offhand) || minecraft.screen != null || minecraft.gameMode == null
+            || !minecraft.options.keyUse.isDown() || player.getCooldowns().isOnCooldown(offhand.getItem())
+            || !player.isUsingItem() || player.getUsedItemHand() != InteractionHand.MAIN_HAND
+            || !(player.getUseItem().getItem() instanceof ArsenalWeaponItem)) return;
+        // A use action cannot start while another runs: release the weapon's
+        // (client and server), then raise the Defender. The attack state is separate.
+        minecraft.gameMode.releaseUsingItem(player);
+        minecraft.gameMode.useItem(player, InteractionHand.OFF_HAND);
     }
+
+    /** Ends only this weapon's own use action, never a raised Defender or shield. */
+    private static void stopUsing(LocalPlayer player, WeaponKind kind) {
+        if (player.isUsingItem() && player.getUseItem().getItem() instanceof ArsenalWeaponItem used
+            && used.kind() == kind) player.stopUsingItem();
+    }
+
     private static boolean isBlockingConventionalShield(LocalPlayer player) {
         if (!player.isUsingItem()) return false;
         ItemStack active = player.getUseItem();

@@ -34,11 +34,14 @@ public final class ArsenalMod {
         com.nanonaitor.arsenal.registry.ModRecipes.SERIALIZERS.register(group);
         com.nanonaitor.arsenal.enchantment.ModEnchantments.ENCHANTMENTS.register(group);
         net.minecraftforge.fml.ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, ArsenalConfig.SPEC);
+        net.minecraftforge.fml.ModLoadingContext.get().registerConfig(ModConfig.Type.CLIENT,
+            com.nanonaitor.arsenal.config.ArsenalClientConfig.SPEC);
         net.minecraftforge.fml.ModLoadingContext.get().registerConfig(ModConfig.Type.SERVER,
             com.nanonaitor.arsenal.compat.LevelRequirements.SPEC,com.nanonaitor.arsenal.compat.LevelRequirements.FILE);
         ModNetwork.init();
         net.minecraftforge.common.crafting.CraftingHelper.register(com.nanonaitor.arsenal.config.WeaponRecipeCondition.SERIALIZER);
         com.nanonaitor.arsenal.combat.TierEffects.register();
+        com.nanonaitor.arsenal.combat.ScimitarCounter.register();
         var bus = net.minecraftforge.common.MinecraftForge.EVENT_BUS;
         bus.addListener((LivingAttackEvent e) -> { if (CombatEvents.onLivingAttack(e)) e.setCanceled(true); });
         bus.addListener(CombatEvents::onLivingHurt);
