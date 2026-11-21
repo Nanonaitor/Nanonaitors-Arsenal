@@ -203,6 +203,14 @@ public final class FlailAnimationHandler {
             forwardX, forwardZ, radius,
             angle - trailGapAngle * 1.75D, 0.12D,
             WeaponPartRenderer.BALL_TRAIL_FAR);
+        // First person: draw only the spinning head. The chain runs from beside the
+        // camera and could sweep across the view for a moment.
+        Minecraft mc = Minecraft.getMinecraft();
+        if (player == mc.getRenderViewEntity() && mc.gameSettings.thirdPersonView == 0) {
+            WeaponPartRenderer.renderBall(player.getHeldItemMainhand(), ballX, ballY, ballZ, 0.30D,
+                (float) Math.toDegrees(Math.atan2(ballX - anchorX, ballZ - anchorZ)));
+            return;
+        }
         // Keep the chain out of the wielder's head: if the straight line would pass
         // through it, bend the chain over the head on its way out to the ball.
         double headX = px, headY = baseY + (player.isSneaking() ? 1.30D : 1.62D), headZ = pz;
