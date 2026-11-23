@@ -46,6 +46,10 @@ public final class BatteringRamCombat {
     /** Block state -> lowest ram break level that can break it (NOT_BREAKABLE if none). */
     private static final Map<IBlockState, Integer> BREAK_LEVELS = new java.util.HashMap<>();
     private static final int NOT_BREAKABLE = Integer.MAX_VALUE;
+    /** After crashing into a wall, the use key must be let go before charging again. */
+    private static final Map<EntityPlayer, Long> CRASHED = new WeakHashMap<>();
+    /** Normal ram hits: extra Knockback levels waiting for the target's knockback. */
+    private static final Map<EntityPlayer, long[]> PENDING_KNOCKBACK = new WeakHashMap<>();
 
     private BatteringRamCombat() {}
 
@@ -58,10 +62,20 @@ public final class BatteringRamCombat {
             || !hasChargeEnergy(player)) {
             return;
         }
+        long tick = player.world.getTotalWorldTime();
+        Long crashed = CRASHED.get(player);
+        if (crashed != null) {
+            if (tick - crashed <= 3L) {
+                CRASHED.put(player, tick);
+                return;
+            }
+            CRASHED.remove(player);
+        }
         ChargeState state = CHARGES.get(player);
         if (state == null) {
             state = new ChargeState(player.rotationYaw, player.rotationPitch,
                 WeaponHits.chargeMultiplier(player));
+            state.startTick = tick;
             CHARGES.put(player, state);
             player.resetCooldown();
             // The log creaks as the charge starts.
@@ -120,11 +134,60 @@ public final class BatteringRamCombat {
         int broken = breakRamBlocks(player, stack, forwardX, forwardZ, state.lockedYaw);
         if (broken > 0) {
             impact(player, state, now, 1.2F, 0.75F);
-        } else if (player.collidedHorizontally) {
-            // Ramming a wall it cannot break: a heavy bash, not repeated every tick.
-            impact(player, state, now, 0.9F, 0.85F);
+        } else if (player.collidedHorizontally && now - state.startTick >= 3L) {
+            // Ramming a wall it cannot break: a thump, a short bounce back and a
+            // camera jolt. The charge ends until the use key is let go.
+            crash(player, state, forwardX, forwardZ, now);
+            return;
         }
         hitRamTargets(player, state, stack, forwardX, forwardZ, now);
+    }
+
+    private static void crash(EntityPlayerMP player, ChargeState state, double forwardX, double forwardZ, long now) {
+        player.world.playSound(null, player.posX, player.posY, player.posZ,
+            com.nanonaitor.arsenal.registry.ModSounds.RAM_THUMP, player.getSoundCategory(),
+            1.0F, 0.75F + player.getRNG().nextFloat() * 0.1F);
+        player.world.playSound(null, player.posX, player.posY, player.posZ,
+            com.nanonaitor.arsenal.registry.ModSounds.RAM_IMPACT, player.getSoundCategory(),
+            0.6F, 0.6F + player.getRNG().nextFloat() * 0.1F);
+        player.swingArm(EnumHand.MAIN_HAND);
+        player.motionX = -forwardX * 0.55D;
+        player.motionY = player.onGround ? 0.22D : player.motionY;
+        player.motionZ = -forwardZ * 0.55D;
+        player.velocityChanged = true;
+        state.hitEntities.clear();
+        CHARGES.remove(player);
+        CRASHED.put(player, now);
+        player.resetActiveHand();
+        com.nanonaitor.arsenal.network.ModNetwork.CHANNEL.sendTo(new com.nanonaitor.arsenal.network.ArsenalFxMessage(
+            com.nanonaitor.arsenal.network.ArsenalFxMessage.RAM_CRASH, player.getEntityId(), 100), player);
+    }
+
+    /**
+     * Normal (non-charge) ram hits push like Knockback II at full strength and
+     * Knockback I otherwise, on top of any Knockback enchantment.
+     */
+    @SubscribeEvent(priority = net.minecraftforge.fml.common.eventhandler.EventPriority.LOW)
+    public static void onRamAttack(net.minecraftforge.event.entity.player.AttackEntityEvent event) {
+        EntityPlayer player = event.getEntityPlayer();
+        if (event.isCanceled() || player.world.isRemote || CHARGES.containsKey(player)
+            || !(player.getHeldItemMainhand().getItem() instanceof ItemBatteringRam)) return;
+        int levels = player.getCooledAttackStrength(0.5F) >= 0.95F ? 2 : 1;
+        PENDING_KNOCKBACK.put(player, new long[] {event.getTarget().getEntityId(), levels,
+            player.world.getTotalWorldTime()});
+    }
+
+    @SubscribeEvent
+    public static void onRamKnockback(net.minecraftforge.event.entity.living.LivingKnockBackEvent event) {
+        if (!(event.getAttacker() instanceof EntityPlayer)) return;
+        EntityPlayer player = (EntityPlayer) event.getAttacker();
+        long[] pending = PENDING_KNOCKBACK.get(player);
+        if (pending == null) return;
+        PENDING_KNOCKBACK.remove(player);
+        if (pending[0] != event.getEntityLiving().getEntityId()
+            || player.world.getTotalWorldTime() - pending[2] > 1L) return;
+        // Vanilla's Knockback enchantment adds 0.5 strength per level.
+        event.setStrength(event.getStrength() + 0.5F * pending[1]);
     }
 
     /** Bash sound and a recoil swing (the arms kick back), at most every 8 ticks. */
@@ -320,7 +383,9 @@ public final class BatteringRamCombat {
             if (target.attackEntityFrom(magic?DamageSource.MAGIC:DamageSource.causePlayerDamage(player),
                 baseDamage * state.damageMultiplier + enchantmentDamage)) {
                 state.hitEntities.add(target.getEntityId());
-                target.knockBack(player, 1.5F, forwardX, forwardZ);
+                // Charge hits shove hard; Knockback adds its usual 0.5 per level.
+                target.knockBack(player, 1.5F + 0.5F * EnchantmentHelper.getEnchantmentLevel(
+                    Enchantments.KNOCKBACK, stack), forwardX, forwardZ);
                 impact(player, state, now, 1.0F, 0.9F);
                 stack.damageItem(1, player);
                 if (!player.capabilities.isCreativeMode) {
@@ -347,6 +412,7 @@ public final class BatteringRamCombat {
         private final float damageMultiplier;
         private long lastHeartbeatTick;
         private long lastImpactTick = Long.MIN_VALUE / 2;
+        private long startTick;
         private final Set<Integer> hitEntities = new HashSet<>();
 
         private ChargeState(float lockedYaw, float lockedPitch,

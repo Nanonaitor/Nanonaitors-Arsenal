@@ -342,7 +342,7 @@ public final class ShieldCombat {
             if (target.attackEntityFrom(new EntityDamageSource("tartsy_dash", player), 2.0F)) {
                 if (ModContent.STUNNED != null)
                     com.nanonaitor.arsenal.config.ConfiguredEffects.apply(target,
-                        com.nanonaitor.arsenal.config.ArsenalConfig.effects.tartsyDash, 20, 0);
+                        com.nanonaitor.arsenal.config.ArsenalConfig.tartsyShield.dashEffects, 20, 0);
                 com.nanonaitor.arsenal.data.TransientData.of(player).setBoolean(TARTSY_CRITICAL_READY, true);
                 target.knockBack(player, 0.55F, player.posX - target.posX,
                     player.posZ - target.posZ);

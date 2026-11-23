@@ -68,11 +68,9 @@ public final class ItemBallAndChain extends ItemArsenalWeapon {
                                ITooltipFlag flag) {
         if (!ArsenalTooltip.begin(tooltip, TextFormatting.GOLD,
                 "Hold attack to swing; release to throw.")) return;
-        tooltip.add(TextFormatting.GRAY + "Higher rotations increase throw reach and damage.");
-        tooltip.add(TextFormatting.GRAY + "Crouch + use to guard. Hold use while winding up to spin faster.");
-        tooltip.add(TextFormatting.GRAY + "With an empty offhand, guarding and winding up block every attack.");
-        tooltip.add(TextFormatting.GRAY + "A thrown ball smashes projectiles in its path.");
-        tooltip.add(TextFormatting.GRAY + "Knockback also shoves back melee attackers you guard against.");
+        tooltip.add(TextFormatting.GRAY + "More spins: farther, harder throws.");
+        tooltip.add(TextFormatting.GRAY + "Crouch + use to guard; hold use to spin faster.");
+        tooltip.add(TextFormatting.GRAY + "Smashes projectiles in its path.");
         tooltip.add(TextFormatting.RED + "Two-Handed");
     }
 

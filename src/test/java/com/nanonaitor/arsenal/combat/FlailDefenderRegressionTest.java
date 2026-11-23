@@ -90,7 +90,7 @@ public final class FlailDefenderRegressionTest {
         check(com.nanonaitor.arsenal.config.ArsenalConfig.scimitars.counterMultiplier == 1.3D);
         check(com.nanonaitor.arsenal.config.ArsenalConfig.scimitars.counterWindowSeconds == 5);
         // Weakness is no longer the default scimitar effect.
-        check(com.nanonaitor.arsenal.config.ArsenalConfig.effects.scimitarHit.length == 0);
+        check(com.nanonaitor.arsenal.config.ArsenalConfig.scimitars.hitEffects.length == 0);
         // Ball and Chain guard Knockback: grows with the level and never deals damage.
         check(ShieldCombat.guardKnockback(0) == 0.0F);
         check(Math.abs(ShieldCombat.guardKnockback(1) - 0.9F) < 1.0E-4F);

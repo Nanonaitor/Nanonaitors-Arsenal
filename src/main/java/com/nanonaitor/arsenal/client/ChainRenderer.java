@@ -89,6 +89,14 @@ final class ChainRenderer {
         Tessellator tessellator = Tessellator.getInstance();
         BufferBuilder buffer = tessellator.getBuffer();
         buffer.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION_TEX_COLOR);
+        links(buffer, path);
+        tessellator.draw();
+        if (texturePart.hasEffect()) glint(path);
+        GlStateManager.enableCull();
+    }
+
+    /** Every link along the path, alternating by 90 degrees. */
+    private static void links(BufferBuilder buffer, double[][] path) {
         double travelled = STEP * 0.5D;
         int index = 0;
         for (int seg = 0; seg + 1 < path.length; seg++) {
@@ -109,8 +117,62 @@ final class ChainRenderer {
             }
             travelled -= len;
         }
-        tessellator.draw();
-        GlStateManager.enableCull();
+    }
+
+    private static final net.minecraft.util.ResourceLocation GLINT =
+        new net.minecraft.util.ResourceLocation("textures/misc/enchanted_item_glint.png");
+
+    /** The enchantment shimmer over the links, drawn like vanilla's item glint (two scrolling passes). */
+    private static void glint(double[][] path) {
+        Minecraft mc = Minecraft.getMinecraft();
+        mc.getTextureManager().bindTexture(GLINT);
+        GlStateManager.depthMask(false);
+        GlStateManager.depthFunc(GL11.GL_EQUAL);
+        GlStateManager.enableBlend();
+        GlStateManager.blendFunc(GlStateManager.SourceFactor.SRC_COLOR, GlStateManager.DestFactor.ONE);
+        float[] saved = tint;
+        tint = GLINT_COLOR;
+        glintPass = true;
+        RenderManager manager = mc.getRenderManager();
+        glintX = manager.viewerPosX;
+        glintY = manager.viewerPosY;
+        glintZ = manager.viewerPosZ;
+        Tessellator tessellator = Tessellator.getInstance();
+        for (int pass = 0; pass < 2; pass++) {
+            GlStateManager.matrixMode(GL11.GL_TEXTURE);
+            GlStateManager.pushMatrix();
+            GlStateManager.scale(8.0F, 8.0F, 8.0F);
+            long period = pass == 0 ? 3000L : 4873L;
+            float scroll = (float) (Minecraft.getSystemTime() % period) / period / 8.0F;
+            GlStateManager.translate(pass == 0 ? scroll : -scroll, 0.0F, 0.0F);
+            GlStateManager.rotate(pass == 0 ? -50.0F : 10.0F, 0.0F, 0.0F, 1.0F);
+            GlStateManager.matrixMode(GL11.GL_MODELVIEW);
+            BufferBuilder buffer = tessellator.getBuffer();
+            buffer.begin(GL11.GL_QUADS, DefaultVertexFormats.POSITION_TEX_COLOR);
+            links(buffer, path);
+            tessellator.draw();
+            GlStateManager.matrixMode(GL11.GL_TEXTURE);
+            GlStateManager.popMatrix();
+            GlStateManager.matrixMode(GL11.GL_MODELVIEW);
+        }
+        glintPass = false;
+        tint = saved;
+        GlStateManager.blendFunc(GlStateManager.SourceFactor.SRC_ALPHA, GlStateManager.DestFactor.ONE_MINUS_SRC_ALPHA);
+        GlStateManager.disableBlend();
+        GlStateManager.depthFunc(GL11.GL_LEQUAL);
+        GlStateManager.depthMask(true);
+        mc.getTextureManager().bindTexture(TextureMap.LOCATION_BLOCKS_TEXTURE);
+    }
+
+    /** Vanilla's glint colour (0xFF8040CC). */
+    private static final float[] GLINT_COLOR = {0.5F, 0.25F, 0.8F};
+    private static boolean glintPass;
+    private static double glintX, glintY, glintZ;
+
+    private static void glintVertex(BufferBuilder buffer, double[] p) {
+        double x = p[0] + glintX, y = p[1] + glintY, z = p[2] + glintZ;
+        buffer.pos(p[0], p[1], p[2]).tex((x + z) * 0.12D, (y - x * 0.5D) * 0.12D)
+            .color(tint[0], tint[1], tint[2], 1.0F).endVertex();
     }
 
     /**
@@ -180,6 +242,14 @@ final class ChainRenderer {
      */
     private static void face(BufferBuilder buffer, double[] p0, double[] p1, double[] p2, double[] p3,
                              double[] normal) {
+        if (glintPass) {
+            // World-space glint UVs, so the shimmer sweeps along the chain as one piece.
+            glintVertex(buffer, p0);
+            glintVertex(buffer, p1);
+            glintVertex(buffer, p2);
+            glintVertex(buffer, p3);
+            return;
+        }
         double lambert = Math.max(0.0D, dot(normal, LIGHT));
         float shade = (float) (0.45D + 0.55D * lambert);
         float r = shade * tint[0], g = shade * tint[1], b = shade * tint[2];

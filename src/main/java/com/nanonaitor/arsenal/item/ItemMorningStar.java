@@ -56,7 +56,7 @@ public final class ItemMorningStar extends ItemArsenalWeapon {
                 "Hold attack to charge for a stronger sweeping hit.")) return;
         tooltip.add(TextFormatting.GRAY + "Charge increases damage and sweep width.");
         String effects = ConfiguredEffects.displayNames(combine(
-            ArsenalConfig.effects.morningStarFracture, ArsenalConfig.effects.morningStarStun));
+            ArsenalConfig.morningStar.fractureEffects, ArsenalConfig.morningStar.stunEffects));
         if (!effects.isEmpty()) tooltip.add(TextFormatting.GRAY + "Full charge applies: " + effects + ".");
     }
 

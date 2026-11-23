@@ -25,22 +25,30 @@ public final class ConfigurationRegressionTest {
         check(BallChargeRules.nextCharge(3,3,true)==3);
         check(BallChargeRules.nextCharge(1,2,true)==2);
         check(BallChargeRules.nextCharge(1,2,false)==2);
-        String[][] families={{"morningStar","morning_star"},{"scimitar","scimitar"},
+        String[][] families={{"morningStar","morning_star"},{"scimitars","scimitar"},
             {"bladeStaff","blade_staff"},{"claws","claws"},{"flail","flail"},
             {"batteringRam","battering_ram"},{"ballAndChain","ball_and_chain"},
             {"tartsyShield","tartsy_shield"},{"sunWarBulwark","sun_war_bulwark"}};
         try {
             for(String[] family:families) {
-                java.lang.reflect.Field field=ArsenalConfig.Weapons.class.getField(family[0]);
+                // Each weapon has its own titled config section with an enabled switch.
+                Object section=ArsenalConfig.class.getField(family[0]).get(null);
+                java.lang.reflect.Field field=section.getClass().getField("enabled");
                 check(ContentSwitches.enabled(family[1]+"_iron"));
-                field.setBoolean(ArsenalConfig.weapons,false);
+                field.setBoolean(section,false);
                 check(!ContentSwitches.enabled(family[1]+"_iron"));
                 check(ContentSwitches.enabled("iron_chain"));
-                field.setBoolean(ArsenalConfig.weapons,true);
+                field.setBoolean(section,true);
             }
-            for(java.lang.reflect.Field field:ArsenalConfig.Effects.class.getFields())
-                for(String entry:(String[])field.get(ArsenalConfig.effects))
-                    check(EffectSpec.parse(entry,200,1)!=null);
+            // Every default effect list in every section parses.
+            for(java.lang.reflect.Field category:ArsenalConfig.class.getFields()) {
+                Object section=category.get(null);
+                if(section==null||section instanceof String)continue;
+                for(java.lang.reflect.Field field:section.getClass().getFields())
+                    if(field.getType()==String[].class && !"entityBlacklist".equals(field.getName()))
+                        for(String entry:(String[])field.get(section))
+                            check(EffectSpec.parse(entry,200,1)!=null);
+            }
         } catch(ReflectiveOperationException exception) { throw new AssertionError(exception); }
         System.out.println("Passed "+checks+" effect/charge regression checks");
     }

@@ -96,7 +96,8 @@ public final class ModernWeaponInputHandler {
             }
             if(event.isButtonstate() && Minecraft.getMinecraft().currentScreen==null
                 && !guardIntent
-                && !com.nanonaitor.arsenal.compat.ScimitarShieldCompat.isGuarding(player)) {
+                && !com.nanonaitor.arsenal.compat.ScimitarShieldCompat.isGuarding(player)
+                && com.nanonaitor.arsenal.client.pose.ScimitarBash.phase(player, 0.0F) < 0.0F) {
                 scimitarPressedThisTick=true;
                 Boolean attackedOffhand=attackNextReadyScimitar(
                     player,player.world.getTotalWorldTime());
@@ -246,9 +247,12 @@ public final class ModernWeaponInputHandler {
             ModNetwork.CHANNEL.sendToServer(new ModernWeaponControlMessage(
                 ModernWeaponControlMessage.SCIMITAR_BASH, true));
             // The swing is shared with other players and plays the outward double slash.
+            com.nanonaitor.arsenal.client.pose.ScimitarBash.note(player);
             player.swingArm(EnumHand.MAIN_HAND);
+            com.nanonaitor.arsenal.compat.BetterCombatScimitarAnimation.cancelNativeMainhandSweep();
         }
-        if (mc.currentScreen == null && !scimitarBashOwnsAttack
+        boolean bashing = com.nanonaitor.arsenal.client.pose.ScimitarBash.phase(player, 0.0F) >= 0.0F;
+        if (mc.currentScreen == null && !scimitarBashOwnsAttack && !bashing
             && !guard && !offhandButton && !disabled && dualScimitars
             && attack && attackWasDown && !scimitarPressedThisTick) {
             attackNextReadyScimitar(player,now);
@@ -290,13 +294,14 @@ public final class ModernWeaponInputHandler {
                 player.ticksExisted + event.getPartialTicks());
             return;
         }
-        if (!com.nanonaitor.arsenal.compat.ScimitarShieldCompat.isGuarding(player)
+        float bash = com.nanonaitor.arsenal.client.pose.ScimitarBash.phase(player, event.getPartialTicks());
+        if (!(com.nanonaitor.arsenal.compat.ScimitarShieldCompat.isGuarding(player) || bash >= 0.0F)
             || !(event.getItemStack().getItem() instanceof ItemScimitar)) return;
         // Render both blades ourselves so vanilla cannot move one outside the
-        // camera. They are mirrored into the classic crossed-sword guard.
+        // camera. They are mirrored into the classic crossed-sword guard; the
+        // bash keeps playing after its cooldown has dropped the guard.
         event.setCanceled(true);
-        WeaponPartRenderer.renderBlockingScimitar(event.getItemStack(), event.getHand(),
-            com.nanonaitor.arsenal.client.pose.AttackTiming.phase(player, event.getPartialTicks()));
+        WeaponPartRenderer.renderBlockingScimitar(event.getItemStack(), event.getHand(), bash);
     }
 
     /** Pose capture tool only: a fixed first-person charge (-1 = off). */

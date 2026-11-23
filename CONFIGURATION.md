@@ -1,28 +1,44 @@
-# Arsenal 1.12.2 configuration (2.0.26)
+# Arsenal 1.12.2 configuration (2.0.27)
 
 File: `<Minecraft profile>/config/nanonaitors_arsenal.cfg`.
-In game: **Mods → Nanonaitor's Arsenal → Config**. The category pages contain
-true/false buttons, number fields, and editable effect/entity lists.
+In game: **Mods → Nanonaitor's Arsenal → Config**. Settings are grouped by
+weapon, with general sections and an Enchantments section. Hover over any
+section or option for its full explanation.
 
 Restart Minecraft/server after edits. Use matching settings on server and clients.
-Weapon switches disable only crafting/upgrade recipes. Existing weapons remain
-registered, visible, and usable, including creative and JEI item listings.
-Back up worlds before disabling enchantments: those are **not registered** when
-disabled, so Forge can report missing enchantment entries and remove them from saves.
+Weapon switches disable only crafting/upgrade recipes and loot. Existing weapons
+remain registered, visible, and usable, including creative and JEI item listings.
+Disabled enchantments stay registered, so saves are safe, but cannot be obtained,
+applied, or take effect.
 
-## Weapons and enchantments
+**Upgrading from 2.0.26 or older:** the old `weapons`, `reach` and `effects`
+sections are moved into the new per-weapon sections automatically on the first
+launch, keeping your values, and then removed from the file.
 
-All switches default to `true`.
+## Sections
 
-| Category | Switches |
+| Section | Settings |
 | --- | --- |
-| weapons | morningStar, scimitar, bladeStaff, claws, flail, batteringRam, ballAndChain, tartsyShield, sunWarBulwark |
-| enchantments | enableLongChain, enableRotationForce, enableRecovery, enableBreeched |
+| worldEquipment | lootIntegration, lootReplacementChance, mobEquipment, mobReplacementChance, socketMobEquipment |
+| animations (client) | weaponPoses, moBendsPoses, attackSpeedSwings, chainMaterialColors |
+| sounds (client) | volume |
+| stunned | entityBlacklist |
+| materials | venomHit, icedDragonboneHit |
+| morningStar | enabled, fullChargeSeconds, fractureEffects, stunEffects, hitEffects, livingEffects |
+| scimitars | enabled, counterMultiplier, counterWindowSeconds, hitEffects |
+| bladeStaff | enabled, reflectEffects, hitEffects |
+| claws | enabled, hitEffects, livingEffects |
+| flail | enabled, radius, hitEffects, livingEffects |
+| batteringRam | enabled, hitEffects |
+| ballAndChain | enabled, windupReach, throwReachPerCharge, playerFracture, hitEffects, livingEffects |
+| tartsyShield | enabled, dashEffects |
+| sunWarBulwark | enabled |
+| shields | allowShieldEnchantments |
+| enchantments | enableAll, enableLongChain, enableRotationForce, enableRecovery, enableBreeched, enableReverso, enableLuna, enableMagicLog, enableEndure, longChainMaxLevel, rotationForceMaxLevel |
 
-Turning a weapon off disables its crafting and Dragon Forge upgrade recipes.
-Existing items, automatic Linked Claw pairing, and furnace recycling still work.
-JEI will show the item but not the disabled crafting recipe. Long Chain and
-Rotation Force maximum-level settings remain available.
+Each weapon's `enabled` defaults to `true`. Turning a weapon off disables its
+crafting and Dragon Forge upgrade recipes and its loot. Existing items, automatic
+Linked Claw pairing, and furnace recycling still work.
 
 ## Effect lists
 
@@ -31,29 +47,29 @@ Use `tier` in the level or seconds field to retain that proc's calculated defaul
 An empty list, or blank entry, applies no potion. Unknown/malformed entries are
 skipped with a warning rather than crashing; optional SRP effects require SRP.
 
-Example inside the generated `effects` category:
+Example:
 
 ```text
-S:scimitarHitExtra <
-    minecraft:slowness@1@3
->
-S:flailHit <
->
+scimitars {
+    S:hitEffects <
+        minecraft:slowness@1@3
+    >
+}
 ```
 
 | Setting | Default and trigger |
 | --- | --- |
-| scimitarHitExtra | Empty; optional effects on a confirmed scimitar melee hit. Before 2.0.26 this was `scimitarHit` with Weakness (`minecraft:weakness@tier@10`); scimitars now use the block counter below. Add that line back to restore Weakness. |
-| morningStarFracture | `nanonaitors_arsenal:armor_fracture@tier@tier`; original fully-charged fracture trigger, tier cap and player/mob duration |
-| morningStarStun | `nanonaitors_arsenal:stunned@1@3`; original 20% full-charge ability proc |
-| ballPlayerFracture | `nanonaitors_arsenal:armor_fracture@tier@10`; full-charge outgoing hit against players |
-| bladeStaffReflect | `nanonaitors_arsenal:stunned@1@1`; successful non-melee reflection |
-| tartsyDash | `nanonaitors_arsenal:stunned@1@1`; successful dash hit |
-| venomHit | Poison III, 10 seconds |
-| icedDragonboneHit | Slowness III and Mining Fatigue III, 5 seconds |
-| livingMorningStar / livingClaws / livingFlail | SRP Corrosive / Bleed / Antimall, I for Living or II for Sentient, 10 seconds |
-| livingBallAndChain | SRP Debar, I/II for 10 seconds; parasites only |
-| clawsHit / flailHit / ballAndChainHit / batteringRamHit / morningStarHit / bladeStaffHit | Empty; optional additional confirmed-damage effects |
+| scimitars.hitEffects | Empty; optional effects on a confirmed scimitar melee hit. Before 2.0.26 scimitars applied Weakness (`minecraft:weakness@tier@10`); add that line back to restore it. |
+| morningStar.fractureEffects | `nanonaitors_arsenal:armor_fracture@tier@tier`; fully-charged fracture, tier cap and player/mob duration |
+| morningStar.stunEffects | `nanonaitors_arsenal:stunned@1@3`; 20% full-charge ability proc |
+| ballAndChain.playerFracture | `nanonaitors_arsenal:armor_fracture@tier@10`; full-charge hit against players |
+| bladeStaff.reflectEffects | `nanonaitors_arsenal:stunned@1@1`; successful non-melee reflection |
+| tartsyShield.dashEffects | `nanonaitors_arsenal:stunned@1@1`; successful dash hit |
+| materials.venomHit | Poison III, 10 seconds |
+| materials.icedDragonboneHit | Slowness III and Mining Fatigue III, 5 seconds |
+| morningStar / claws / flail .livingEffects | SRP Corrosive / Bleed / Antimall, I for Living or II for Sentient, 10 seconds |
+| ballAndChain.livingEffects | SRP Debar, I/II for 10 seconds; parasites only |
+| each weapon's hitEffects | Empty; optional additional confirmed-damage effects |
 
 Changing the potion lists does **not** change direct damage, piercing, permanent
 mob armor fracture, fire, Ice & Fire's separate freezing, lightning, or the
@@ -87,12 +103,28 @@ These only change what a player sees and hears; each player can set their own.
 
 | Setting | Default (blocks) |
 | --- | ---: |
-| reach.flailRadius | 4 |
-| reach.ballWindupReach | 3 |
-| reach.ballThrowReachPerCharge | 4 |
+| flail.radius | 4 |
+| ballAndChain.windupReach | 3 |
+| ballAndChain.throwReachPerCharge | 4 |
 
 Attribute/quality reach bonuses and Long Chain still add to these values.
 Ball throws use base-per-charge × effective charge, then add bonuses.
+
+## Enchantments
+
+Hover over each switch in game for what the enchantment does. The same
+explanation shows under the enchantment's name when you hover an item or book.
+
+| Enchantment | Effect |
+| --- | --- |
+| Long Chain | Flail, Ball and Chain: +1 block of reach per level |
+| Rotation Force | Flail, Ball and Chain: +0.2 attack speed per level |
+| Recovery | Arsenal shields: halves the Tartsy disable and Bulwark bash cooldowns |
+| Breeched (curse) | Arsenal shields: doubles those cooldowns |
+| Reverso | Blade Staff: reflecting heals you and repairs the staff |
+| Luna | Morning Star: +25% smash area, -25% charge time per level |
+| Magic Log | Battering Ram: half charge hunger, magic damage |
+| Endure | Scimitars: resist and shorten guard breaks |
 
 ## Shields and Stunned immunity
 
@@ -120,7 +152,7 @@ These bonuses require SetBonus **and detection of RLCraft's configured sets and
 bonuses**, not just wearing visually similar armor in standalone Minecraft.
 
 - Silver/Gold Scimitar + matching active set: Weakness II, only if Weakness is
-  added back to `scimitarHitExtra` with the `tier` level.
+  added back to `scimitars.hitEffects` with the `tier` level.
 - Silver Ball & Chain + matching active set: charges `1 → 3` (full) in two rotations.
 - Gold retains its pre-existing `1 → full` two-rotation behavior with or without
   its set. The matching set also receives full reach/damage on rotation two.

@@ -207,7 +207,7 @@ public final class ModernBackportCombat {
                 if (full) MorningStarCombat.applyFracture(target, item);
                 if (full && ModContent.STUNNED != null && player.getRNG().nextFloat() < 0.20F)
                     com.nanonaitor.arsenal.config.ConfiguredEffects.apply(target,
-                        com.nanonaitor.arsenal.config.ArsenalConfig.effects.morningStarStun, 60, 0);
+                        com.nanonaitor.arsenal.config.ArsenalConfig.morningStar.stunEffects, 60, 0);
             }
         }
         player.swingArm(EnumHand.MAIN_HAND);
@@ -236,6 +236,27 @@ public final class ModernBackportCombat {
         }
     }
 
+    private static final String BASH_TICK = "ArsenalScimitarBashTick";
+    /** Ticks after a bash during which the pair lands no other melee hit. */
+    private static final int BASH_EXCLUSIVE_TICKS = 10;
+
+    static boolean recentlyBashed(EntityPlayer player) {
+        net.minecraft.nbt.NBTTagCompound data = com.nanonaitor.arsenal.data.TransientData.of(player);
+        if (!data.hasKey(BASH_TICK)) return false;
+        long age = player.world.getTotalWorldTime() - data.getLong(BASH_TICK);
+        return age >= 0L && age <= BASH_EXCLUSIVE_TICKS;
+    }
+
+    @SubscribeEvent(priority = EventPriority.HIGHEST)
+    public static void onlyTheBashHits(net.minecraftforge.event.entity.living.LivingAttackEvent event) {
+        net.minecraft.util.DamageSource source = event.getSource();
+        if (!(source.getImmediateSource() instanceof EntityPlayer) || source.getTrueSource() != source.getImmediateSource()
+            || "arsenal_scimitar_bash".equals(source.getDamageType())) return;
+        EntityPlayer player = (EntityPlayer)source.getImmediateSource();
+        if (player.world.isRemote || !com.nanonaitor.arsenal.compat.ScimitarShieldCompat.isPair(player)) return;
+        if (recentlyBashed(player)) event.setCanceled(true);
+    }
+
     private static void scimitarBash(EntityPlayerMP player) {
         if (!com.nanonaitor.arsenal.compat.ScimitarShieldCompat.isGuarding(player)
             || !com.nanonaitor.arsenal.compat.ScimitarShieldCompat.bashEnabled()) return;
@@ -243,6 +264,8 @@ public final class ModernBackportCombat {
         if (!com.nanonaitor.arsenal.compat.ReskillableCompat.canUse(player, main)
             || !com.nanonaitor.arsenal.compat.ReskillableCompat.canUse(player, off)) return;
         net.minecraft.entity.Entity entity = scimitarTarget(player, 4.0D, -1);
+        // The bash is the click's only hit: no native or paired swing rides along.
+        com.nanonaitor.arsenal.data.TransientData.of(player).setLong(BASH_TICK, player.world.getTotalWorldTime());
         if (entity instanceof EntityLivingBase && CombatTargetRules.canHit(player, (EntityLivingBase)entity)) {
             EntityLivingBase target = (EntityLivingBase)entity;
             float damage = com.nanonaitor.arsenal.compat.ScimitarAttackBridge.bashDamage(player, target);
@@ -343,6 +366,10 @@ public final class ModernBackportCombat {
         }
         boolean dual = player.getHeldItemMainhand().getItem() instanceof ItemScimitar
             && player.getHeldItemOffhand().getItem() instanceof ItemScimitar;
+        if (dual && recentlyBashed(player)) {
+            event.setCanceled(true);
+            return;
+        }
         // A disabled cross-guard is a recovery state for the pair, not an
         // opportunity for RLCombat to fall back to a native hand attack.
         if (dual && com.nanonaitor.arsenal.compat.ScimitarShieldCompat.disabled(player)) {

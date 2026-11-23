@@ -34,5 +34,7 @@ public final class ModNetwork {
             BallAndChainWindupMessage.class, 9, Side.CLIENT);
         CHANNEL.registerMessage(BladeStaffReflectionMessage.Handler.class,
             BladeStaffReflectionMessage.class, 10, Side.CLIENT);
+        CHANNEL.registerMessage(ArsenalFxMessage.Handler.class,
+            ArsenalFxMessage.class, 11, Side.CLIENT);
     }
 }

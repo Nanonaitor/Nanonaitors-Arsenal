@@ -76,6 +76,26 @@
       }
     ]
   },
+  "battering_ram.thump": {
+    "subtitle": "subtitles.nanonaitors_arsenal.battering_ram.thump",
+    "sounds": [
+      {
+        "name": "minecraft:entity.generic.big_fall",
+        "type": "event"
+      }
+    ]
+  },
+  "ball_chain.armor_pierce": {
+    "subtitle": "subtitles.nanonaitors_arsenal.ball_chain.armor_pierce",
+    "sounds": [
+      {
+        "name": "nanonaitors_arsenal:ball_chain_armor_pierce1"
+      },
+      {
+        "name": "nanonaitors_arsenal:ball_chain_armor_pierce2"
+      }
+    ]
+  },
   "claws.slash": {
     "subtitle": "subtitles.nanonaitors_arsenal.claws.slash",
     "sounds": [

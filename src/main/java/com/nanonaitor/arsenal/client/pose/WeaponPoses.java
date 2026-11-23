@@ -148,7 +148,8 @@ public final class WeaponPoses {
             in.weaponArmLeft = mainIsLeft;
         } else if (main instanceof com.nanonaitor.arsenal.item.ItemScimitar
             && off instanceof com.nanonaitor.arsenal.item.ItemScimitar
-            && com.nanonaitor.arsenal.compat.ScimitarShieldCompat.isGuarding(player)) {
+            && (com.nanonaitor.arsenal.compat.ScimitarShieldCompat.isGuarding(player)
+                || ScimitarBash.phase(player, partialTicks) >= 0.0F)) {
             // Paired scimitars held crossed as a guard; a bash slashes both outward.
             in.kind = Kind.SCIMITARS;
             in.active = true;
@@ -182,6 +183,9 @@ public final class WeaponPoses {
             in.attackCount = AttackTiming.count(player, EnumHand.MAIN_HAND);
             in.offAttackPhase = AttackTiming.phase(player, partialTicks, EnumHand.OFF_HAND);
             in.offAttackCount = AttackTiming.count(player, EnumHand.OFF_HAND);
+        } else if (in.kind == Kind.SCIMITARS) {
+            in.attackPhase = ScimitarBash.phase(player, partialTicks);
+            in.attackCount = AttackTiming.count(player);
         } else if (in.kind != Kind.NONE) {
             in.attackPhase = AttackTiming.phase(player, partialTicks);
             in.attackCount = AttackTiming.count(player);
@@ -267,6 +271,60 @@ public final class WeaponPoses {
             points[i] = vanillaArmPoint(player, partialTicks, pose, leftArm, 16.0D);
         }
         return points;
+    }
+
+    /**
+     * Blade points (model px down the arm, forward of it): tip, then mid-blade.
+     * In third person the scimitar's blade carries on along the arm past the fist.
+     */
+    private static final double[][] SCIMITAR_BLADE = {{23.0D, -1.5D}, {17.0D, -0.5D}};
+
+    /**
+     * Air-slash streaks behind an ordinary scimitar swing: the blade's tip and
+     * middle at the last few sampled moments of vanilla's swing, as world
+     * offsets from the feet (newest first), or null when no streak shows.
+     */
+    public static double[][][] scimitarTrail(EntityPlayer player, float partialTicks) {
+        if (!enabled()) return null;
+        net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getMinecraft();
+        if (player == mc.getRenderViewEntity() && mc.gameSettings.thirdPersonView == 0) return null;
+        float age = player.ticksExisted + partialTicks;
+        // A full weapon pose (guard, bash, claws...) owns the arms.
+        if (compute(player, age, partialTicks) != null) return null;
+        EnumHand hand = AttackTiming.hand(player);
+        if (!(player.getHeldItem(hand).getItem() instanceof com.nanonaitor.arsenal.item.ItemScimitar)) return null;
+        float a = ArsenalConfig.animations.attackSpeedSwings ? AttackTiming.phase(player, partialTicks)
+            : player.isSwingInProgress ? player.getSwingProgress(partialTicks) : -1.0F;
+        if (a < 0.04F || a > 0.75F) return null;
+        EnumHandSide primary = player.getPrimaryHand();
+        boolean left = (hand == EnumHand.MAIN_HAND) == (primary == EnumHandSide.LEFT);
+        float pitch = (player.prevRotationPitch + (player.rotationPitch - player.prevRotationPitch) * partialTicks)
+            * (float) (Math.PI / 180.0D);
+        double[][][] trails = new double[SCIMITAR_BLADE.length][7][];
+        for (int i = 0; i < 7; i++) {
+            Pose pose = vanillaSwingPose(Math.max(0.0F, a - i * 0.05F), pitch, left);
+            for (int b = 0; b < SCIMITAR_BLADE.length; b++) {
+                trails[b][i] = vanillaArmPoint(player, partialTicks, pose, left,
+                    SCIMITAR_BLADE[b][0], SCIMITAR_BLADE[b][1]);
+            }
+        }
+        return trails;
+    }
+
+    /** ModelBiped's swing for a held item at progress p (the swinging arm only). */
+    private static Pose vanillaSwingPose(float p, float headPitch, boolean left) {
+        float bodyY = (float) Math.sin(Math.sqrt(p) * Math.PI * 2.0D) * 0.2F;
+        if (left) bodyY = -bodyY;
+        float f = 1.0F - p;
+        f = 1.0F - f * f * f * f;
+        float lift = (float) Math.sin(f * Math.PI) * 1.2F
+            + (float) Math.sin(p * Math.PI) * -(headPitch - 0.7F) * 0.75F;
+        // Held-item arm rests at -pi/10; the swinging arm turns by 3x the body
+        // twist in all (vanillaArmPoint adds the body's own share).
+        float[] arm = {-0.31415927F - lift, bodyY * 2.0F, (float) Math.sin(p * Math.PI) * -0.4F};
+        Pose pose = new Pose().bodyY(bodyY);
+        if (left) pose.left = arm; else pose.right = arm;
+        return pose;
     }
 
     // ---- Easing between motions -------------------------------------------
@@ -409,6 +467,12 @@ public final class WeaponPoses {
 
     /** {@link #armPoint} on the vanilla player model, for any pose (also past or future ones). */
     private static double[] vanillaArmPoint(EntityPlayer player, float partialTicks, Pose pose, boolean left, double reach) {
+        return vanillaArmPoint(player, partialTicks, pose, left, reach, 0.0D);
+    }
+
+    /** As above, plus forward model pixels in the arm's frame (where a held blade points). */
+    private static double[] vanillaArmPoint(EntityPlayer player, float partialTicks, Pose pose, boolean left,
+        double reach, double forward) {
         float[] arm = left ? pose.left : pose.right;
         if (arm == null) return null;
         float twist = pose.body ? pose.bodyY : 0.0F;
@@ -417,7 +481,7 @@ public final class WeaponPoses {
         // Fist centre in the arm's frame, rotated like ModelRenderer (Z, Y, X),
         // then moved to the (possibly twisted) shoulder pivot. Model pixels.
         double[] hand = GripMath.rotate(arm[0] + (sneak ? 0.4F : 0.0F), arm[1] + twist, arm[2],
-            new double[] {side, reach, 0.0D});
+            new double[] {side, reach, -forward});
         double px = hand[0] + side * 5.0D * Math.cos(twist);
         double py = hand[1] + 2.0D;
         double pz = hand[2] - side * 5.0D * Math.sin(twist);
@@ -666,6 +730,11 @@ public final class WeaponPoses {
         if (compute(player, ageInTicks, ageInTicks - (int) ageInTicks) != null) {
             // A full weapon pose owns the arms: vanilla's swing would only twist
             // the body and shift the shoulders under it, a visible twitch.
+            model.swingProgress = 0.0F;
+            return;
+        }
+        if (ScimitarBash.ownsSwing(player)) {
+            // The bash's swing finished as the double slash: never replay it as a hit.
             model.swingProgress = 0.0F;
             return;
         }

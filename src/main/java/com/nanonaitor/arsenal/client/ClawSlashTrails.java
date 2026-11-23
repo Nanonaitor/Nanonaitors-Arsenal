@@ -19,6 +19,7 @@ import org.lwjgl.opengl.GL11;
 /**
  * Air-slash streaks behind a raking claw: three thin, parallel lines (one per
  * blade) that follow the claw tip through the strike and fade out behind it.
+ * Scimitar swings get the same streaks along the blade's tip and middle.
  */
 @SideOnly(Side.CLIENT)
 @Mod.EventBusSubscriber(modid = NanonaitorsArsenal.MOD_ID, value = Side.CLIENT)
@@ -39,8 +40,10 @@ public final class ClawSlashTrails {
         Tessellator tessellator = Tessellator.getInstance();
         BufferBuilder buffer = tessellator.getBuffer();
         for (EntityPlayer player : mc.world.playerEntities) {
-          for (boolean offHand : new boolean[] {false, true}) {
-            double[][] trail = WeaponPoses.clawTrail(player, partial, offHand);
+          double[][][] swords = WeaponPoses.scimitarTrail(player, partial);
+          for (int t = 0; t < 2 + (swords == null ? 0 : swords.length); t++) {
+            boolean claw = t < 2;
+            double[][] trail = claw ? WeaponPoses.clawTrail(player, partial, t == 1) : swords[t - 2];
             if (trail == null) continue;
             if (!begun) {
                 begun = true;
@@ -64,6 +67,13 @@ public final class ClawSlashTrails {
                 double[] thick = normalize(cross(dir, across));
                 float alphaA = 0.75F * (1.0F - i / (float) (trail.length - 1));
                 float alphaB = 0.75F * (1.0F - (i + 1) / (float) (trail.length - 1));
+                if (!claw) {
+                    // A scimitar leaves one streak at its tip and a fainter one mid-blade.
+                    float k = t == 2 ? 0.8F : 0.45F;
+                    quad(buffer, a, b, across, alphaA * k, alphaB * k);
+                    quad(buffer, a, b, thick, alphaA * k, alphaB * k);
+                    continue;
+                }
                 // Three streaks, one per blade, spread across the sweep the way the
                 // blades sit side by side (stacked, not trailing one behind another).
                 for (int blade = -1; blade <= 1; blade++) {

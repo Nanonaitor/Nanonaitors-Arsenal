@@ -86,7 +86,7 @@ public final class ItemScimitar extends ItemArsenalWeapon {
         tooltip.add(TextFormatting.GRAY + "Attack while guarding to shield bash.");
         tooltip.add(TextFormatting.GRAY + "Blocking an attack empowers your next hit or bash (x"
             + ArsenalConfig.scimitars.counterMultiplier + ").");
-        String effects = ConfiguredEffects.displayNames(ArsenalConfig.effects.scimitarHit);
+        String effects = ConfiguredEffects.displayNames(ArsenalConfig.scimitars.hitEffects);
         if (!effects.isEmpty()) tooltip.add(TextFormatting.GRAY + "Hits apply: " + effects + ".");
     }
 }

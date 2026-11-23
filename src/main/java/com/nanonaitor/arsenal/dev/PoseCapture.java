@@ -91,7 +91,62 @@ public final class PoseCapture {
         add("calibration", label, "minecraft:stick", "minecraft:stick", in -> {}).angles = angles;
     }
 
+    /** Marker text "r11": only this round's new visuals. */
+    private static boolean focusRound11() {
+        try {
+            return new String(java.nio.file.Files.readAllBytes(new File(Minecraft.getMinecraft().mcDataDir, MARKER).toPath()),
+                java.nio.charset.StandardCharsets.UTF_8).contains("r11");
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private static void buildRound11() {
+        String scimitar = NanonaitorsArsenal.MOD_ID + ":scimitar_iron";
+        for (float phase : new float[] {0.2F, 0.35F, 0.5F}) {
+            add("round11", "scimitar swing " + Math.round(phase * 100) + "% (air lines)", scimitar, null, in -> {})
+                .live = p -> com.nanonaitor.arsenal.client.pose.AttackTiming.debugPhase = phase;
+        }
+        add("round11", "dual scimitars swing 35%", scimitar, scimitar, in -> {})
+            .live = p -> com.nanonaitor.arsenal.client.pose.AttackTiming.debugPhase = 0.35F;
+        for (float phase : new float[] {0.3F, 0.6F}) {
+            add("round11", "bash " + Math.round(phase * 100) + "%, guard already dropped", scimitar, scimitar, in -> {})
+                .live = p -> com.nanonaitor.arsenal.client.pose.ScimitarBash.debugPhase = phase;
+        }
+        add("round11", "enchanted ball wind-up (glint)", NanonaitorsArsenal.MOD_ID + ":ball_and_chain_iron#ench", null,
+            in -> in.active = false)
+            .live = p -> com.nanonaitor.arsenal.client.BallAndChainAnimationHandler.debugWindup(p, Math.PI / 2.0D);
+        add("round11", "enchanted flail spin (glint)", NanonaitorsArsenal.MOD_ID + ":flail_iron#ench", null, in -> {})
+            .live = p -> com.nanonaitor.arsenal.client.FlailAnimationHandler.debugOrbit(p, Math.PI / 2.0D);
+        add("round11", "chain blocks + chain item held", NanonaitorsArsenal.MOD_ID + ":iron_chain", null, in -> {})
+            .live = PoseCapture::placeChains;
+        add("round11", "armour-break icon", NanonaitorsArsenal.MOD_ID + ":ball_and_chain_iron", null, in -> {})
+            .live = p -> com.nanonaitor.arsenal.client.ArsenalClientFx.receive(
+                com.nanonaitor.arsenal.network.ArsenalFxMessage.ARMOR_BREAK, p.getEntityId(), 200);
+        Shot first = add("round11", "first person chain item", NanonaitorsArsenal.MOD_ID + ":iron_chain", null, in -> {});
+        first.firstPerson = true;
+    }
+
+    private static boolean chainsPlaced;
+
+    private static void placeChains(EntityPlayer player) {
+        if (chainsPlaced) return;
+        chainsPlaced = true;
+        MinecraftServer server = Minecraft.getMinecraft().getIntegratedServer();
+        server.addScheduledTask(() -> {
+            net.minecraft.world.World world = server.getWorld(0);
+            net.minecraft.block.state.IBlockState chain = com.nanonaitor.arsenal.registry.ModContent.IRON_CHAIN.getDefaultState();
+            for (int y = 4; y <= 6; y++) world.setBlockState(new net.minecraft.util.math.BlockPos(-1, y, -1), chain);
+            world.setBlockState(new net.minecraft.util.math.BlockPos(1, 5, -1), chain.withProperty(
+                com.nanonaitor.arsenal.block.BlockIronChain.AXIS, net.minecraft.util.EnumFacing.Axis.X));
+        });
+    }
+
     private static void buildShots() {
+        if (focusRound11()) {
+            buildRound11();
+            return;
+        }
         // Known vanilla arm angles, to line the Mo' Bends path up with vanilla.
         calibration("both forward (X -1.57)", -1.57F, 0, 0, -1.57F, 0, 0);
         calibration("forward, turned inward (Y -/+0.6)", -1.57F, -0.6F, 0, -1.57F, 0.6F, 0);
@@ -375,6 +430,7 @@ public final class PoseCapture {
         com.nanonaitor.arsenal.client.BallAndChainInputHandler.debugGuard = false;
         com.nanonaitor.arsenal.client.pose.AttackTiming.debugPhase = -1.0F;
         com.nanonaitor.arsenal.client.ModernWeaponInputHandler.debugMorningCharge = -1.0F;
+        com.nanonaitor.arsenal.client.pose.ScimitarBash.debugPhase = -1.0F;
         ItemStack main = stack(shot.main), off = stack(shot.off);
         MinecraftServer server = mc.getIntegratedServer();
         java.util.UUID id = mc.player.getUniqueID();
@@ -392,8 +448,12 @@ public final class PoseCapture {
 
     private static ItemStack stack(String id) {
         if (id == null) return ItemStack.EMPTY;
+        boolean enchanted = id.endsWith("#ench");
+        if (enchanted) id = id.substring(0, id.length() - 5);
         Item item = ForgeRegistries.ITEMS.getValue(new ResourceLocation(id));
-        return item == null ? ItemStack.EMPTY : new ItemStack(item);
+        ItemStack stack = item == null ? ItemStack.EMPTY : new ItemStack(item);
+        if (enchanted && !stack.isEmpty()) stack.addEnchantment(net.minecraft.init.Enchantments.UNBREAKING, 1);
+        return stack;
     }
 
     /** The whole screen, scaled to fit a cell (first-person shots). */

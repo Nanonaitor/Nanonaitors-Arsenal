@@ -59,14 +59,13 @@ public final class WorldEquipmentCompat {
     private static List<Item> alternatives(WeaponTier tier) {
         List<Item> items=new ArrayList<>();
         if(tier==null || !ArsenalCompatManager.isTierAvailable(tier))return items;
-        ArsenalConfig.Weapons c=ArsenalConfig.weapons;
-        if(c.morningStar)items.add(ModContent.MORNING_STARS.get(tier));
-        if(c.scimitar)items.add(ModContent.SCIMITARS.get(tier));
-        if(c.bladeStaff)items.add(ModContent.DOUBLE_BLADED_SCIMITARS.get(tier));
-        if(c.claws)items.add(ModContent.CLAWS.get(tier));
-        if(c.flail)items.add(ModContent.FLAILS.get(tier));
-        if(c.batteringRam)items.add(ModContent.BATTERING_RAMS.get(tier));
-        if(c.ballAndChain)items.add(ModContent.BALLS_AND_CHAINS.get(tier));
+        if(ArsenalConfig.morningStar.enabled)items.add(ModContent.MORNING_STARS.get(tier));
+        if(ArsenalConfig.scimitars.enabled)items.add(ModContent.SCIMITARS.get(tier));
+        if(ArsenalConfig.bladeStaff.enabled)items.add(ModContent.DOUBLE_BLADED_SCIMITARS.get(tier));
+        if(ArsenalConfig.claws.enabled)items.add(ModContent.CLAWS.get(tier));
+        if(ArsenalConfig.flail.enabled)items.add(ModContent.FLAILS.get(tier));
+        if(ArsenalConfig.batteringRam.enabled)items.add(ModContent.BATTERING_RAMS.get(tier));
+        if(ArsenalConfig.ballAndChain.enabled)items.add(ModContent.BALLS_AND_CHAINS.get(tier));
         items.removeIf(Objects::isNull);
         return items;
     }

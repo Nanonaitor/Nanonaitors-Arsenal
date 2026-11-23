@@ -238,6 +238,12 @@ public final class WeaponPartRenderer {
      */
     public static void renderStickSprite(double fromX, double fromY, double fromZ,
                                          double toX, double toY, double toZ) {
+        renderStickSprite(fromX, fromY, fromZ, toX, toY, toZ, false);
+    }
+
+    /** As above; glint = the weapon is enchanted, so its handle glints too. */
+    public static void renderStickSprite(double fromX, double fromY, double fromZ,
+                                         double toX, double toY, double toZ, boolean glint) {
         double dx = toX - fromX, dy = toY - fromY, dz = toZ - fromZ;
         double length = Math.sqrt(dx * dx + dy * dy + dz * dz);
         if (length < 1.0E-4D) return;
@@ -253,7 +259,7 @@ public final class WeaponPartRenderer {
         GlStateManager.scale(scale, scale, scale);
         ChainRenderer.applyWorldLight(fromX, fromY, fromZ);
         RenderHelper.enableStandardItemLighting();
-        Minecraft.getMinecraft().getRenderItem().renderItem(STICK, ItemCameraTransforms.TransformType.NONE);
+        Minecraft.getMinecraft().getRenderItem().renderItem(stick(glint), ItemCameraTransforms.TransformType.NONE);
         RenderHelper.disableStandardItemLighting();
         GlStateManager.popMatrix();
     }
@@ -263,14 +269,41 @@ public final class WeaponPartRenderer {
         new java.util.IdentityHashMap<>();
 
     private static ItemStack animationPart(ItemStack held, int part) {
+        // An enchanted weapon's parts glint too (a render-only enchantment marker).
+        boolean glint = held.hasEffect();
         return PART_STACKS.computeIfAbsent(held.getItem(), item -> new java.util.HashMap<>())
-            .computeIfAbsent(part, key -> {
+            .computeIfAbsent(glint ? part | GLINT_BIT : part, key -> {
                 ItemStack stack = new ItemStack(held.getItem());
                 NBTTagCompound tag = new NBTTagCompound();
-                tag.setInteger(PART_TAG, key);
+                tag.setInteger(PART_TAG, key & ~GLINT_BIT);
+                if ((key & GLINT_BIT) != 0) tag.setTag("ench", glintMarker());
                 stack.setTagCompound(tag);
                 return stack;
             });
+    }
+
+    private static final int GLINT_BIT = 1 << 20;
+
+    private static net.minecraft.nbt.NBTTagList glintMarker() {
+        net.minecraft.nbt.NBTTagList list = new net.minecraft.nbt.NBTTagList();
+        NBTTagCompound entry = new NBTTagCompound();
+        entry.setShort("id", (short) 0);
+        entry.setShort("lvl", (short) 1);
+        list.appendTag(entry);
+        return list;
+    }
+
+    private static ItemStack glintStick;
+
+    private static ItemStack stick(boolean glint) {
+        if (!glint) return STICK;
+        if (glintStick == null) {
+            glintStick = new ItemStack(net.minecraft.init.Items.STICK);
+            NBTTagCompound tag = new NBTTagCompound();
+            tag.setTag("ench", glintMarker());
+            glintStick.setTagCompound(tag);
+        }
+        return glintStick;
     }
 
     private static void renderPart(ItemStack stack, double x, double y, double z,

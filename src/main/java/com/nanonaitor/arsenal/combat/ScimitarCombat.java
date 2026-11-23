@@ -18,7 +18,7 @@ public final class ScimitarCombat {
             amplifier = 1; // Weakness II while Gold's full-set infusion is active.
         }
         com.nanonaitor.arsenal.config.ConfiguredEffects.apply(target,
-            com.nanonaitor.arsenal.config.ArsenalConfig.effects.scimitarHit,
+            com.nanonaitor.arsenal.config.ArsenalConfig.scimitars.hitEffects,
             WEAKNESS_DURATION_TICKS, amplifier);
     }
 

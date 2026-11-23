@@ -192,7 +192,7 @@ public final class DoubleBladedScimitarCombat {
             if (!reverso && !isDirectMelee(event.getSource()) && source instanceof EntityLivingBase
                 && ModContent.STUNNED != null) {
                 com.nanonaitor.arsenal.config.ConfiguredEffects.apply((EntityLivingBase)source,
-                    com.nanonaitor.arsenal.config.ArsenalConfig.effects.bladeStaffReflect, 20, 0);
+                    com.nanonaitor.arsenal.config.ArsenalConfig.bladeStaff.reflectEffects, 20, 0);
             }
             defender.getCooldownTracker().removeCooldown(staffItem);
             defender.getCooldownTracker().setCooldown(staffItem, SUCCESS_COOLDOWN_TICKS);

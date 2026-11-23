@@ -136,6 +136,12 @@ public final class AttackTiming {
         return swing == null ? 0 : swing.handCount[hand.ordinal()];
     }
 
+    /** Tick the latest swing started, or Long.MIN_VALUE. */
+    public static long startTick(EntityPlayer player) {
+        Swing swing = SWINGS.get(player);
+        return swing == null ? Long.MIN_VALUE : swing.startTick;
+    }
+
     /** Which hand the current swing belongs to. */
     public static EnumHand hand(EntityPlayer player) {
         Swing swing = SWINGS.get(player);

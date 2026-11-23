@@ -23,7 +23,7 @@ public final class ItemTartsyShield extends ItemArsenalShield {
 
     @Override protected void appendShieldDetails(List<String> tooltip) {
         line(tooltip, TextFormatting.GRAY, "Blocks one hit; attack while guarding to dash.");
-        String effects = ConfiguredEffects.displayNames(ArsenalConfig.effects.tartsyDash);
+        String effects = ConfiguredEffects.displayNames(ArsenalConfig.tartsyShield.dashEffects);
         if (!effects.isEmpty()) line(tooltip, TextFormatting.GRAY, "Dash hits apply: " + effects + ".");
     }
 }

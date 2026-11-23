@@ -20,6 +20,10 @@ public final class ModSounds {
     /** Battering Ram: the log creaks as a charge starts; a heavy bash on hits and walls. */
     public static final SoundEvent RAM_CHARGE = create("battering_ram.charge");
     public static final SoundEvent RAM_IMPACT = create("battering_ram.impact");
+    /** Battering Ram: the dull thump of crashing into a wall it cannot break. */
+    public static final SoundEvent RAM_THUMP = create("battering_ram.thump");
+    /** Ball and Chain: a full-charge hit cracking the target's armour. */
+    public static final SoundEvent BALL_CHAIN_ARMOR_PIERCE = create("ball_chain.armor_pierce");
     /** Claws: a high metal slash on every hit, and a ringing accent on every third. */
     public static final SoundEvent CLAWS_SLASH = create("claws.slash");
     public static final SoundEvent CLAWS_RING = create("claws.ring");
@@ -37,6 +41,6 @@ public final class ModSounds {
     public static void register(RegistryEvent.Register<SoundEvent> event) {
         event.getRegistry().registerAll(BALL_CHAIN_SWING, BALL_CHAIN_HIT, BALL_CHAIN_RATTLE,
             BALL_CHAIN_CRASH, SCIMITAR_BASH, RAM_CHARGE, RAM_IMPACT, CLAWS_SLASH, CLAWS_RING,
-            REVERSO_HEAL, BLADE_STAFF_REFLECT);
+            REVERSO_HEAL, BLADE_STAFF_REFLECT, RAM_THUMP, BALL_CHAIN_ARMOR_PIERCE);
     }
 }

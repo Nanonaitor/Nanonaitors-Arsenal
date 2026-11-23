@@ -173,7 +173,7 @@ public final class FlailAnimationHandler {
         double[] tip = com.nanonaitor.arsenal.client.pose.WeaponPoses.weaponArmPoint(player, partialTicks, 19.0D);
         if (grip != null && tip != null) {
             WeaponPartRenderer.renderStickSprite(px + grip[0], baseY + grip[1], pz + grip[2],
-                px + tip[0], baseY + tip[1], pz + tip[2]);
+                px + tip[0], baseY + tip[1], pz + tip[2], player.getHeldItemMainhand().hasEffect());
             anchorX = px + tip[0];
             anchorY = baseY + tip[1];
             anchorZ = pz + tip[2];

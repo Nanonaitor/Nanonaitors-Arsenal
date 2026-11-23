@@ -153,9 +153,16 @@ public final class BallAndChainCombat {
         if (now % 2L == 0L) ModNetwork.CHANNEL.sendToAllAround(
             new com.nanonaitor.arsenal.network.BallAndChainWindupMessage(player.getEntityId()),
             new NetworkRegistry.TargetPoint(player.dimension,player.posX,player.posY,player.posZ,64.0D));
+        int interval = ChainWeaponStats.swingIntervalTicks(player, weapon);
+        if (state.interval != 0 && interval != state.interval && now < state.nextSwingTick) {
+            // The spin sped up or slowed down mid-turn: keep the share of the turn
+            // still to go, at the new speed, instead of restarting the count.
+            state.nextSwingTick = now + Math.max(1L,
+                Math.round((state.nextSwingTick - now) * interval / (double) state.interval));
+        }
+        state.interval = interval;
         if (now >= state.nextSwingTick) {
-            state.nextSwingTick = now
-                + ChainWeaponStats.swingIntervalTicks(player, weapon);
+            state.nextSwingTick = now + interval;
             int maxCharges = maxCharges(((ItemBallAndChain) weapon.getItem()).getTier());
             int previousCharge = state.charge;
             state.charge = BallChargeRules.nextCharge(state.charge, maxCharges,
@@ -367,6 +374,7 @@ public final class BallAndChainCombat {
                 hit = true;
                 if (!returning && isFullCharge(state)) {
                     fractureArmor(target, state.tier);
+                    armorPierceFeedback(player, target);
                 }
             }
         }
@@ -577,6 +585,15 @@ public final class BallAndChainCombat {
         return high;
     }
 
+    /** A full-charge hit: an armour crack sound and the fracture icon over the target. */
+    private static void armorPierceFeedback(EntityPlayerMP player, EntityLivingBase target) {
+        target.world.playSound(null, target.posX, target.posY + target.height * 0.5D, target.posZ,
+            com.nanonaitor.arsenal.registry.ModSounds.BALL_CHAIN_ARMOR_PIERCE, player.getSoundCategory(),
+            1.0F, 0.9F + player.getRNG().nextFloat() * 0.2F);
+        ModNetwork.CHANNEL.sendToAllTracking(new com.nanonaitor.arsenal.network.ArsenalFxMessage(
+            com.nanonaitor.arsenal.network.ArsenalFxMessage.ARMOR_BREAK, target.getEntityId(), 5), target);
+    }
+
     private static void fractureArmor(EntityLivingBase target, WeaponTier tier) {
         if (target instanceof EntityPlayer) {
             if (ModContent.ARMOR_FRACTURE == null) {
@@ -586,7 +603,7 @@ public final class BallAndChainCombat {
             int amplifier = piercing >= 100 ? 4 : piercing >= 75 ? 2
                 : piercing >= 50 ? 1 : 0;
             com.nanonaitor.arsenal.config.ConfiguredEffects.apply(target,
-                com.nanonaitor.arsenal.config.ArsenalConfig.effects.ballPlayerFracture, 200, amplifier);
+                com.nanonaitor.arsenal.config.ArsenalConfig.ballAndChain.playerFracture, 200, amplifier);
             return;
         }
         IAttributeInstance armor = target.getEntityAttribute(SharedMonsterAttributes.ARMOR);
@@ -607,6 +624,7 @@ public final class BallAndChainCombat {
         private long lastHeartbeatTick;
         private long nextSwingTick;
         private int charge;
+        private int interval;
 
         private SwingState(long startTick) {
             this.lastHeartbeatTick = startTick;

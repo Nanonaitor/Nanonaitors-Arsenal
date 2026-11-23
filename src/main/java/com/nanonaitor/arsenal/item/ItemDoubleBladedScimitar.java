@@ -94,7 +94,7 @@ public final class ItemDoubleBladedScimitar extends ItemArsenalWeapon {
         if (!ArsenalTooltip.begin(tooltip, TextFormatting.GOLD,
                 "Sweeps nearby enemies; right-click to reflect damage.")) return;
         tooltip.add(TextFormatting.GRAY + reflectionDescription());
-        String effects = ConfiguredEffects.displayNames(ArsenalConfig.effects.bladeStaffReflect);
+        String effects = ConfiguredEffects.displayNames(ArsenalConfig.bladeStaff.reflectEffects);
         if (!effects.isEmpty()) tooltip.add(TextFormatting.GRAY + "Reflected projectiles apply: " + effects + ".");
         tooltip.add(TextFormatting.RED + "Two-Handed");
     }

@@ -75,14 +75,15 @@ public final class ArsenalCompatEffects {
         WeaponTier tier = weapon.getTier();
         EntityLivingBase target = event.getEntityLiving();
         if (tier.isVenom()) com.nanonaitor.arsenal.config.ConfiguredEffects.apply(target,
-            com.nanonaitor.arsenal.config.ArsenalConfig.effects.venomHit, 200, 2);
-        com.nanonaitor.arsenal.config.ArsenalConfig.Effects effects = com.nanonaitor.arsenal.config.ArsenalConfig.effects;
-        String[] extra = weapon instanceof ItemClaws ? effects.clawsHit
-            : weapon instanceof ItemFlail ? effects.flailHit
-            : weapon instanceof ItemBallAndChain ? effects.ballAndChainHit
-            : weapon instanceof ItemBatteringRam ? effects.batteringRamHit
-            : weapon instanceof ItemMorningStar ? effects.morningStarHit
-            : weapon instanceof ItemDoubleBladedScimitar ? effects.bladeStaffHit : new String[0];
+            com.nanonaitor.arsenal.config.ArsenalConfig.materials.venomHit, 200, 2);
+        com.nanonaitor.arsenal.config.ArsenalConfig.Materials materials = com.nanonaitor.arsenal.config.ArsenalConfig.materials;
+        String[] extra = weapon instanceof ItemClaws ? com.nanonaitor.arsenal.config.ArsenalConfig.claws.hitEffects
+            : weapon instanceof ItemFlail ? com.nanonaitor.arsenal.config.ArsenalConfig.flail.hitEffects
+            : weapon instanceof ItemBallAndChain ? com.nanonaitor.arsenal.config.ArsenalConfig.ballAndChain.hitEffects
+            : weapon instanceof ItemBatteringRam ? com.nanonaitor.arsenal.config.ArsenalConfig.batteringRam.hitEffects
+            : weapon instanceof ItemMorningStar ? com.nanonaitor.arsenal.config.ArsenalConfig.morningStar.hitEffects
+            : weapon instanceof ItemDoubleBladedScimitar ? com.nanonaitor.arsenal.config.ArsenalConfig.bladeStaff.hitEffects
+            : new String[0];
         com.nanonaitor.arsenal.config.ConfiguredEffects.apply(target, extra, 200, 0);
         if (tier == WeaponTier.LIVING || tier == WeaponTier.SENTIENT) {
             applyLivingFamilyProc(weapon, target, tier == WeaponTier.SENTIENT);
@@ -91,7 +92,7 @@ public final class ArsenalCompatEffects {
             target.setFire(5); knockBack(target,player);
         } else if (tier == WeaponTier.ICED_DRAGONBONE) {
             setFrozen(target,200);
-            com.nanonaitor.arsenal.config.ConfiguredEffects.apply(target, effects.icedDragonboneHit, 100, 2);
+            com.nanonaitor.arsenal.config.ConfiguredEffects.apply(target, materials.icedDragonboneHit, 100, 2);
             knockBack(target,player);
         } else if (tier == WeaponTier.ELECTRIC_DRAGONBONE) {
             long now=player.world.getTotalWorldTime();
@@ -165,17 +166,17 @@ public final class ArsenalCompatEffects {
         int amplifier = sentient ? 1 : 0;
         if (weapon instanceof ItemMorningStar) {
             com.nanonaitor.arsenal.config.ConfiguredEffects.apply(target,
-                com.nanonaitor.arsenal.config.ArsenalConfig.effects.livingMorningStar, LIVING_EFFECT_DURATION_TICKS, amplifier);
+                com.nanonaitor.arsenal.config.ArsenalConfig.morningStar.livingEffects, LIVING_EFFECT_DURATION_TICKS, amplifier);
         } else if (weapon instanceof ItemClaws) {
             com.nanonaitor.arsenal.config.ConfiguredEffects.apply(target,
-                com.nanonaitor.arsenal.config.ArsenalConfig.effects.livingClaws, LIVING_EFFECT_DURATION_TICKS, amplifier);
+                com.nanonaitor.arsenal.config.ArsenalConfig.claws.livingEffects, LIVING_EFFECT_DURATION_TICKS, amplifier);
         } else if (weapon instanceof ItemFlail) {
             com.nanonaitor.arsenal.config.ConfiguredEffects.apply(target,
-                com.nanonaitor.arsenal.config.ArsenalConfig.effects.livingFlail, LIVING_EFFECT_DURATION_TICKS, amplifier);
+                com.nanonaitor.arsenal.config.ArsenalConfig.flail.livingEffects, LIVING_EFFECT_DURATION_TICKS, amplifier);
         } else if (weapon instanceof ItemBallAndChain) {
             if (ArsenalCompatManager.isSrpParasite(target)) {
                 com.nanonaitor.arsenal.config.ConfiguredEffects.apply(target,
-                    com.nanonaitor.arsenal.config.ArsenalConfig.effects.livingBallAndChain, LIVING_EFFECT_DURATION_TICKS, amplifier);
+                    com.nanonaitor.arsenal.config.ArsenalConfig.ballAndChain.livingEffects, LIVING_EFFECT_DURATION_TICKS, amplifier);
             }
         }
         // Battering Rams keep their proc on the wielder through heldSrpEffects().

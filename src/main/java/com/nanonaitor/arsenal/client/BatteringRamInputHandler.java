@@ -17,10 +17,18 @@ import net.minecraftforge.fml.relauncher.Side;
 public final class BatteringRamInputHandler {
     private static long lastHeartbeatTick = Long.MIN_VALUE;
     private static boolean cameraLocked;
+    /** Crashed into a wall: no charge until the use key is let go. */
+    private static boolean crashLock;
     private static float lockedYaw;
     private static float lockedPitch;
 
     private BatteringRamInputHandler() {}
+
+    /** The server ended the charge against a wall. */
+    public static void crashed() {
+        crashLock = true;
+        cameraLocked = false;
+    }
 
     /** Stable local render state; vanilla may briefly reset active-hand use while attacking. */
     public static boolean isCharging(EntityPlayer player) {
@@ -47,11 +55,12 @@ public final class BatteringRamInputHandler {
             return;
         }
         boolean holdingRam = player.getHeldItemMainhand().getItem() instanceof ItemBatteringRam;
+        if (crashLock && !minecraft.gameSettings.keyBindUseItem.isKeyDown()) crashLock = false;
         boolean hasChargeEnergy = com.nanonaitor.arsenal.combat.BatteringRamCombat.hasChargeEnergy(player);
         boolean canCharge = holdingRam && ArsenalCompatManager.canUseTwoHanded(player)
             && !ShieldUsePriority.requested(player)
             && !com.nanonaitor.arsenal.combat.AbilityUseRules.cooling(player,player.getHeldItemMainhand())
-            && hasChargeEnergy
+            && hasChargeEnergy && !crashLock
             && minecraft.currentScreen == null
             && minecraft.gameSettings.keyBindUseItem.isKeyDown();
         if (!canCharge) {

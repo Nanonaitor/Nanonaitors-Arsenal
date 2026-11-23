@@ -107,9 +107,7 @@ public final class BallAndChainAnimationHandler {
         WindupState state = WINDUPS.get(player);
         if (state == null || RELEASES.containsKey(player)
             || !(player.getHeldItemMainhand().getItem() instanceof ItemBallAndChain)) return Double.NaN;
-        double age = player.world.getTotalWorldTime() - state.startTick + partialTicks;
-        int interval = ChainWeaponStats.swingIntervalTicks(player, player.getHeldItemMainhand());
-        return age / interval * Math.PI * 2.0D;
+        return rotations(player, state, player.getHeldItemMainhand(), partialTicks) * Math.PI * 2.0D;
     }
 
     /** Throw progress 0..1 (out until 0.5, back after), or -1 when no throw is playing. */
@@ -268,13 +266,10 @@ public final class BallAndChainAnimationHandler {
     private static void renderWindup(EntityPlayer player, WindupState state,
                                      float partialTicks) {
         RenderFrame frame = getFrame(player, partialTicks, player.rotationYaw, 0.0F);
-        double age = player.world.getTotalWorldTime() - state.startTick + partialTicks;
         ItemStack weapon = player.getHeldItemMainhand();
-        int interval = ChainWeaponStats.swingIntervalTicks(player, weapon);
         double reachScale = ChainWeaponStats.ballWindupReach(player, weapon)
             / BallAndChainCombat.WINDUP_REACH;
-        double angle = age / interval
-            * Math.PI * 2.0D;
+        double angle = rotations(player, state, weapon, partialTicks) * Math.PI * 2.0D;
         double distance = (0.75D + Math.cos(angle) * 0.45D) * reachScale;
         double horizontal = Math.sqrt(frame.forwardX * frame.forwardX
             + frame.forwardZ * frame.forwardZ);
@@ -361,9 +356,30 @@ public final class BallAndChainAnimationHandler {
         }
     }
 
+    /**
+     * Turns spun so far. Holding use speeds the spin up (and letting go slows it):
+     * the ball carries on from where it is at the new speed instead of jumping.
+     */
+    private static double rotations(EntityPlayer player, WindupState state, ItemStack weapon, float partialTicks) {
+        int interval = ChainWeaponStats.swingIntervalTicks(player, weapon);
+        long now = player.world.getTotalWorldTime();
+        if (state.interval == 0) {
+            state.interval = interval;
+            state.baseTick = state.startTick;
+        } else if (interval != state.interval) {
+            state.baseRotations += (now - state.baseTick) / (double) state.interval;
+            state.baseTick = now;
+            state.interval = interval;
+        }
+        return state.baseRotations + (now - state.baseTick + partialTicks) / state.interval;
+    }
+
     private static final class WindupState {
         private final long startTick;
         private long endTick;
+        private int interval;
+        private long baseTick;
+        private double baseRotations;
 
         private WindupState(long startTick) {
             this.startTick = startTick;

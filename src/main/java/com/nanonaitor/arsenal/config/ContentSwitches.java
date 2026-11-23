@@ -10,16 +10,15 @@ public final class ContentSwitches {
         return item != null && item.getRegistryName() != null && enabled(item.getRegistryName().getResourcePath());
     }
     public static boolean enabled(String id) {
-        ArsenalConfig.Weapons w = ArsenalConfig.weapons;
-        if (id.startsWith("morning_star")) return w.morningStar;
-        if (id.startsWith("blade_staff")) return w.bladeStaff;
-        if (id.startsWith("scimitar")) return w.scimitar;
-        if (id.startsWith("claws") || id.startsWith("linked_claw")) return w.claws;
-        if (id.startsWith("flail")) return w.flail;
-        if (id.startsWith("battering_ram")) return w.batteringRam;
-        if (id.startsWith("ball_and_chain")) return w.ballAndChain;
-        if (id.startsWith("tartsy_shield")) return w.tartsyShield;
-        if (id.startsWith("sun_war_bulwark")) return w.sunWarBulwark;
+        if (id.startsWith("morning_star")) return ArsenalConfig.morningStar.enabled;
+        if (id.startsWith("blade_staff")) return ArsenalConfig.bladeStaff.enabled;
+        if (id.startsWith("scimitar")) return ArsenalConfig.scimitars.enabled;
+        if (id.startsWith("claws") || id.startsWith("linked_claw")) return ArsenalConfig.claws.enabled;
+        if (id.startsWith("flail")) return ArsenalConfig.flail.enabled;
+        if (id.startsWith("battering_ram")) return ArsenalConfig.batteringRam.enabled;
+        if (id.startsWith("ball_and_chain")) return ArsenalConfig.ballAndChain.enabled;
+        if (id.startsWith("tartsy_shield")) return ArsenalConfig.tartsyShield.enabled;
+        if (id.startsWith("sun_war_bulwark")) return ArsenalConfig.sunWarBulwark.enabled;
         return true;
     }
 

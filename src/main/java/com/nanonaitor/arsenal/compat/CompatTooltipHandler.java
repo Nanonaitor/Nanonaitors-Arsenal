@@ -78,14 +78,51 @@ public final class CompatTooltipHandler {
         }
     }
 
+    private static final String[] ARSENAL_ENCHANTMENTS = {
+        "long_chain", "rotation_force", "recovery", "breeched",
+        "reverso", "luna", "magic_log", "endure"
+    };
+
+    /**
+     * Hovering an item or book shows what each Arsenal enchantment does, right
+     * under the enchantment's name. Knockback on a Ball and Chain or Battering
+     * Ram also explains its extra use there.
+     */
+    @SubscribeEvent(priority = EventPriority.LOW)
+    public static void explainEnchantments(ItemTooltipEvent event) {
+        ItemStack stack = event.getItemStack();
+        Map<Enchantment, Integer> enchantments = EnchantmentHelper.getEnchantments(stack);
+        if (enchantments.isEmpty()) return;
+        java.util.List<String> tip = event.getToolTip();
+        for (Map.Entry<Enchantment, Integer> entry : enchantments.entrySet()) {
+            Enchantment enchantment = entry.getKey();
+            if (enchantment == null || enchantment.getRegistryName() == null) continue;
+            String explanation = null;
+            if (NanonaitorsArsenal.MOD_ID.equals(enchantment.getRegistryName().getResourceDomain())) {
+                String key = "enchantment.nanonaitors_arsenal." + enchantment.getRegistryName().getResourcePath() + ".desc";
+                if (I18n.hasKey(key)) explanation = I18n.format(key);
+            } else if (enchantment == net.minecraft.init.Enchantments.KNOCKBACK) {
+                if (stack.getItem() instanceof com.nanonaitor.arsenal.item.ItemBallAndChain) {
+                    explanation = "Also shoves back melee attackers you guard against.";
+                } else if (stack.getItem() instanceof com.nanonaitor.arsenal.item.ItemBatteringRam) {
+                    explanation = "Adds to the ram's own push, on normal and charge hits.";
+                }
+            }
+            if (explanation == null) continue;
+            String name = TextFormatting.getTextWithoutFormattingCodes(enchantment.getTranslatedName(entry.getValue()));
+            int at = -1;
+            for (int i = 0; i < tip.size(); i++) {
+                if (name != null && name.equals(TextFormatting.getTextWithoutFormattingCodes(tip.get(i)))) { at = i; break; }
+            }
+            String line = (enchantment.isCurse() ? TextFormatting.RED : TextFormatting.DARK_GRAY) + explanation;
+            if (at >= 0) tip.add(at + 1, line);
+        }
+    }
+
     /** Keeps one copy when another tooltip provider adds the same explanation. */
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void deduplicateEnchantmentDescriptions(ItemTooltipEvent event) {
-        String[] keys = {
-            "long_chain", "rotation_force", "recovery", "breeched",
-            "reverso", "luna", "magic_log", "endure"
-        };
-        for (String key : keys) {
+        for (String key : ARSENAL_ENCHANTMENTS) {
             String expected = I18n.format(
                 "enchantment.nanonaitors_arsenal." + key + ".desc");
             boolean found = false;
