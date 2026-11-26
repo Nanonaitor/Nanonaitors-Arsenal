@@ -527,10 +527,29 @@ public final class WeaponPoses {
         return (count % 3 == 0 ? 0.50F : 0.32F) * (float) Math.sin(a * Math.PI);
     }
 
-    /** Battering Ram attack: a quick thrust forward in the first part of the swing, then back. */
-    private static float ramLunge(float a) {
+    /**
+     * Battering Ram attack: a small swing from back to front. The log draws back
+     * past the hip, swings forward through the hit, then settles at the hip.
+     * Returns the arm's X angle (rest is -0.30).
+     */
+    private static float ramSwing(float a) {
+        if (a < 0.0F || !ArsenalConfig.animations.attackSpeedSwings) return -0.30F;
+        if (a < 0.30F) return lerp(-0.30F, 0.12F, smooth(a / 0.30F));
+        if (a < 0.55F) return lerp(0.12F, -0.80F, smooth((a - 0.30F) / 0.25F));
+        return lerp(-0.80F, -0.30F, smooth((a - 0.55F) / 0.45F));
+    }
+
+    /** The torso leans into the ram swing: turned back on the draw, forward on the hit. */
+    private static float ramSwingTwist(float a) {
         if (a < 0.0F || !ArsenalConfig.animations.attackSpeedSwings) return 0.0F;
-        return a < 0.25F ? 0.55F * a / 0.25F : 0.55F * Math.max(0.0F, 1.0F - (a - 0.25F) / 0.45F);
+        if (a < 0.30F) return lerp(0.0F, 0.16F, smooth(a / 0.30F));
+        if (a < 0.55F) return lerp(0.16F, -0.12F, smooth((a - 0.30F) / 0.25F));
+        return lerp(-0.12F, 0.0F, smooth((a - 0.55F) / 0.45F));
+    }
+
+    private static float smooth(float t) {
+        t = t < 0.0F ? 0.0F : t > 1.0F ? 1.0F : t;
+        return t * t * (3.0F - 2.0F * t);
     }
 
     private static float[] mixArm(float[] from, float[] to, float t) {
@@ -564,8 +583,9 @@ public final class WeaponPoses {
             case RAM: {
                 // Carried at the hip, the log pointing forward like a heavy gun (the
                 // "hip" held model). Two-handed, the other hand grips the forward
-                // handle underneath. A normal attack is a short, quick lunge.
-                float x = -0.30F - ramLunge(in.attackPhase) * 0.5F;
+                // handle underneath. A normal attack is a small swing from back to front.
+                float x = ramSwing(in.attackPhase);
+                float twist = in.active ? 0.0F : ramSwingTwist(in.attackPhase);
                 if (in.active) {
                     // Charge: pull back for two ticks, drive forward, then bob with the stride.
                     float t = in.segmentAge;
@@ -581,6 +601,7 @@ public final class WeaponPoses {
                     // The left hand takes the front handle.
                     pose.left(GripMath.leftGrip(right, RAM_HANDLES, RAM_HIP_AXIS, 2.8D, 3.8D, false));
                 }
+                if (twist != 0.0F) pose.bodyY(in.weaponArmLeft ? -twist : twist);
                 return pose;
             }
 

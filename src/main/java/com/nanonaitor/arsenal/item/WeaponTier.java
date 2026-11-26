@@ -37,17 +37,32 @@ public enum WeaponTier {
     LIVING("living", material("ARSENAL_LIVING", 3, 1000, 12F, 11F, 1), 5,
         Family.SRP, "srparasites:infectious_blade_fragment", 3),
     SENTIENT("sentient", material("ARSENAL_SENTIENT", 3, 1000, 14F, 16F, 1), 5,
-        Family.SRP, "srparasites:infectious_blade_fragment", 3);
+        Family.SRP, "srparasites:infectious_blade_fragment", 3),
+
+    // Player-defined materials (config: customMaterials). Unused slots register nothing.
+    CUSTOM_1("custom_1", Item.ToolMaterial.IRON, 4, Family.CUSTOM, "ore:ingotIron", 2),
+    CUSTOM_2("custom_2", Item.ToolMaterial.IRON, 4, Family.CUSTOM, "ore:ingotIron", 2),
+    CUSTOM_3("custom_3", Item.ToolMaterial.IRON, 4, Family.CUSTOM, "ore:ingotIron", 2),
+    CUSTOM_4("custom_4", Item.ToolMaterial.IRON, 4, Family.CUSTOM, "ore:ingotIron", 2),
+    CUSTOM_5("custom_5", Item.ToolMaterial.IRON, 4, Family.CUSTOM, "ore:ingotIron", 2),
+    CUSTOM_6("custom_6", Item.ToolMaterial.IRON, 4, Family.CUSTOM, "ore:ingotIron", 2),
+    CUSTOM_7("custom_7", Item.ToolMaterial.IRON, 4, Family.CUSTOM, "ore:ingotIron", 2),
+    CUSTOM_8("custom_8", Item.ToolMaterial.IRON, 4, Family.CUSTOM, "ore:ingotIron", 2);
 
     public enum Family { VANILLA, SPARTAN, DEFILED, ICE_AND_FIRE, FIRE_DRAGONBONE,
-        ICE_DRAGONBONE, LIGHTNING_DRAGONBONE, DESERT_MYRMEX, JUNGLE_MYRMEX, SRP }
+        ICE_DRAGONBONE, LIGHTNING_DRAGONBONE, DESERT_MYRMEX, JUNGLE_MYRMEX, SRP, CUSTOM }
 
-    private final String id;
-    private final Item.ToolMaterial material;
-    private final int morningStarFractureCap;
+    // Built-in tiers never change these; a custom slot takes them from the config.
+    private String id;
+    private Item.ToolMaterial material;
+    private int morningStarFractureCap;
     private final Family family;
-    private final String repairIngredient;
-    private final int ramBreakLevel;
+    private String repairIngredient;
+    private int ramBreakLevel;
+    private boolean configured;
+    private String displayName;
+    private int color = 0xFFFFFF;
+    private int harvestLevel;
 
     WeaponTier(String id, Item.ToolMaterial material, int fractureCap, Family family,
                String repairIngredient, int ramBreakLevel) {
@@ -62,6 +77,91 @@ public enum WeaponTier {
     }
 
     public String getId() { return id; }
+    public boolean isCustom() { return family == Family.CUSTOM; }
+    /** Built-in tiers always; a custom slot only once a config entry fills it. */
+    public boolean isActive() { return !isCustom() || configured; }
+    /** Custom tiers: the name shown in place of "Iron" (e.g. "Copper"). */
+    public String getDisplayName() { return displayName; }
+    /** Custom tiers: the RGB tint for the weapon's metal parts. */
+    public int getColor() { return color; }
+
+    /**
+     * Fills the custom slots from the config, once, before items are registered.
+     * Entry: id, Display Name, #RRGGBB, repair ingredient, harvest level,
+     * durability, attack damage, enchantability.
+     */
+    public static synchronized void configureCustom(String[] entries) {
+        if (customConfigured) return;
+        customConfigured = true;
+        java.util.Set<String> taken = new java.util.HashSet<>();
+        for (WeaponTier tier : values()) if (!tier.isCustom()) taken.add(tier.id);
+        int slot = 0;
+        WeaponTier[] slots = {CUSTOM_1, CUSTOM_2, CUSTOM_3, CUSTOM_4, CUSTOM_5, CUSTOM_6, CUSTOM_7, CUSTOM_8};
+        for (String entry : entries == null ? new String[0] : entries) {
+            if (entry == null || entry.trim().isEmpty() || entry.trim().startsWith("#")) continue;
+            if (slot >= slots.length) {
+                com.nanonaitor.arsenal.NanonaitorsArsenal.LOGGER.warn("Only {} custom materials are supported; ignoring '{}'", slots.length, entry);
+                continue;
+            }
+            try {
+                CustomSpec spec = CustomSpec.parse(entry);
+                if (!taken.add(spec.id)) throw new IllegalArgumentException("id '" + spec.id + "' is already used");
+                WeaponTier tier = slots[slot++];
+                tier.id = spec.id;
+                tier.displayName = spec.displayName;
+                tier.color = spec.color;
+                tier.repairIngredient = spec.repair;
+                tier.harvestLevel = spec.harvest;
+                tier.ramBreakLevel = Math.min(3, spec.harvest);
+                tier.morningStarFractureCap = Math.min(5, 2 + spec.harvest);
+                tier.material = EnumHelper.addToolMaterial("ARSENAL_CUSTOM_" + spec.id.toUpperCase(java.util.Locale.ROOT),
+                    spec.harvest, spec.durability, 2.0F + 2.0F * spec.harvest, spec.damage, spec.enchantability);
+                tier.configured = true;
+            } catch (IllegalArgumentException bad) {
+                com.nanonaitor.arsenal.NanonaitorsArsenal.LOGGER.warn("Skipping custom material '{}': {}", entry, bad.getMessage());
+            }
+        }
+    }
+
+    private static boolean customConfigured;
+
+    /** One customMaterials entry, validated. */
+    public static final class CustomSpec {
+        public final String id, displayName, repair;
+        public final int color, harvest, durability, enchantability;
+        public final float damage;
+
+        private CustomSpec(String id, String displayName, int color, String repair, int harvest,
+                           int durability, float damage, int enchantability) {
+            this.id = id; this.displayName = displayName; this.color = color; this.repair = repair;
+            this.harvest = harvest; this.durability = durability; this.damage = damage;
+            this.enchantability = enchantability;
+        }
+
+        public static CustomSpec parse(String entry) {
+            String[] p = entry.split(",");
+            if (p.length != 8) throw new IllegalArgumentException("needs 8 comma-separated values, got " + p.length);
+            for (int i = 0; i < p.length; i++) p[i] = p[i].trim();
+            if (!p[0].matches("[a-z0-9_]{1,24}")) throw new IllegalArgumentException("id must be 1-24 of a-z, 0-9, _");
+            if (p[1].isEmpty()) throw new IllegalArgumentException("display name is empty");
+            String hex = p[2].startsWith("#") ? p[2].substring(1) : p[2];
+            if (!hex.matches("[0-9a-fA-F]{6}")) throw new IllegalArgumentException("color must be #RRGGBB");
+            if (!p[3].startsWith("ore:") && !p[3].contains(":")) throw new IllegalArgumentException("repair ingredient must be ore:name or modid:item");
+            try {
+                int harvest = Integer.parseInt(p[4]);
+                int durability = Integer.parseInt(p[5]);
+                float damage = Float.parseFloat(p[6]);
+                int enchantability = Integer.parseInt(p[7]);
+                if (harvest < 0 || harvest > 10) throw new IllegalArgumentException("harvest level must be 0-10");
+                if (durability < 1 || durability > 100000) throw new IllegalArgumentException("durability must be 1-100000");
+                if (!(damage >= 0.0F && damage <= 100.0F)) throw new IllegalArgumentException("attack damage must be 0-100");
+                if (enchantability < 0 || enchantability > 100) throw new IllegalArgumentException("enchantability must be 0-100");
+                return new CustomSpec(p[0], p[1], Integer.parseInt(hex, 16), p[3], harvest, durability, damage, enchantability);
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException("harvest, durability, damage and enchantability must be numbers");
+            }
+        }
+    }
     public Item.ToolMaterial getMaterial() { return material; }
     public int getMorningStarFractureCap() { return morningStarFractureCap; }
     public double getClawAttackDamage() { return (4.0D + material.getAttackDamage()) * 0.5D; }
@@ -78,12 +178,17 @@ public enum WeaponTier {
         || family == Family.LIGHTNING_DRAGONBONE || family == Family.DESERT_MYRMEX
         || family == Family.JUNGLE_MYRMEX || family == Family.SRP; }
     public int getArmorPiercePercent() {
+        if (isCustom()) return harvestLevel <= 0 ? 25 : harvestLevel == 1 ? 50 : harvestLevel == 2 ? 75 : 100;
         if (this == WOOD) return 25;
         if (this == STONE || this == GOLD || this == BRONZE) return 50;
         if (this == IRON || this == SILVER || this == STEEL || this == UMBRIUM) return 75;
         return 100;
     }
     public float getReflectionMultiplier() {
+        if (isCustom()) {
+            return harvestLevel <= 0 ? 0.0F : harvestLevel == 1 ? 0.10F : harvestLevel == 2 ? 0.50F
+                : harvestLevel == 3 ? 0.75F : 1.0F;
+        }
         switch (this) {
             case WOOD: return 0.0F;
             case STONE: return 0.10F;

@@ -81,6 +81,13 @@ public final class ArsenalConfig {
     @Config.Comment("Settings shared by all Arsenal shields.")
     public static Shields shields = new Shields();
 
+    // ---- Custom materials ---------------------------------------------------
+
+    @Config.LangKey("config.nanonaitors_arsenal.customMaterials")
+    @Config.Comment({"Your own weapon materials. Each entry adds that material's version of every enabled weapon,",
+        "crafted like the iron ones with your ingredient, its metal tinted your colour. Up to 8. Restart required."})
+    public static CustomMaterials customMaterials = new CustomMaterials();
+
     // ---- Enchantments -------------------------------------------------------
 
     @Config.LangKey("config.nanonaitors_arsenal.enchantments")
@@ -244,6 +251,16 @@ public final class ArsenalConfig {
     public static final class Shields {
         @Config.Comment("Allow shield-specific enchantments on Arsenal shields (including compatible modded shield types). Unbreaking/Mending remain allowed. Restart recommended.")
         public boolean allowShieldEnchantments = true;
+    }
+
+    public static final class CustomMaterials {
+        @Config.Comment({"One material per line: id, Display Name, #RRGGBB, repair ingredient, harvest level, durability, attack damage, enchantability",
+            "Example: copper, Copper, #D9824B, ore:ingotCopper, 2, 300, 1.5, 14",
+            "id: lowercase letters, digits, _ (used in item IDs: keep it once worlds use it). Display Name replaces \"Iron\" in item names.",
+            "Repair ingredient: ore:oreDictName or modid:item. Harvest level 0-3 like wood-diamond: sets armour piercing, reflection and ram block breaking.",
+            "Durability, attack damage and enchantability work like a vanilla tool material (iron: 2, 250, 2.0, 14). Lines starting with # are ignored."})
+        @Config.RequiresMcRestart
+        public String[] materials = {};
     }
 
     public static final class Enchantments {

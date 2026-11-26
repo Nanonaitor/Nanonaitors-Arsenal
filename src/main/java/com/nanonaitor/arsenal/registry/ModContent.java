@@ -93,7 +93,9 @@ public final class ModContent {
         SUN_WAR_BULWARK = new ItemSunWarBulwark();
         TARTSY_SHIELD = new ItemTartsyShield();
         event.getRegistry().registerAll(SUN_WAR_BULWARK, TARTSY_SHIELD);
+        WeaponTier.configureCustom(com.nanonaitor.arsenal.config.ArsenalConfig.customMaterials.materials);
         for (WeaponTier tier : WeaponTier.values()) {
+            if (!tier.isActive()) continue;
             ItemMorningStar morningStar = new ItemMorningStar(tier);
             ItemScimitar scimitar = new ItemScimitar(tier);
             ItemClaws claws = new ItemClaws(tier);
@@ -133,7 +135,7 @@ public final class ModContent {
             String tierId = key.getResourcePath()
                 .substring(LEGACY_BLADE_STAFF_PREFIX.length());
             for (WeaponTier tier : WeaponTier.values()) {
-                if (!tier.getId().equals(tierId)) continue;
+                if (!tier.isActive() || !tier.getId().equals(tierId)) continue;
                 Item replacement = DOUBLE_BLADED_SCIMITARS.get(tier);
                 if (replacement != null) mapping.remap(replacement);
                 break;
@@ -252,14 +254,21 @@ public final class ModContent {
             if (linked != null) {
                 ModelLoader.setCustomModelResourceLocation(linked, 0,
                     new ModelResourceLocation(NanonaitorsArsenal.MOD_ID
-                        + ":claws_" + tier.getId(), "inventory"));
+                        + ":claws_" + (tier.isCustom() ? "custom" : tier.getId()), "inventory"));
             }
         }
     }
 
     @SideOnly(Side.CLIENT)
     private static void registerModel(Item item) {
+        // Custom materials share one tinted model per weapon (the *_custom models).
+        String path = item.getRegistryName().getResourcePath();
+        if (item instanceof com.nanonaitor.arsenal.item.ItemArsenalWeapon
+            && ((com.nanonaitor.arsenal.item.ItemArsenalWeapon) item).getTier().isCustom()) {
+            WeaponTier tier = ((com.nanonaitor.arsenal.item.ItemArsenalWeapon) item).getTier();
+            path = path.substring(0, path.length() - tier.getId().length()) + "custom";
+        }
         ModelLoader.setCustomModelResourceLocation(item, 0,
-            new ModelResourceLocation(item.getRegistryName(), "inventory"));
+            new ModelResourceLocation(NanonaitorsArsenal.MOD_ID + ":" + path, "inventory"));
     }
 }

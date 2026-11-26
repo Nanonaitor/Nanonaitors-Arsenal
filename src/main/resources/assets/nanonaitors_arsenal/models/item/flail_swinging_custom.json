@@ -1,0 +1,7 @@
+{
+  "parent": "nanonaitors_arsenal:item/flail_swinging_hidden",
+  "textures": {
+    "layer0": "nanonaitors_arsenal:items/flail_swinging_custom_base",
+    "layer1": "nanonaitors_arsenal:items/flail_swinging_custom_metal"
+  }
+}

@@ -50,6 +50,17 @@ public abstract class ItemArsenalWeapon extends ItemSword {
         setCreativeTab(NanonaitorsArsenal.CREATIVE_TAB);
     }
 
+    /** Custom materials have no lang entry: take the iron name and swap the material. */
+    @Override
+    @SuppressWarnings("deprecation")
+    public String getItemStackDisplayName(ItemStack stack) {
+        if (!tier.isCustom()) return super.getItemStackDisplayName(stack);
+        String key = getUnlocalizedName().substring(0, getUnlocalizedName().length() - tier.getId().length()) + "iron.name";
+        String iron = net.minecraft.util.text.translation.I18n.translateToLocal(key);
+        return iron.equals(key) ? tier.getDisplayName() + " " + getUnlocalizedName()
+            : iron.replace("Iron", tier.getDisplayName());
+    }
+
     public final WeaponTier getTier() {
         return tier;
     }

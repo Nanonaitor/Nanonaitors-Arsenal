@@ -379,6 +379,12 @@ public final class BallAndChainCombat {
             }
         }
         if (hit) playAttackSound(player, true, (returning ? 0.66F : 0.72F) + state.charge * 0.10F);
+        if (hit && !returning && !state.shook && isFullCharge(state)) {
+            // A full-charge hit lands heavily: one short jolt of the thrower's camera.
+            state.shook = true;
+            ModNetwork.CHANNEL.sendTo(new com.nanonaitor.arsenal.network.ArsenalFxMessage(
+                com.nanonaitor.arsenal.network.ArsenalFxMessage.SHAKE, player.getEntityId(), 60), player);
+        }
     }
 
     private static boolean applyHit(EntityPlayerMP player, EntityLivingBase target,
@@ -447,8 +453,10 @@ public final class BallAndChainCombat {
             projectile.setDead();
             player.getServerWorld().spawnParticle(net.minecraft.util.EnumParticleTypes.CRIT,
                 current.x, current.y, current.z, 10, 0.15D, 0.15D, 0.15D, 0.25D);
+            // The same crack as an armour-piercing hit, a little lighter.
             player.world.playSound(null, current.x, current.y, current.z,
-                SoundEvents.ENTITY_ITEM_BREAK, player.getSoundCategory(), 0.9F, 0.75F);
+                com.nanonaitor.arsenal.registry.ModSounds.BALL_CHAIN_ARMOR_PIERCE, player.getSoundCategory(),
+                0.8F, 1.1F + player.getRNG().nextFloat() * 0.15F);
         }
     }
 
@@ -646,6 +654,8 @@ public final class BallAndChainCombat {
         /** Where the ball meets a block (null when the path is clear); played once on arrival. */
         private Vec3d crashAt;
         private boolean crashed;
+        /** The full-charge impact jolt plays once per throw. */
+        private boolean shook;
         private final java.util.Set<Integer> hitOutbound = new java.util.HashSet<>();
         private final java.util.Set<Integer> hitReturning = new java.util.HashSet<>();
 

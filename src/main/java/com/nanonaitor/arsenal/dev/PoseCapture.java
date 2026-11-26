@@ -142,7 +142,40 @@ public final class PoseCapture {
         });
     }
 
+    private static boolean focus(String round) {
+        try {
+            return new String(java.nio.file.Files.readAllBytes(new File(Minecraft.getMinecraft().mcDataDir, MARKER).toPath()),
+                java.nio.charset.StandardCharsets.UTF_8).contains(round);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /** Ram swing and custom materials ("copper" and "amethyst" must be in the test config). */
+    private static void buildRound12() {
+        String ram = NanonaitorsArsenal.MOD_ID + ":battering_ram_iron";
+        for (float phase : new float[] {0.15F, 0.3F, 0.45F, 0.6F, 0.8F}) {
+            add("round12", "ram swing " + Math.round(phase * 100) + "%", ram, null,
+                in -> { in.active = false; in.attackPhase = phase; });
+        }
+        String m = NanonaitorsArsenal.MOD_ID + ":";
+        for (String tier : new String[] {"copper", "amethyst"}) {
+            add("round12", tier + " morning star + scimitar", m + "morning_star_" + tier, m + "scimitar_" + tier, in -> {});
+            add("round12", tier + " ball wind-up", m + "ball_and_chain_" + tier, null, in -> in.active = false)
+                .live = p -> com.nanonaitor.arsenal.client.BallAndChainAnimationHandler.debugWindup(p, Math.PI / 2.0D);
+            add("round12", tier + " flail spin", m + "flail_" + tier, null, in -> {})
+                .live = p -> com.nanonaitor.arsenal.client.FlailAnimationHandler.debugOrbit(p, Math.PI / 2.0D);
+            add("round12", tier + " ram + claws", m + "battering_ram_" + tier, null, in -> in.active = false);
+            add("round12", tier + " claws pair", m + "claws_" + tier, m + "linked_claw_" + tier, in -> in.attackPhase = -1);
+            add("round12", tier + " blade staff", m + "blade_staff_" + tier, null, in -> { in.active = false; in.attackPhase = -1; });
+        }
+    }
+
     private static void buildShots() {
+        if (focus("r12")) {
+            buildRound12();
+            return;
+        }
         if (focusRound11()) {
             buildRound11();
             return;

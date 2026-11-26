@@ -58,6 +58,12 @@ public final class ModRecipes {
     public static void registerLateOreRecipes() {
         finalPass = true;
         for (WeaponTier tier : ORE_TIERS) registerFamily(ForgeRegistries.RECIPES, tier, false);
+        // Custom materials: crafted like the other material tiers, once every mod's ore entries exist.
+        for (WeaponTier tier : WeaponTier.values()) {
+            if (tier.isCustom() && ArsenalCompatManager.isTierAvailable(tier)) {
+                registerFamily(ForgeRegistries.RECIPES, tier, false);
+            }
+        }
     }
 
     private static void registerOnce(IForgeRegistry<IRecipe> registry, IRecipe recipe) {
@@ -94,6 +100,14 @@ public final class ModRecipes {
     }
     private static Object blockIngredient(WeaponTier t) {
         String id = t.getId();
+        if (t.isCustom()) {
+            // ore:ingotX / ore:gemX -> blockX when it exists, otherwise the material itself.
+            String repair = t.getRepairIngredient();
+            String suffix = repair.startsWith("ore:ingot") ? repair.substring(9)
+                : repair.startsWith("ore:gem") ? repair.substring(7) : null;
+            if (suffix != null && ArsenalCompatManager.hasOre("block" + suffix)) return "block" + suffix;
+            return ingredient(repair);
+        }
         if (id.contains("dragonbone")) {
             ItemStack dragonboneBlock = ArsenalCompatManager.itemStack("iceandfire:dragon_bone_block");
             return dragonboneBlock.isEmpty() ? null : dragonboneBlock;

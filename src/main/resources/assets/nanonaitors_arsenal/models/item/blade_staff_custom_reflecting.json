@@ -1,0 +1,7 @@
+{
+  "parent": "nanonaitors_arsenal:item/blade_staff_reflecting",
+  "textures": {
+    "layer0": "nanonaitors_arsenal:items/blade_staff_custom_spin_base",
+    "layer1": "nanonaitors_arsenal:items/blade_staff_custom_spin_metal"
+  }
+}

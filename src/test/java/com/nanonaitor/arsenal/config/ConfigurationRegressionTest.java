@@ -50,6 +50,18 @@ public final class ConfigurationRegressionTest {
                             check(EffectSpec.parse(entry,200,1)!=null);
             }
         } catch(ReflectiveOperationException exception) { throw new AssertionError(exception); }
+        // Custom material lines: valid ones parse, bad ones are rejected with a reason.
+        com.nanonaitor.arsenal.item.WeaponTier.CustomSpec copper=com.nanonaitor.arsenal.item.WeaponTier.CustomSpec
+            .parse(" copper, Copper, #D9824B, ore:ingotCopper, 2, 300, 1.5, 14 ");
+        check(copper.id.equals("copper") && copper.color==0xD9824B && copper.harvest==2 && copper.durability==300
+            && copper.damage==1.5F && copper.enchantability==14 && copper.repair.equals("ore:ingotCopper"));
+        for(String bad:new String[]{"copper, Copper, #D9824B", "Copper!, Copper, #D9824B, ore:ingotCopper, 2, 300, 1.5, 14",
+            "copper, Copper, orange, ore:ingotCopper, 2, 300, 1.5, 14", "copper, Copper, #D9824B, ingotCopper, 2, 300, 1.5, 14",
+            "copper, Copper, #D9824B, ore:ingotCopper, two, 300, 1.5, 14", "copper, Copper, #D9824B, ore:ingotCopper, 2, 0, 1.5, 14"}) {
+            boolean rejected=false;
+            try { com.nanonaitor.arsenal.item.WeaponTier.CustomSpec.parse(bad); } catch(IllegalArgumentException expected){rejected=true;}
+            check(rejected);
+        }
         System.out.println("Passed "+checks+" effect/charge regression checks");
     }
 }

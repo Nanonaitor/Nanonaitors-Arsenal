@@ -35,6 +35,8 @@ public final class ArsenalCompatManager {
             case DESERT_MYRMEX: return hasItem("iceandfire:myrmex_desert_chitin");
             case JUNGLE_MYRMEX: return hasItem("iceandfire:myrmex_jungle_chitin");
             case SRP: return Loader.isModLoaded("srparasites") && hasItem("srparasites:living_core");
+            case CUSTOM: return tier.isActive() && (tier.getRepairIngredient().startsWith("ore:")
+                ? hasOre(tier.getRepairIngredient().substring(4)) : hasItem(tier.getRepairIngredient()));
             default: return false;
         }
     }

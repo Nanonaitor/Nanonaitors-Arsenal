@@ -1,0 +1,77 @@
+{
+  "ambientocclusion": false,
+  "textures": {
+    "particle": "nanonaitors_arsenal:items/flail_spikeball_custom",
+    "spikeball": "nanonaitors_arsenal:items/flail_spikeball_custom"
+  },
+  "elements": [
+    {
+      "from": [
+        -4,
+        -4,
+        7.25
+      ],
+      "to": [
+        20,
+        20,
+        8.75
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#spikeball",
+          "tintindex": 1
+        },
+        "south": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#spikeball",
+          "tintindex": 1
+        }
+      }
+    },
+    {
+      "from": [
+        7.25,
+        -4,
+        -4
+      ],
+      "to": [
+        8.75,
+        20,
+        20
+      ],
+      "faces": {
+        "west": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#spikeball",
+          "tintindex": 1
+        },
+        "east": {
+          "uv": [
+            0,
+            0,
+            16,
+            16
+          ],
+          "texture": "#spikeball",
+          "tintindex": 1
+        }
+      }
+    }
+  ]
+}

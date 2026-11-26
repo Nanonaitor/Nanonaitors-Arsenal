@@ -28,6 +28,7 @@ public final class ArsenalJeiPlugin implements IModPlugin {
             blacklist.addIngredientToBlacklist(new ItemStack(linkedClaw));
         }
         for (WeaponTier tier : WeaponTier.values()) {
+            if (!tier.isActive()) continue;
             hideIfDisabled(blacklist, ModContent.MORNING_STARS.get(tier));
             hideIfDisabled(blacklist, ModContent.SCIMITARS.get(tier));
             hideIfDisabled(blacklist, ModContent.DOUBLE_BLADED_SCIMITARS.get(tier));
@@ -52,7 +53,7 @@ public final class ArsenalJeiPlugin implements IModPlugin {
             blacklist.addIngredientToBlacklist(new ItemStack(ModContent.IRON_CHAIN_ITEM));
         }
         for (WeaponTier tier : WeaponTier.values()) {
-            if (ArsenalCompatManager.isTierAvailable(tier)) continue;
+            if (!tier.isActive() || ArsenalCompatManager.isTierAvailable(tier)) continue;
             for (net.minecraft.item.Item item : new net.minecraft.item.Item[]{
                 ModContent.MORNING_STARS.get(tier), ModContent.SCIMITARS.get(tier),
                 ModContent.CLAWS.get(tier), ModContent.FLAILS.get(tier),

@@ -1,4 +1,4 @@
-# Arsenal 1.12.2 configuration (2.0.27)
+# Arsenal 1.12.2 configuration (2.0.28)
 
 File: `<Minecraft profile>/config/nanonaitors_arsenal.cfg`.
 In game: **Mods → Nanonaitor's Arsenal → Config**. Settings are grouped by
@@ -109,6 +109,34 @@ These only change what a player sees and hears; each player can set their own.
 
 Attribute/quality reach bonuses and Long Chain still add to these values.
 Ball throws use base-per-charge × effective charge, then add bonuses.
+
+## Custom materials
+
+Add your own weapon materials in **customMaterials → materials** (in game: Mods →
+Nanonaitor's Arsenal → Config → Custom Materials), then restart. Each line adds
+that material's version of every enabled weapon, crafted like the other material
+tiers with your ingredient (the Battering Ram and Ball and Chain use its block when
+one exists), with the metal tinted your colour. Up to 8 lines.
+
+```text
+custommaterials {
+    S:materials <
+        copper, Copper, #D9824B, ore:ingotCopper, 2, 300, 1.5, 14
+     >
+}
+```
+
+| Field | Meaning |
+| --- | --- |
+| id | Lowercase letters, digits and `_`. Becomes part of item IDs (`morning_star_copper`), so keep it once a world uses it. |
+| Display Name | Replaces "Iron" in item names ("Copper Morning Star"). |
+| #RRGGBB | Tint for the metal parts; handles, logs and tendons keep their colours. |
+| repair ingredient | `ore:oreDictName` or `modid:item`. The material only appears when it exists. |
+| harvest level | 0-3 like wood to diamond (4+ allowed): sets armour piercing, Blade Staff reflection and which blocks the ram breaks. |
+| durability, attack damage, enchantability | Like a vanilla tool material (iron: 250, 2.0, 14). |
+
+Invalid lines are skipped with a log warning naming the problem. Removing a line
+later leaves that material's items unknown in worlds that have them.
 
 ## Enchantments
 
