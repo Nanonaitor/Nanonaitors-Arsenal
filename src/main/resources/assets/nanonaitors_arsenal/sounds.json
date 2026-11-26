@@ -65,5 +65,14 @@
         "type": "event"
       }
     ]
+  },
+  "ball_chain.armor_pierce": {
+    "subtitle": "subtitles.nanonaitors_arsenal.ball_chain.armor_pierce",
+    "sounds": [
+      "nanonaitors_arsenal:ball_chain_armor_pierce1",
+      "nanonaitors_arsenal:ball_chain_armor_pierce2",
+      "nanonaitors_arsenal:ball_chain_armor_pierce3",
+      "nanonaitors_arsenal:ball_chain_armor_pierce4"
+    ]
   }
 }

@@ -4,7 +4,15 @@
   "package": "com.nanonaitor.arsenal.mixin",
   "compatibilityLevel": "JAVA_17",
   "refmap": "arsenal.refmap.json",
-  "mixins": ["LivingDamageAccessor"],
-  "client": ["AbilityPoseMixin"],
-  "injectors": {"defaultRequire": 1}
+  "mixins": [
+    "DragonforgeCarryOverMixin",
+    "LivingDamageAccessor"
+  ],
+  "client": [
+    "AbilityPoseMixin",
+    "SwingTimingMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
 }

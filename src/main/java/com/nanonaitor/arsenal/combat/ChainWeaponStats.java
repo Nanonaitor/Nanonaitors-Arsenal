@@ -10,20 +10,20 @@ import net.minecraft.world.item.ItemStack;
 
 public final class ChainWeaponStats {
     public static double flailReach(LivingEntity owner, ItemStack stack) {
-        return Math.max(1.0D, com.nanonaitor.arsenal.config.ArsenalConfig.FLAIL_REACH.get() + attributeReachBonus(owner) + longChainBonus(owner, stack));
+        return Math.max(1.0D, com.nanonaitor.arsenal.config.SyncedConfig.get("flailReach", com.nanonaitor.arsenal.config.ArsenalConfig.FLAIL_REACH) + attributeReachBonus(owner) + longChainBonus(owner, stack));
     }
 
     /** Long Chain expands the horizontal orbit only, never the vertical hitbox. */
     public static double flailVerticalReach(LivingEntity owner) {
-        return Math.max(1.0D, com.nanonaitor.arsenal.config.ArsenalConfig.FLAIL_REACH.get() + attributeReachBonus(owner));
+        return Math.max(1.0D, com.nanonaitor.arsenal.config.SyncedConfig.get("flailReach", com.nanonaitor.arsenal.config.ArsenalConfig.FLAIL_REACH) + attributeReachBonus(owner));
     }
 
     public static double ballWindupReach(LivingEntity owner, ItemStack stack) {
-        return Math.max(1.0D, com.nanonaitor.arsenal.config.ArsenalConfig.BALL_WINDUP_REACH.get() + attributeReachBonus(owner) + longChainBonus(owner, stack));
+        return Math.max(1.0D, com.nanonaitor.arsenal.config.SyncedConfig.get("ballWindupReach", com.nanonaitor.arsenal.config.ArsenalConfig.BALL_WINDUP_REACH) + attributeReachBonus(owner) + longChainBonus(owner, stack));
     }
 
     public static double ballThrowReach(LivingEntity owner, ItemStack stack, int effectiveCharge) {
-        return Math.max(1.0D, effectiveCharge * com.nanonaitor.arsenal.config.ArsenalConfig.FLAIL_REACH.get() + attributeReachBonus(owner)
+        return Math.max(1.0D, effectiveCharge * com.nanonaitor.arsenal.config.SyncedConfig.get("ballThrowReach", com.nanonaitor.arsenal.config.ArsenalConfig.BALL_THROW_REACH) + attributeReachBonus(owner)
             + longChainBonus(owner, stack));
     }
 

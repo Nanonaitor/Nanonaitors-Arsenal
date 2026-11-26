@@ -266,5 +266,112 @@ public final class PortedRulesGameTests {
         h.succeed();
     }
 
+    @GameTest(template = "empty", templateNamespace = "forge")
+    public static void segmentDistanceMath(GameTestHelper h) {
+        Vec3 o = Vec3.ZERO;
+        h.assertTrue(Math.abs(CombatEvents.segmentDistanceSqr(o, new Vec3(0, 0, 4), new Vec3(-2, 0, 2), new Vec3(2, 0, 2))) < 1e-9,
+            "Crossing segments touch");
+        h.assertTrue(Math.abs(CombatEvents.segmentDistanceSqr(o, new Vec3(0, 0, 4), new Vec3(1, 0, 0), new Vec3(1, 0, 4)) - 1) < 1e-9,
+            "Parallel segments one block apart");
+        h.assertTrue(Math.abs(CombatEvents.segmentDistanceSqr(o, new Vec3(0, 0, 4), new Vec3(0, 3, 6), new Vec3(0, 3, 6)) - 13) < 1e-9,
+            "Point beyond the end measures to the end");
+        h.succeed();
+    }
+
+    @GameTest(template = "empty", templateNamespace = "forge", timeoutTicks = 120)
+    public static void thrownBallSmashesProjectiles(GameTestHelper h) {
+        var p = player(h, "BallSmash");
+        p.setItemSlot(EquipmentSlot.MAINHAND, weapon(WeaponKind.BALL_AND_CHAIN, WeaponTier.IRON));
+        // Two slow arrows hanging in the throw's path: one from a mob, one the wielder's own.
+        var foreign = h.spawn(EntityType.ARROW, new Vec3(1.5, 2.0, 3.5));
+        var own = h.spawn(EntityType.ARROW, new Vec3(1.7, 2.0, 3.5));
+        own.setOwner(p);
+        for (var arrow : new net.minecraft.world.entity.projectile.Arrow[] {foreign, own}) {
+            arrow.setNoGravity(true);
+            arrow.setDeltaMovement(0.0D, 0.0D, 0.06D);
+        }
+        var tick = new net.minecraftforge.event.TickEvent.PlayerTickEvent(net.minecraftforge.event.TickEvent.Phase.END, p);
+        CombatEvents.handleControl(p, ModNetwork.BALL_CHAIN, true);
+        CombatEvents.onPlayerTick(tick);
+        CombatEvents.handleControl(p, ModNetwork.BALL_CHAIN, false);
+        h.onEachTick(() -> CombatEvents.onPlayerTick(tick));
+        h.runAfterDelay(60, () -> {
+            h.assertTrue(!foreign.isAlive(), "The thrown ball smashes a projectile in its path");
+            h.assertTrue(own.isAlive(), "The wielder's own projectiles are left alone");
+            h.succeed();
+        });
+    }
+
+    @GameTest(template = "empty", templateNamespace = "forge")
+    public static void windUpGuardsWithEmptyOffhand(GameTestHelper h) {
+        var p = player(h, "WindUpGuard");
+        p.setItemSlot(EquipmentSlot.MAINHAND, weapon(WeaponKind.BALL_AND_CHAIN, WeaponTier.IRON));
+        var attacker = dummy(h, 2);
+        var tick = new net.minecraftforge.event.TickEvent.PlayerTickEvent(net.minecraftforge.event.TickEvent.Phase.END, p);
+        CombatEvents.handleControl(p, ModNetwork.BALL_CHAIN, true);
+        CombatEvents.onPlayerTick(tick);
+        h.assertTrue(CombatEvents.ballWindupGuards(p), "Winding up with an empty offhand guards");
+        h.assertTrue(CombatEvents.onLivingAttack(new LivingAttackEvent(p, p.damageSources().mobAttack(attacker), 4)),
+            "A hit from the front is blocked during the wind-up");
+        var behind = h.spawn(EntityType.ZOMBIE, new BlockPos(1, 1, 0));
+        h.assertTrue(!CombatEvents.onLivingAttack(new LivingAttackEvent(p, p.damageSources().mobAttack(behind), 4)),
+            "A hit from behind is not");
+        p.setItemSlot(EquipmentSlot.OFFHAND, new ItemStack(Items.TORCH));
+        h.assertTrue(!CombatEvents.ballWindupGuards(p), "An occupied offhand gives no wind-up guard");
+        h.succeed();
+    }
+
+    @GameTest(template = "empty", templateNamespace = "forge", timeoutTicks = 60)
+    public static void electricChainLightningHops(GameTestHelper h) {
+        var p = player(h, "ChainLightning");
+        var blade = weapon(WeaponKind.SCIMITAR, WeaponTier.ELECTRIC_DRAGONBONE);
+        p.setItemSlot(EquipmentSlot.MAINHAND, blade);
+        var first = dummy(h, 2);
+        var second = h.spawn(EntityType.ZOMBIE, new BlockPos(3, 1, 2));
+        var third = h.spawn(EntityType.ZOMBIE, new BlockPos(5, 1, 2));
+        for (var z : new net.minecraft.world.entity.monster.Zombie[] {second, third}) {
+            z.setNoAi(true);
+            z.getAttribute(Attributes.MAX_HEALTH).setBaseValue(100);
+            z.setHealth(100);
+        }
+        var hops = ChainLightning.strike(p, first);
+        h.assertTrue(hops.size() == 3 && hops.get(0) == first && hops.get(1) == second && hops.get(2) == third,
+            "Lightning hops from the target to the nearest enemies in turn: " + hops.size());
+        h.assertTrue(Math.abs(first.getHealth() - 95) < .01F && Math.abs(second.getHealth() - 96) < .01F
+            && Math.abs(third.getHealth() - 97) < .01F, "5, 4, 3 damage per hop, through armor: "
+                + first.getHealth() + " " + second.getHealth() + " " + third.getHealth());
+        h.assertTrue(p.getHealth() == p.getMaxHealth(), "The wielder is never struck");
+        h.succeed();
+    }
+
+    @GameTest(template = "empty", templateNamespace = "forge")
+    public static void dragonforgeKeepsWeaponData(GameTestHelper h) {
+        if (!net.minecraftforge.fml.ModList.get().isLoaded("iceandfire")) { h.succeed(); return; }
+        var core = net.minecraftforge.registries.ForgeRegistries.BLOCKS.getValue(
+            new net.minecraft.resources.ResourceLocation("iceandfire", "dragonforge_fire_core"));
+        h.setBlock(new BlockPos(1, 1, 1), core);
+        var forge = (net.minecraft.world.Container)h.getBlockEntity(new BlockPos(1, 1, 1));
+        var claws = weapon(WeaponKind.CLAWS, WeaponTier.DRAGONBONE);
+        claws.setHoverName(Component.literal("Old Friend"));
+        claws.enchant(Enchantments.SHARPNESS, 3);
+        claws.setDamageValue(claws.getMaxDamage() / 2);
+        forge.setItem(0, claws);
+        forge.setItem(1, new ItemStack(net.minecraftforge.registries.ForgeRegistries.ITEMS.getValue(
+            new net.minecraft.resources.ResourceLocation("iceandfire", "fire_dragon_blood"))));
+        try {
+            forge.getClass().getMethod("smeltItem").invoke(forge);
+        } catch (ReflectiveOperationException error) {
+            throw new IllegalStateException(error);
+        }
+        ItemStack out = forge.getItem(2);
+        h.assertTrue(out.getItem() == ModItems.get(WeaponKind.CLAWS, WeaponTier.FLAMED_DRAGONBONE).get(),
+            "The Dragonforge upgrades the claws: " + out);
+        h.assertTrue(out.getHoverName().getString().equals("Old Friend"), "Name kept");
+        h.assertTrue(net.minecraft.world.item.enchantment.EnchantmentHelper.getItemEnchantmentLevel(Enchantments.SHARPNESS, out) == 3,
+            "Enchantments kept");
+        h.assertTrue(Math.abs((float)out.getDamageValue() / out.getMaxDamage() - 0.5F) < 0.01F, "Proportional wear kept");
+        h.succeed();
+    }
+
     private PortedRulesGameTests() {}
 }

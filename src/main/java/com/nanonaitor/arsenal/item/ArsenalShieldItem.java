@@ -39,7 +39,7 @@ public final class ArsenalShieldItem extends ShieldItem {
             new net.minecraft.world.entity.ai.attributes.AttributeModifier(BASE_ATTACK_SPEED_UUID,"Bulwark cooldown",-3.75D,net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADDITION));
     }
     @Override public boolean canApplyAtEnchantingTable(ItemStack stack,net.minecraft.world.item.enchantment.Enchantment enchantment){
-        if(!com.nanonaitor.arsenal.config.ArsenalConfig.SHIELD_ENCHANTMENTS.get())
+        if(!com.nanonaitor.arsenal.config.SyncedConfig.get("shieldEnchantments", com.nanonaitor.arsenal.config.ArsenalConfig.SHIELD_ENCHANTMENTS))
             return enchantment==net.minecraft.world.item.enchantment.Enchantments.UNBREAKING || enchantment==net.minecraft.world.item.enchantment.Enchantments.MENDING;
         if(enchantment==net.minecraft.world.item.enchantment.Enchantments.THORNS)return true;
         return super.canApplyAtEnchantingTable(stack,enchantment);

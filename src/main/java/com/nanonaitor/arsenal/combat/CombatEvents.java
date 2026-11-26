@@ -154,10 +154,10 @@ public final class CombatEvents {
             && shield.shieldType() == ArsenalShieldItem.Type.SUN_WAR
             && otherHandEmpty(player, active) && sunWarBlocks(source)) {
             blocked = true;
-        } else if (active.getItem() instanceof ArsenalWeaponItem weapon
-            && weapon.kind() == WeaponKind.BALL_AND_CHAIN
-            && ballGuarding(player) && directedShieldBlocks(player, source)) {
+        } else if ((ballGuarding(player) || ballWindupGuards(player)) && directedShieldBlocks(player, source)) {
+            // The crouch guard, and the whole wind-up with an empty offhand.
             blocked = true;
+            active = player.getMainHandItem();
         } else if (active.getItem() instanceof ArsenalWeaponItem weapon
             && weapon.kind() == WeaponKind.SCIMITAR && ParityRules.guarding(player)
             && directedShieldBlocks(player, source)) {
@@ -212,6 +212,14 @@ public final class CombatEvents {
             && player.getMainHandItem().getItem() instanceof ArsenalWeaponItem weapon
             && weapon.kind() == WeaponKind.BALL_AND_CHAIN && player.getOffhandItem().isEmpty()
             && player.isShiftKeyDown() && !BALLS.containsKey(player.getUUID());
+    }
+
+    /** The spinning ball shields the wielder through the whole wind-up (empty offhand only). */
+    public static boolean ballWindupGuards(Player player) {
+        BallState state = BALLS.get(player.getUUID());
+        return state != null && !state.releasing && player.getOffhandItem().isEmpty()
+            && player.getMainHandItem().getItem() instanceof ArsenalWeaponItem weapon
+            && weapon.kind() == WeaponKind.BALL_AND_CHAIN;
     }
 
     /** Push strength for a Knockback level on the Ball and Chain guard (0 = none). */
@@ -909,7 +917,7 @@ public final class CombatEvents {
 
     public static int morningStarChargeTicks(ItemStack stack, Player player) {
         int luna=ModEnchantments.level(player,stack,ModEnchantments.LUNA);
-        return Math.max(1, (int)Math.ceil(ArsenalConfig.MORNING_STAR_CHARGE_SECONDS.get() * 20.0D * (1.0D-.25D*luna)));
+        return Math.max(1, (int)Math.ceil(com.nanonaitor.arsenal.config.SyncedConfig.get("morningStarSeconds", ArsenalConfig.MORNING_STAR_CHARGE_SECONDS) * 20.0D * (1.0D-.25D*luna)));
     }
 
     private static void morningStarControl(ServerPlayer player, boolean active) {
@@ -1246,6 +1254,7 @@ public final class CombatEvents {
         // ball travelled this tick, outbound first, then on the way back.
         Vec3 ball = BallPath.origin(player).add(state.direction.scale(BallPath.travel(state.distance, progress)));
         hitAlongPath(player, state, state.lastBall, ball, age * 2L > state.releaseDuration);
+        smashProjectiles(player, state.lastBall, ball);
         state.lastBall = ball;
         if (age * 2L >= state.releaseDuration && !state.returned) {
             state.returned = true;
@@ -1291,7 +1300,10 @@ public final class CombatEvents {
             target.knockback(finalKnockback, -push.x, -push.z);
             EnchantmentBridge.doPostAttackEffectsWithItemSource(level, target, source, weapon);
             weapon.hurtAndBreak(1, player, e -> e.broadcastBreakEvent(EquipmentSlot.MAINHAND));
-            if (full && !returning) fractureArmor(target, tier);
+            if (full && !returning) {
+                fractureArmor(target, tier);
+                armorCrack(player, target);
+            }
             level.playSound(null, target.blockPosition(), SoundEvents.PLAYER_ATTACK_STRONG,
                 SoundSource.PLAYERS, 1.0F, 0.78F);
         }
@@ -1317,6 +1329,66 @@ public final class CombatEvents {
         level.sendParticles(ParticleTypes.FIREWORK, at.x, at.y, at.z, 6 + state.charge * 3, 0.1D, 0.1D, 0.1D, 0.12D);
         level.sendParticles(ParticleTypes.POOF, at.x, at.y, at.z, 2 + state.charge, 0.1D, 0.1D, 0.1D, 0.02D);
     }
+
+    /** A full-charge hit: an armour crack and the Armor Fracture icon over the target. */
+    private static void armorCrack(ServerPlayer player, LivingEntity target) {
+        player.level().playSound(null, target.getX(), target.getY(0.5D), target.getZ(),
+            ModSounds.BALL_CHAIN_ARMOR_PIERCE.get(), SoundSource.PLAYERS,
+            1.0F, 0.9F + player.getRandom().nextFloat() * 0.2F);
+        ModNetwork.armorBreakIcon(target, 5);
+    }
+
+    /** Projectile smash reach around the ball's path, plus half the projectile's width. */
+    public static final double PROJECTILE_SMASH_RADIUS = 0.9D;
+
+    /**
+     * Destroys projectiles the thrown ball runs into, outbound or returning.
+     * Each tick compares the ball's path this tick with each projectile's path
+     * this tick, so fast arrows cannot slip between two ticks.
+     */
+    private static void smashProjectiles(ServerPlayer player, Vec3 from, Vec3 to) {
+        ServerLevel level = (ServerLevel)player.level();
+        // Grown generously: an arrow can move about 3 blocks in one tick.
+        AABB search = new AABB(from, to).inflate(4.0D);
+        for (var projectile : level.getEntitiesOfClass(net.minecraft.world.entity.projectile.Projectile.class,
+                search, p -> smashable(player, p))) {
+            double centre = projectile.getBbHeight() * 0.5D;
+            Vec3 previous = new Vec3(projectile.xo, projectile.yo + centre, projectile.zo);
+            Vec3 current = new Vec3(projectile.getX(), projectile.getY() + centre, projectile.getZ());
+            double reach = PROJECTILE_SMASH_RADIUS + projectile.getBbWidth() * 0.5D;
+            if (segmentDistanceSqr(from, to, previous, current) > reach * reach) continue;
+            projectile.discard();
+            level.sendParticles(ParticleTypes.CRIT, current.x, current.y, current.z, 10, 0.15D, 0.15D, 0.15D, 0.25D);
+            // The same crack as an armour-piercing hit, a little lighter.
+            level.playSound(null, current.x, current.y, current.z, ModSounds.BALL_CHAIN_ARMOR_PIERCE.get(),
+                SoundSource.PLAYERS, 0.8F, 1.1F + player.getRandom().nextFloat() * 0.15F);
+        }
+    }
+
+    /** A moving projectile not fired by the wielder (stuck arrows have no motion). */
+    private static boolean smashable(ServerPlayer player, net.minecraft.world.entity.projectile.Projectile projectile) {
+        return projectile.isAlive() && projectile.getOwner() != player
+            && projectile.getDeltaMovement().lengthSqr() > 0.0025D;
+    }
+
+    /** Squared closest distance between segments ab and cd. */
+    public static double segmentDistanceSqr(Vec3 a, Vec3 b, Vec3 c, Vec3 d) {
+        Vec3 u = b.subtract(a), v = d.subtract(c), w = a.subtract(c);
+        double uu = u.dot(u), uv = u.dot(v), vv = v.dot(v), uw = u.dot(w), vw = v.dot(w);
+        double den = uu * vv - uv * uv;
+        double s, t;
+        if (uu < 1.0E-12D && vv < 1.0E-12D) return w.lengthSqr();
+        if (uu < 1.0E-12D) { s = 0.0D; t = clamp(vw / vv); }
+        else if (vv < 1.0E-12D) { t = 0.0D; s = clamp(-uw / uu); }
+        else {
+            s = den < 1.0E-12D ? 0.0D : clamp((uv * vw - vv * uw) / den);
+            t = clamp((uv * s + vw) / vv);
+            s = clamp((uv * t - uw) / uu);
+        }
+        return a.add(u.scale(s)).subtract(c.add(v.scale(t))).lengthSqr();
+    }
+
+    private static double clamp(double v) { return v < 0.0D ? 0.0D : v > 1.0D ? 1.0D : v; }
 
     /** The chain itself rattles with every swing and throw, a little under the swing's level. */
     private static void chainRattle(ServerPlayer player) {

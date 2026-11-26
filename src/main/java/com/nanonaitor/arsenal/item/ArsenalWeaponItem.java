@@ -164,8 +164,8 @@ public class ArsenalWeaponItem extends net.minecraft.world.item.SwordItem {
             }
             case SCIMITAR -> {
                 lines.add(Component.literal("Blocking an attack empowers your next hit or bash (x"
-                    + com.nanonaitor.arsenal.config.ArsenalConfig.SCIMITAR_COUNTER_MULTIPLIER.get() + ", "
-                    + com.nanonaitor.arsenal.config.ArsenalConfig.SCIMITAR_COUNTER_SECONDS.get() + " secs).")
+                    + com.nanonaitor.arsenal.config.SyncedConfig.get("counterMultiplier", com.nanonaitor.arsenal.config.ArsenalConfig.SCIMITAR_COUNTER_MULTIPLIER) + ", "
+                    + com.nanonaitor.arsenal.config.SyncedConfig.get("counterSeconds", com.nanonaitor.arsenal.config.ArsenalConfig.SCIMITAR_COUNTER_SECONDS) + " secs).")
                     .withStyle(ChatFormatting.DARK_PURPLE));
                 lines.add(Component.literal("Can attack from either hand; dual wield to auto-alternate.")
                     .withStyle(ChatFormatting.GOLD));
@@ -199,7 +199,11 @@ public class ArsenalWeaponItem extends net.minecraft.world.item.SwordItem {
                     .withStyle(ChatFormatting.GOLD));
                 lines.add(Component.literal("Crouch + use to guard. Hold use while winding up to spin faster.")
                     .withStyle(ChatFormatting.AQUA));
+                lines.add(Component.literal("With an empty offhand, the wind-up also blocks attacks from the front.")
+                    .withStyle(ChatFormatting.AQUA));
                 lines.add(Component.literal("Knockback also shoves back melee attackers you guard against.")
+                    .withStyle(ChatFormatting.GRAY));
+                lines.add(Component.literal("A thrown ball smashes projectiles in its path.")
                     .withStyle(ChatFormatting.GRAY));
                 lines.add(Component.literal("An occupied offhand halves rotation speed.")
                     .withStyle(ChatFormatting.DARK_RED));

@@ -24,7 +24,7 @@ public final class ModEnchantments {
    public boolean isAllowedOnBooks(){return enabled(id);}
    public boolean isCurse(){return id.equals("breeched");}
    public boolean isTreasureOnly(){return id.equals("breeched");}
-   public boolean canEnchant(ItemStack s){return enabled(id) && (chain ? s.getItem() instanceof ArsenalWeaponItem w && (w.kind()==WeaponKind.FLAIL || w.kind()==WeaponKind.BALL_AND_CHAIN) : s.getItem() instanceof ArsenalShieldItem && ArsenalConfig.SHIELD_ENCHANTMENTS.get());}
+   public boolean canEnchant(ItemStack s){return enabled(id) && (chain ? s.getItem() instanceof ArsenalWeaponItem w && (w.kind()==WeaponKind.FLAIL || w.kind()==WeaponKind.BALL_AND_CHAIN) : s.getItem() instanceof ArsenalShieldItem && com.nanonaitor.arsenal.config.SyncedConfig.get("shieldEnchantments", ArsenalConfig.SHIELD_ENCHANTMENTS));}
    public boolean canApplyAtEnchantingTable(ItemStack s){return !isCurse() && canEnchant(s);}
    protected boolean checkCompatibility(Enchantment other){return super.checkCompatibility(other) && !(!chain && (other==RECOVERY.get() || other==BREECHED.get()));}
   });
@@ -40,8 +40,8 @@ public final class ModEnchantments {
  public static int level(LivingEntity owner,ItemStack stack,RegistryObject<Enchantment> enchantment){
   if(!enabled(enchantment.getId().getPath()))return 0;
   int value=EnchantmentHelper.getItemEnchantmentLevel(enchantment.get(),stack);
-  return Math.min(value,enchantment==LONG_CHAIN?ArsenalConfig.LONG_CHAIN_MAX_LEVEL.get():enchantment==ROTATION_FORCE?ArsenalConfig.ROTATION_FORCE_MAX_LEVEL.get():value);
+  return Math.min(value,enchantment==LONG_CHAIN?com.nanonaitor.arsenal.config.SyncedConfig.get("longChainMax", ArsenalConfig.LONG_CHAIN_MAX_LEVEL):enchantment==ROTATION_FORCE?com.nanonaitor.arsenal.config.SyncedConfig.get("rotationForceMax", ArsenalConfig.ROTATION_FORCE_MAX_LEVEL):value);
  }
- public static boolean enabled(String id){var value=ArsenalConfig.ENCHANTMENTS.get(id);return ArsenalConfig.ENABLE_CUSTOM_ENCHANTMENTS.get() && value!=null && value.get();}
+ public static boolean enabled(String id){var value=ArsenalConfig.ENCHANTMENTS.get(id);return com.nanonaitor.arsenal.config.SyncedConfig.get("enchantments",ArsenalConfig.ENABLE_CUSTOM_ENCHANTMENTS) && value!=null && com.nanonaitor.arsenal.config.SyncedConfig.get("enchantment."+id,value);}
  private ModEnchantments(){}
 }

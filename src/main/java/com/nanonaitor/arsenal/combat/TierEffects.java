@@ -83,6 +83,8 @@ public final class TierEffects {
     player.getPersistentData().putLong("ArsenalElectricTick",now);
     var bolt=EntityType.LIGHTNING_BOLT.create(level);
     if(bolt!=null){bolt.moveTo(target.position());bolt.setVisualOnly(true);level.addFreshEntity(bolt);}
+    // Chain lightning runs after this hit finishes, not inside the target's own damage event.
+    level.getServer().execute(()->ChainLightning.strike(player,target));
    }
    knockBack(target,player);
   }

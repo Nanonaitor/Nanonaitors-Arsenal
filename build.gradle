@@ -3,7 +3,7 @@ plugins {
     id 'net.minecraftforge.gradle' version '[6.0,6.2)'
     id 'org.spongepowered.mixin' version '0.7.+'
 }
-version = '0.1.8'
+version = '0.1.9'
 group = 'com.nanonaitor.arsenal'
 base.archivesName = 'nanonaitors-arsenal-1.20.1'
 java.toolchain.languageVersion = JavaLanguageVersion.of(17)
@@ -21,10 +21,20 @@ minecraft {
         }
         server { args '--nogui' }
         gameTestServer { property 'forge.enabledGameTestNamespaces', 'nanonaitors_arsenal,forge' }
+        if (project.hasProperty('iafDev')) configureEach {
+            property 'mixin.env.remapRefMap', 'true'
+            property 'mixin.env.refMapRemappingFile', "${projectDir}/build/createSrgToMcp/output.srg"
+        }
     }
 }
+// Dev-only Ice & Fire run (-PiafDev): jars copied into the git-ignored tmp/iaf-dev folder.
+if (project.hasProperty('iafDev')) repositories { flatDir { dirs 'tmp/iaf-dev' } }
 dependencies {
     minecraft 'net.minecraftforge:forge:1.20.1-47.4.18'
+    if (project.hasProperty('iafDev')) {
+        runtimeOnly fg.deobf('local:iceandfire:2.1.13')
+        runtimeOnly fg.deobf('local:citadel:2.6.3')
+    }
     annotationProcessor 'org.spongepowered:mixin:0.8.5:processor'
 }
 mixin {

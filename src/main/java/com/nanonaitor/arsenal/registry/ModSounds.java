@@ -28,6 +28,9 @@ public final class ModSounds {
     /** Battering Ram: a heavy bash on hits and walls. */
     public static final RegistryObject<SoundEvent> RAM_IMPACT = SOUNDS.register("battering_ram.impact",
         () -> SoundEvent.createVariableRangeEvent(new ResourceLocation(ArsenalMod.MOD_ID, "battering_ram.impact")));
+    /** Ball and Chain: armour cracking on a full-charge hit, and a projectile smashed by a thrown ball. */
+    public static final RegistryObject<SoundEvent> BALL_CHAIN_ARMOR_PIERCE = SOUNDS.register("ball_chain.armor_pierce",
+        () -> SoundEvent.createVariableRangeEvent(new ResourceLocation(ArsenalMod.MOD_ID, "ball_chain.armor_pierce")));
     /** Claws: a high metal slash on every hit. */
     public static final RegistryObject<SoundEvent> CLAWS_SLASH = SOUNDS.register("claws.slash",
         () -> SoundEvent.createVariableRangeEvent(new ResourceLocation(ArsenalMod.MOD_ID, "claws.slash")));

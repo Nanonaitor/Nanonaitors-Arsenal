@@ -53,6 +53,15 @@ public final class ArsenalMod {
         bus.addListener((PlayerInteractEvent.LeftClickBlock e) -> { if (CombatEvents.onLeftClickBlock(e)) e.setCanceled(true); });
         bus.addListener((EntityJoinLevelEvent e) -> { if (CombatEvents.onEntityJoin(e)) e.setCanceled(true); });
         bus.addListener((TickEvent.PlayerTickEvent e) -> { if (e.phase == TickEvent.Phase.END) CombatEvents.onPlayerTick(e); });
+        // Players see and predict attacks with the server's combat settings, not their own file.
+        bus.addListener((net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedInEvent e) -> {
+            if (e.getEntity() instanceof net.minecraft.server.level.ServerPlayer player) ModNetwork.syncConfig(player);
+        });
+        group.addListener((net.minecraftforge.fml.event.config.ModConfigEvent.Reloading e) -> {
+            var server = net.minecraftforge.server.ServerLifecycleHooks.getCurrentServer();
+            // Reloads come from the file watcher thread; send from the server thread.
+            if (e.getConfig().getSpec() == ArsenalConfig.SPEC && server != null) server.execute(() -> ModNetwork.syncConfig(null));
+        });
         if (FMLEnvironment.dist == Dist.CLIENT) ClientControls.register();
     }
 }

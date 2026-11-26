@@ -97,6 +97,9 @@ public final class PoseCapture {
             .setup = () -> { WeaponVisualState.debugThrowProgress = 0.35D; WeaponVisualState.debugThrowCharge = 3; };
         Shot guard = add("ball_and_chain", "crouch guard", ball, null, in -> {});
         guard.setup = () -> WeaponPoses.debugBallGuard = true; guard.crouch = true;
+        add("ball_and_chain", "armour crack icon", ball, null, in -> {}).setup = () ->
+            com.nanonaitor.arsenal.client.ArsenalClientFx.receive(com.nanonaitor.arsenal.network.ModNetwork.FX_ARMOR_BREAK,
+                Minecraft.getInstance().player.getId(), 200);
         add("ball_and_chain", "one hand wind-up 90 deg", ball, torch, in -> {})
             .setup = () -> WeaponVisualState.debugWindupAngle = Math.PI / 2.0D;
         Shot guardFp = add("ball_and_chain", "first person guard", ball, null, in -> {});
@@ -213,6 +216,9 @@ public final class PoseCapture {
             shotIndex = 0; view = 0; wait = 0;
             mc.options.hideGui = true;
             camera = new ArmorStand(EntityType.ARMOR_STAND, mc.level); hookCamera();
+            checkRemoteSwings(mc);
+            com.mojang.logging.LogUtils.getLogger().info("ARSENAL CONFIG SYNC CHECK: server values received -> {}",
+                com.nanonaitor.arsenal.config.SyncedConfig.active() ? "PASS" : "FAIL");
             camera.setInvisible(true);
             begin(mc, server);
             return;
@@ -300,6 +306,18 @@ public final class PoseCapture {
         } catch (Exception error) {
             com.mojang.logging.LogUtils.getLogger().warn("Pose capture failed for {}", name, error);
         }
+    }
+
+    /** Another player swinging both claws in one tick: both hands must animate. */
+    private static void checkRemoteSwings(Minecraft mc) {
+        var other = new net.minecraft.client.player.RemotePlayer(mc.level,
+            new com.mojang.authlib.GameProfile(java.util.UUID.randomUUID(), "SwingCheck"));
+        other.swing(net.minecraft.world.InteractionHand.MAIN_HAND);
+        other.swing(net.minecraft.world.InteractionHand.OFF_HAND);
+        boolean main = AttackTiming.phase(other, 0.0F, net.minecraft.world.InteractionHand.MAIN_HAND) >= 0.0F;
+        boolean off = AttackTiming.phase(other, 0.0F, net.minecraft.world.InteractionHand.OFF_HAND) >= 0.0F;
+        com.mojang.logging.LogUtils.getLogger().info("ARSENAL REMOTE SWING CHECK: main={} off={} -> {}", main, off,
+            main && off ? "PASS" : "FAIL");
     }
 
     private PoseCapture() {}

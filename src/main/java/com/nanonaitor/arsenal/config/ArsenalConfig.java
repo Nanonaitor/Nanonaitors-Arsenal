@@ -12,6 +12,9 @@ public final class ArsenalConfig {
     public static final ForgeConfigSpec.DoubleValue MOB_REPLACEMENT_CHANCE;
     public static final ForgeConfigSpec.ConfigValue<java.util.List<? extends String>> STUN_BLACKLIST;
     public static final ForgeConfigSpec.IntValue EVOLUTION_THRESHOLD;
+    public static final ForgeConfigSpec.BooleanValue CHAIN_LIGHTNING;
+    public static final ForgeConfigSpec.IntValue CHAIN_LIGHTNING_RANGE;
+    public static final ForgeConfigSpec.ConfigValue<java.util.List<? extends Double>> CHAIN_LIGHTNING_DAMAGE;
     public static final ForgeConfigSpec.DoubleValue SCIMITAR_COUNTER_MULTIPLIER;
     public static final ForgeConfigSpec.IntValue SCIMITAR_COUNTER_SECONDS;
     public static final java.util.Map<String,ForgeConfigSpec.BooleanValue> WEAPONS=new java.util.LinkedHashMap<>(), ENCHANTMENTS=new java.util.LinkedHashMap<>();
@@ -58,6 +61,10 @@ public final class ArsenalConfig {
         SHIELD_ENCHANTMENTS=BUILDER.define("allowShieldEnchantments",true);
         MATCHING_ARMOR_BONUSES=BUILDER.comment("Rebuild the 1.12.2 gold/silver full-set bonuses using armor items/tags; no SetBonus mod required.").define("matchingArmorBonuses",true);
         STUN_BLACKLIST=BUILDER.comment("Exact entity IDs that cannot receive Stunned.").defineListAllowEmpty("stunnedEntityBlacklist",java.util.List.of(),v->v instanceof String);
+        CHAIN_LIGHTNING=BUILDER.comment("Electric Dragonbone hits arc chain lightning to nearby enemies, as Ice & Fire's 1.12.2 lightning weapons did.").define("electricChainLightning",true);
+        CHAIN_LIGHTNING_RANGE=BUILDER.comment("Blocks the chain lightning can jump between enemies.").defineInRange("chainLightningRange",8,1,32);
+        CHAIN_LIGHTNING_DAMAGE=BUILDER.comment("Armor-bypassing lightning damage per hop, starting with the struck target; one entry per hop.")
+            .defineListAllowEmpty("chainLightningDamage",java.util.List.of(5.0D,4.0D,3.0D,2.0D,1.0D),v->v instanceof Number n && n.doubleValue()>=0);
         EVOLUTION_THRESHOLD=BUILDER.comment("Living weapons evolve after accumulating more than this much slain srparasites mob maximum health. No evolution occurs without parasite entities.").defineInRange("livingEvolutionHealth",1000,1,10000000);
         BUILDER.pop();
         BUILDER.push("effects");

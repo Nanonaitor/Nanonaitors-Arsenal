@@ -19,7 +19,9 @@ This branch is independent of the 1.12.2 and 26.1.2 source trees.
    but a disposable creative world is recommended for the first tests.
 
 The mod belongs on both the client and server for multiplayer. Use the same version
-and common configuration on both sides, especially for reach/charge visuals.
+on both sides. The server sends its combat settings (reach, charge time, enchantment
+switches and caps, scimitar counter) to each player on join, so clients don't need a
+copy of the server's config.
 Other mods are optional; the base weapons work without Restless Horizons.
 
 ## Included weapons and controls
@@ -101,19 +103,21 @@ applied immediately): `animations.weaponPoses`, `animations.attackSpeedSwings`,
 `sounds.volume` (0 to 2) for Arsenal's own sounds.
 
 Restart after changing the common options. Recipe toggles can also take effect on a
-datapack reload; clients must use matching combat settings for accurate prediction.
+datapack reload. Connected clients receive the server's combat settings automatically,
+including after a config reload.
 Enchantment toggles suppress new availability and Arsenal's effect without deleting
 the registry entry or existing saved enchantment data.
 
 ## Important differences / still needs playtesting
 
-- Blooded Dragonbone and venom upgrades use data-preserving crafting recipes.
-  Native Dragonforge processing is **not** integrated in this release: the inspected
-  1.20.1 API lacks the original preserve-NBT option. This avoids silently losing
-  names, enchantments, quality data and wear during an upgrade.
-- Electric Dragonbone has its damage matchup bonus, knockback and a visual-only
-  lightning strike. The original Ice & Fire chain-lightning API was not present;
-  chained secondary lightning damage is **not** reproduced.
+- Blooded Dragonbone upgrades work in Ice & Fire's Dragonforge (fire, ice and
+  lightning forges) as well as through data-preserving crafting recipes. A small
+  optional hook keeps the weapon's name, enchantments, data and wear in the forge.
+  Venom upgrades stay crafting recipes.
+- Electric Dragonbone hits arc chain lightning to nearby enemies (5, 4, 3, 2, 1
+  armor-bypassing damage per hop, 8-block hops), rebuilt natively because Ice & Fire's
+  1.20.1 release has no chain-lightning API. `compatibility.electricChainLightning`,
+  `chainLightningRange` and `chainLightningDamage` adjust it.
 - SRP Spartans alone does not provide the original SRP creature/effect systems.
   Corrosive, Bleed, Antimall, Debar, Rage, Call of the Hive cleansing and evolution
   only operate where their expected registry IDs/entities actually exist. No fake

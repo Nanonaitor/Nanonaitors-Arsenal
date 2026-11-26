@@ -98,7 +98,10 @@ public final class ClientWeaponRenderer {
 
     /** One world-space attack, including the local player in first person. */
     public static void renderWorld(RenderLevelStageEvent event) {
-        if (event.getStage() == RenderLevelStageEvent.Stage.AFTER_PARTICLES) ClawSlashTrails.render(event);
+        if (event.getStage() == RenderLevelStageEvent.Stage.AFTER_PARTICLES) {
+            ClawSlashTrails.render(event);
+            ArsenalClientFx.render(event);
+        }
         if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_ENTITIES) return;
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.player == null || minecraft.level == null) return;

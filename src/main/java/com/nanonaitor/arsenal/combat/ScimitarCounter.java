@@ -41,7 +41,7 @@ public final class ScimitarCounter {
         if (player.level().isClientSide || !holdsScimitar(player)) return;
         long now = player.level().getGameTime();
         boolean fresh = !isCharged(player);
-        player.getPersistentData().putLong(CHARGED_UNTIL, now + ArsenalConfig.SCIMITAR_COUNTER_SECONDS.get() * 20L);
+        player.getPersistentData().putLong(CHARGED_UNTIL, now + com.nanonaitor.arsenal.config.SyncedConfig.get("counterSeconds", ArsenalConfig.SCIMITAR_COUNTER_SECONDS) * 20L);
         // A bright ring tells the player the counter is ready.
         if (fresh) player.level().playSound(null, player.blockPosition(), SoundEvents.ARMOR_EQUIP_IRON,
             SoundSource.PLAYERS, 0.8F, 1.7F);
@@ -72,7 +72,7 @@ public final class ScimitarCounter {
             || !scimitar(TierEffects.attackingStack(player)) || !isCharged(player)
             || event.getAmount() <= 0.0F) return;
         player.getPersistentData().remove(CHARGED_UNTIL);
-        event.setAmount(counterDamage(event.getAmount(), ArsenalConfig.SCIMITAR_COUNTER_MULTIPLIER.get()));
+        event.setAmount(counterDamage(event.getAmount(), com.nanonaitor.arsenal.config.SyncedConfig.get("counterMultiplier", ArsenalConfig.SCIMITAR_COUNTER_MULTIPLIER)));
         if (player.level() instanceof ServerLevel level) {
             var target = event.getEntity();
             level.sendParticles(ParticleTypes.ENCHANTED_HIT, target.getX(), target.getY(0.6D), target.getZ(),

@@ -27,12 +27,17 @@ public final class ModRecipes {
    for(int i=0;i<grid.getContainerSize();i++){
     ItemStack old=grid.getItem(i);
     if(!(old.getItem() instanceof ArsenalWeaponItem))continue;
-    if(old.hasTag())result.setTag(old.getTag().copy());
-    result.getOrCreateTag().remove("ArsenalActive");result.getOrCreateTag().remove("ArsenalBallThrown");
-    result.setDamageValue(Math.min(result.getMaxDamage()-1,Math.round((float)old.getDamageValue()/Math.max(1,old.getMaxDamage())*result.getMaxDamage())));
+    carryOver(old,result);
     break;
    }
    return result;
   }
+ }
+ /** Keeps a weapon's name, enchantments, data and proportional wear when it becomes another tier. */
+ public static void carryOver(ItemStack old,ItemStack result){
+  if(old.hasTag())result.setTag(old.getTag().copy());
+  result.getOrCreateTag().remove("ArsenalActive");result.getOrCreateTag().remove("ArsenalBallThrown");
+  if(result.getTag().isEmpty())result.setTag(null);
+  result.setDamageValue(Math.min(result.getMaxDamage()-1,Math.round((float)old.getDamageValue()/Math.max(1,old.getMaxDamage())*result.getMaxDamage())));
  }
 }

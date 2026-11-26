@@ -69,6 +69,10 @@ public final class ClientControls {
         net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener((InputEvent.InteractionKeyMappingTriggered e) -> { if(interaction(e)) e.setCanceled(true); });
         net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(net.minecraftforge.eventbus.api.EventPriority.LOW,
             ArsenalSoundVolume::onPlay);
+        // Leaving a server drops its combat settings; the next one sends its own.
+        net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(
+            (net.minecraftforge.client.event.ClientPlayerNetworkEvent.LoggingOut e) ->
+                com.nanonaitor.arsenal.config.SyncedConfig.receive(null));
         net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(ClientWeaponRenderer::render);
         net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(ScimitarClientExtensions::beforeRender);
         net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(ClientWeaponRenderer::renderWorld);
@@ -600,13 +604,11 @@ public final class ClientControls {
         // charged. Continued holding only repeats after the hand is fully ready.
         if (mainDown && !mainClawWasDown) {
             player.swing(net.minecraft.world.InteractionHand.MAIN_HAND, true);
-            com.nanonaitor.arsenal.client.pose.AttackTiming.noteSwing(player, InteractionHand.MAIN_HAND);
             ModNetwork.send(ModNetwork.CLAW_MAIN, true);
             lastMainClawAttack = now;
             player.resetAttackStrengthTicker();
         } else if (mainDown && fullyCharged && elapsed(now, lastMainClawAttack, cooldown)) {
             player.swing(net.minecraft.world.InteractionHand.MAIN_HAND, true);
-            com.nanonaitor.arsenal.client.pose.AttackTiming.noteSwing(player, InteractionHand.MAIN_HAND);
             ModNetwork.send(ModNetwork.CLAW_MAIN, true);
             lastMainClawAttack = now;
             player.resetAttackStrengthTicker();
@@ -614,12 +616,10 @@ public final class ClientControls {
 
         if (offhandDown && !offhandClawWasDown) {
             player.swing(net.minecraft.world.InteractionHand.OFF_HAND, true);
-            com.nanonaitor.arsenal.client.pose.AttackTiming.noteSwing(player, InteractionHand.OFF_HAND);
             ModNetwork.send(ModNetwork.CLAW, true);
             lastOffhandClawAttack = now;
         } else if (offhandDown && elapsed(now, lastOffhandClawAttack, cooldown)) {
             player.swing(net.minecraft.world.InteractionHand.OFF_HAND, true);
-            com.nanonaitor.arsenal.client.pose.AttackTiming.noteSwing(player, InteractionHand.OFF_HAND);
             ModNetwork.send(ModNetwork.CLAW, true);
             lastOffhandClawAttack = now;
         }
