@@ -128,7 +128,8 @@ public final class ModernWeaponInputHandler {
                 // let the Defender take the use key (see raiseDefenderOverWeapon)
             } else if (player.getHeldItemOffhand().getItem() instanceof ItemShield) {
                 if (morning) cancelMorningCharge(player);
-            } else if (!(player.getHeldItemOffhand().getItem() instanceof ItemScimitar)) {
+            } else if (!(player.getHeldItemOffhand().getItem() instanceof ItemScimitar)
+                && !appliesToMainHand(player.getHeldItemOffhand())) {
                 event.setCanceled(true);
                 return;
             }
@@ -141,6 +142,25 @@ public final class ModernWeaponInputHandler {
                 && !BallAndChainInputHandler.isGuardingInput();
             if (ballWinding) event.setCanceled(true);
         }
+    }
+
+    /**
+     * Offhand items used on the main-hand item: right-clicking must reach them.
+     * Quark's Ancient Tome, with RLTweaker's "Ancient Tomes Alternate Behavior"
+     * (RLCraft, Dregora), upgrades the held weapon's enchantment on right-click.
+     */
+    public static boolean appliesToMainHand(net.minecraft.item.ItemStack offhand) {
+        return !offhand.isEmpty() && offhand.getItem().getRegistryName() != null
+            && "quark:ancient_tome".equals(offhand.getItem().getRegistryName().toString());
+    }
+
+    /** Pose capture tool only: whether a right-click with this loadout would be swallowed. */
+    public static boolean debugMorningStarBlocksRightClick(EntityPlayerSP player) {
+        net.minecraft.item.ItemStack off = player.getHeldItemOffhand();
+        return player.getHeldItemMainhand().getItem() instanceof ItemMorningStar
+            && !com.nanonaitor.arsenal.combat.AbilityUseRules.defender(off)
+            && !(off.getItem() instanceof ItemShield) && !(off.getItem() instanceof ItemScimitar)
+            && !appliesToMainHand(off);
     }
 
     @SubscribeEvent(priority = EventPriority.LOWEST, receiveCanceled = true)

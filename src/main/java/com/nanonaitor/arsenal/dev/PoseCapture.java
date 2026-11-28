@@ -215,7 +215,46 @@ public final class PoseCapture {
         });
     }
 
+    /** Quark Ancient Tome applied by right-click (RLTweaker alternate behaviour), per weapon. */
+    private static void buildRound14() {
+        String m = NanonaitorsArsenal.MOD_ID + ":";
+        String[] mains = {m + "morning_star_iron", m + "flail_iron", m + "ball_and_chain_iron", m + "claws_iron",
+            m + "battering_ram_iron", m + "blade_staff_iron", m + "scimitar_iron", m + "sun_war_bulwark",
+            m + "tartsy_shield", "minecraft:iron_sword"};
+        for (String main : mains) {
+            add("round14", "tome on " + main, main + "#unbreaking3", "quark:ancient_tome#tome", in -> {})
+                .live = p -> tomeCheck(main);
+        }
+    }
+
+    private static int tomeTicks;
+    private static String tomeShot;
+
+    private static void tomeCheck(String main) {
+        Minecraft mc = Minecraft.getMinecraft();
+        if (!main.equals(tomeShot)) { tomeShot = main; tomeTicks = 0; }
+        int key = mc.gameSettings.keyBindUseItem.getKeyCode();
+        tomeTicks++;
+        if (tomeTicks == 3) {
+            NanonaitorsArsenal.LOGGER.info("tome-check [{}] Arsenal swallows a mouse right-click: {}", main,
+                com.nanonaitor.arsenal.client.ModernWeaponInputHandler.debugMorningStarBlocksRightClick(mc.player));
+            net.minecraft.client.settings.KeyBinding.setKeyBindState(key, true);
+            net.minecraft.client.settings.KeyBinding.onTick(key);
+        }
+        if (tomeTicks == 4) net.minecraft.client.settings.KeyBinding.setKeyBindState(key, false);
+        if (tomeTicks == 9) {
+            EntityPlayerMP srv = mc.getIntegratedServer().getPlayerList().getPlayerByUUID(mc.player.getUniqueID());
+            NanonaitorsArsenal.LOGGER.info("tome-check [{}] after right-click: main unbreaking={} offhand={}", main,
+                net.minecraft.enchantment.EnchantmentHelper.getEnchantmentLevel(net.minecraft.init.Enchantments.UNBREAKING,
+                    srv.getHeldItemMainhand()), srv.getHeldItemOffhand().getItem().getRegistryName());
+        }
+    }
+
     private static void buildShots() {
+        if (focus("r14")) {
+            buildRound14();
+            return;
+        }
         if (focus("r13")) {
             buildRound13();
             return;
@@ -529,11 +568,23 @@ public final class PoseCapture {
 
     private static ItemStack stack(String id) {
         if (id == null) return ItemStack.EMPTY;
-        boolean enchanted = id.endsWith("#ench");
-        if (enchanted) id = id.substring(0, id.length() - 5);
+        String tag = id.contains("#") ? id.substring(id.indexOf('#') + 1) : "";
+        if (!tag.isEmpty()) id = id.substring(0, id.indexOf('#'));
         Item item = ForgeRegistries.ITEMS.getValue(new ResourceLocation(id));
         ItemStack stack = item == null ? ItemStack.EMPTY : new ItemStack(item);
-        if (enchanted && !stack.isEmpty()) stack.addEnchantment(net.minecraft.init.Enchantments.UNBREAKING, 1);
+        if (stack.isEmpty()) return stack;
+        if (tag.equals("ench")) stack.addEnchantment(net.minecraft.init.Enchantments.UNBREAKING, 1);
+        if (tag.equals("unbreaking3")) stack.addEnchantment(net.minecraft.init.Enchantments.UNBREAKING, 3);
+        if (tag.equals("tome")) {
+            // An Ancient Tome of Unbreaking III, written both ways a tome may store it.
+            stack.addEnchantment(net.minecraft.init.Enchantments.UNBREAKING, 3);
+            net.minecraft.nbt.NBTTagList stored = new net.minecraft.nbt.NBTTagList();
+            net.minecraft.nbt.NBTTagCompound entry = new net.minecraft.nbt.NBTTagCompound();
+            entry.setShort("id", (short) net.minecraft.enchantment.Enchantment.getEnchantmentID(net.minecraft.init.Enchantments.UNBREAKING));
+            entry.setShort("lvl", (short) 3);
+            stored.appendTag(entry);
+            stack.getTagCompound().setTag("StoredEnchantments", stored);
+        }
         return stack;
     }
 
