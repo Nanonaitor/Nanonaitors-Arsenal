@@ -47,6 +47,7 @@ public final class ClawSounds {
     /** Main-hand claw hits go through the normal attack. */
     @SubscribeEvent(priority = EventPriority.LOWEST)
     public static void onAttack(AttackEntityEvent event) {
+        if (com.nanonaitor.arsenal.combat.AttackProbe.isAreaProbe(event)) return; // e.g. Callable Horses' area check
         EntityPlayer player = event.getEntityPlayer();
         if (event.isCanceled() || player.world.isRemote
             || !(player.getHeldItemMainhand().getItem() instanceof ItemClaws)) return;

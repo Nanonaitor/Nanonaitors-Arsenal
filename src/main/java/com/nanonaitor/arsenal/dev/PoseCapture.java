@@ -171,7 +171,55 @@ public final class PoseCapture {
         }
     }
 
+    /**
+     * Callable Horses' area check, as it posts it: an attack on the player's own
+     * horse moved onto the player. Logs whether anything cancels it per weapon,
+     * plus a real attack two blocks away as the control.
+     */
+    private static void buildRound13() {
+        String m = NanonaitorsArsenal.MOD_ID + ":";
+        String[][] loadouts = {
+            {m + "flail_iron", null}, {m + "ball_and_chain_iron", null}, {m + "morning_star_iron", null},
+            {m + "claws_iron", m + "linked_claw_iron"}, {m + "battering_ram_iron", null},
+            {m + "blade_staff_iron", null}, {m + "scimitar_iron", m + "scimitar_iron"},
+            {null, m + "sun_war_bulwark"}, {m + "sun_war_bulwark", null}, {"minecraft:iron_sword", null}};
+        for (String[] loadout : loadouts) {
+            final String label = (loadout[0] == null ? "-" : loadout[0]) + " + " + (loadout[1] == null ? "-" : loadout[1]);
+            add("round13", "horse call check: " + label, loadout[0], loadout[1], in -> {}).live = p -> horseCallCheck(label);
+        }
+    }
+
+    private static String lastCheck;
+
+    private static void horseCallCheck(String label) {
+        if (label.equals(lastCheck)) return;
+        lastCheck = label;
+        MinecraftServer server = Minecraft.getMinecraft().getIntegratedServer();
+        java.util.UUID id = Minecraft.getMinecraft().player.getUniqueID();
+        server.addScheduledTask(() -> {
+            EntityPlayerMP player = server.getPlayerList().getPlayerByUUID(id);
+            if (player == null) return;
+            net.minecraft.entity.passive.EntityHorse horse = new net.minecraft.entity.passive.EntityHorse(player.world);
+            horse.setPosition(player.posX, player.posY, player.posZ);
+            boolean attackCanceled = net.minecraftforge.common.MinecraftForge.EVENT_BUS.post(
+                new net.minecraftforge.event.entity.player.AttackEntityEvent(player, horse));
+            boolean interactCanceled = net.minecraftforge.common.MinecraftForge.EVENT_BUS.post(
+                new net.minecraftforge.event.entity.player.PlayerInteractEvent.EntityInteract(player,
+                    net.minecraft.util.EnumHand.MAIN_HAND, horse));
+            horse.setPosition(player.posX + 2.0D, player.posY, player.posZ);
+            boolean realCanceled = net.minecraftforge.common.MinecraftForge.EVENT_BUS.post(
+                new net.minecraftforge.event.entity.player.AttackEntityEvent(player, horse));
+            NanonaitorsArsenal.LOGGER.info("horse-call-check [{}] holding {} / {}: area check attack canceled={} interact canceled={} | real attack 2 blocks away canceled={}",
+                label, player.getHeldItemMainhand().getItem().getRegistryName(), player.getHeldItemOffhand().getItem().getRegistryName(),
+                attackCanceled, interactCanceled, realCanceled);
+        });
+    }
+
     private static void buildShots() {
+        if (focus("r13")) {
+            buildRound13();
+            return;
+        }
         if (focus("r12")) {
             buildRound12();
             return;

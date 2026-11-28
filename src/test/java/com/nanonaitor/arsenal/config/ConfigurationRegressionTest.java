@@ -45,7 +45,7 @@ public final class ConfigurationRegressionTest {
                 Object section=category.get(null);
                 if(section==null||section instanceof String)continue;
                 for(java.lang.reflect.Field field:section.getClass().getFields())
-                    if(field.getType()==String[].class && !"entityBlacklist".equals(field.getName()))
+                    if(field.getType()==String[].class && !java.util.Arrays.asList("entityBlacklist","requirements","materials").contains(field.getName()))
                         for(String entry:(String[])field.get(section))
                             check(EffectSpec.parse(entry,200,1)!=null);
             }
@@ -60,6 +60,21 @@ public final class ConfigurationRegressionTest {
             "copper, Copper, #D9824B, ore:ingotCopper, two, 300, 1.5, 14", "copper, Copper, #D9824B, ore:ingotCopper, 2, 0, 1.5, 14"}) {
             boolean rejected=false;
             try { com.nanonaitor.arsenal.item.WeaponTier.CustomSpec.parse(bad); } catch(IllegalArgumentException expected){rejected=true;}
+            check(rejected);
+        }
+        // Built-in Reskillable requirements: the 122 defaults all parse, bad lines are rejected.
+        check(ArsenalConfig.reskillable.requirements.length==122);
+        for(String line:ArsenalConfig.reskillable.requirements)
+            check(com.nanonaitor.arsenal.compat.ReskillableLocks.Lock.parse(line).item.startsWith("nanonaitors_arsenal:"));
+        com.nanonaitor.arsenal.compat.ReskillableLocks.Lock wild=com.nanonaitor.arsenal.compat.ReskillableLocks.Lock
+            .parse("nanonaitors_arsenal:scimitar_dragonbone:*=reskillable:attack|24");
+        check(wild.meta==32767 && wild.item.equals("nanonaitors_arsenal:scimitar_dragonbone")
+            && wild.requirements.equals("reskillable:attack|24"));
+        check(com.nanonaitor.arsenal.compat.ReskillableLocks.Lock.parse("nanonaitors_arsenal:claws_iron=reskillable:attack|8").meta==0);
+        for(String bad:new String[]{"nanonaitors_arsenal:claws_iron","claws_iron=reskillable:attack|8",
+            "nanonaitors_arsenal:claws_iron:x=reskillable:attack|8","nanonaitors_arsenal:claws_iron=attack"}) {
+            boolean rejected=false;
+            try { com.nanonaitor.arsenal.compat.ReskillableLocks.Lock.parse(bad); } catch(IllegalArgumentException expected){rejected=true;}
             check(rejected);
         }
         System.out.println("Passed "+checks+" effect/charge regression checks");

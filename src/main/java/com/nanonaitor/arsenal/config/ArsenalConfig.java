@@ -88,6 +88,13 @@ public final class ArsenalConfig {
         "crafted like the iron ones with your ingredient, its metal tinted your colour. Up to 8. Restart required."})
     public static CustomMaterials customMaterials = new CustomMaterials();
 
+    // ---- Reskillable -------------------------------------------------------
+
+    @Config.LangKey("config.nanonaitors_arsenal.reskillable")
+    @Config.Comment({"Built-in Reskillable level requirements for Arsenal weapons (only with Reskillable installed).",
+        "A pack's own reskillable.cfg lock for the same item always wins. Restart required."})
+    public static Reskillable reskillable = new Reskillable();
+
     // ---- Enchantments -------------------------------------------------------
 
     @Config.LangKey("config.nanonaitors_arsenal.enchantments")
@@ -261,6 +268,141 @@ public final class ArsenalConfig {
             "Durability, attack damage and enchantability work like a vanilla tool material (iron: 2, 250, 2.0, 14). Lines starting with # are ignored."})
         @Config.RequiresMcRestart
         public String[] materials = {};
+    }
+
+    public static final class Reskillable {
+        @Config.Comment("Add the requirements below when Reskillable is installed. Off: Arsenal adds none (a pack's reskillable.cfg still applies).")
+        @Config.RequiresMcRestart
+        public boolean enabled = true;
+        @Config.Comment({"One per line, Reskillable's own format: modid:item:meta=skill|level,skill|level  (meta * = any damage).",
+            "Example: nanonaitors_arsenal:scimitar_dragonbone:*=reskillable:attack|24",
+            "Items the pack's reskillable.cfg already locks are left to the pack. Custom materials can be added here too.",
+            "Lines starting with # are ignored."})
+        @Config.RequiresMcRestart
+        public String[] requirements = {
+            "nanonaitors_arsenal:morning_star_umbrium:*=reskillable:attack|4",
+            "nanonaitors_arsenal:scimitar_umbrium:*=reskillable:attack|4",
+            "nanonaitors_arsenal:claws_umbrium:*=reskillable:attack|4",
+            "nanonaitors_arsenal:flail_umbrium:*=reskillable:attack|4",
+            "nanonaitors_arsenal:battering_ram_umbrium:*=reskillable:attack|4",
+            "nanonaitors_arsenal:ball_and_chain_umbrium:*=reskillable:attack|4",
+            "nanonaitors_arsenal:linked_claw_umbrium:*=reskillable:attack|4",
+            "nanonaitors_arsenal:blade_staff_umbrium:*=reskillable:attack|4",
+            "nanonaitors_arsenal:morning_star_iron:*=reskillable:attack|8",
+            "nanonaitors_arsenal:scimitar_iron:*=reskillable:attack|8",
+            "nanonaitors_arsenal:claws_iron:*=reskillable:attack|8",
+            "nanonaitors_arsenal:flail_iron:*=reskillable:attack|8",
+            "nanonaitors_arsenal:battering_ram_iron:*=reskillable:attack|8",
+            "nanonaitors_arsenal:ball_and_chain_iron:*=reskillable:attack|8",
+            "nanonaitors_arsenal:linked_claw_iron:*=reskillable:attack|8",
+            "nanonaitors_arsenal:blade_staff_iron:*=reskillable:attack|8",
+            "nanonaitors_arsenal:morning_star_bronze:*=reskillable:attack|4",
+            "nanonaitors_arsenal:scimitar_bronze:*=reskillable:attack|4",
+            "nanonaitors_arsenal:claws_bronze:*=reskillable:attack|4",
+            "nanonaitors_arsenal:flail_bronze:*=reskillable:attack|4",
+            "nanonaitors_arsenal:battering_ram_bronze:*=reskillable:attack|4",
+            "nanonaitors_arsenal:ball_and_chain_bronze:*=reskillable:attack|4",
+            "nanonaitors_arsenal:linked_claw_bronze:*=reskillable:attack|4",
+            "nanonaitors_arsenal:blade_staff_bronze:*=reskillable:attack|4",
+            "nanonaitors_arsenal:morning_star_silver:*=reskillable:attack|4,reskillable:magic|2",
+            "nanonaitors_arsenal:scimitar_silver:*=reskillable:attack|4,reskillable:magic|2",
+            "nanonaitors_arsenal:claws_silver:*=reskillable:attack|4,reskillable:magic|2",
+            "nanonaitors_arsenal:flail_silver:*=reskillable:attack|4,reskillable:magic|2",
+            "nanonaitors_arsenal:battering_ram_silver:*=reskillable:attack|4,reskillable:magic|2",
+            "nanonaitors_arsenal:ball_and_chain_silver:*=reskillable:attack|4,reskillable:magic|2",
+            "nanonaitors_arsenal:linked_claw_silver:*=reskillable:attack|4,reskillable:magic|2",
+            "nanonaitors_arsenal:blade_staff_silver:*=reskillable:attack|4,reskillable:magic|2",
+            "nanonaitors_arsenal:morning_star_gold:*=reskillable:attack|2,reskillable:magic|4",
+            "nanonaitors_arsenal:scimitar_gold:*=reskillable:attack|2,reskillable:magic|4",
+            "nanonaitors_arsenal:claws_gold:*=reskillable:attack|2,reskillable:magic|4",
+            "nanonaitors_arsenal:flail_gold:*=reskillable:attack|2,reskillable:magic|4",
+            "nanonaitors_arsenal:battering_ram_gold:*=reskillable:attack|2,reskillable:magic|4",
+            "nanonaitors_arsenal:ball_and_chain_gold:*=reskillable:attack|2,reskillable:magic|4",
+            "nanonaitors_arsenal:linked_claw_gold:*=reskillable:attack|2,reskillable:magic|4",
+            "nanonaitors_arsenal:blade_staff_gold:*=reskillable:attack|2,reskillable:magic|4",
+            "nanonaitors_arsenal:morning_star_steel:*=reskillable:attack|12",
+            "nanonaitors_arsenal:scimitar_steel:*=reskillable:attack|12",
+            "nanonaitors_arsenal:claws_steel:*=reskillable:attack|12",
+            "nanonaitors_arsenal:flail_steel:*=reskillable:attack|12",
+            "nanonaitors_arsenal:battering_ram_steel:*=reskillable:attack|12",
+            "nanonaitors_arsenal:ball_and_chain_steel:*=reskillable:attack|12",
+            "nanonaitors_arsenal:linked_claw_steel:*=reskillable:attack|12",
+            "nanonaitors_arsenal:blade_staff_steel:*=reskillable:attack|12",
+            "nanonaitors_arsenal:morning_star_diamond:*=reskillable:attack|16",
+            "nanonaitors_arsenal:scimitar_diamond:*=reskillable:attack|16",
+            "nanonaitors_arsenal:claws_diamond:*=reskillable:attack|16",
+            "nanonaitors_arsenal:flail_diamond:*=reskillable:attack|16",
+            "nanonaitors_arsenal:battering_ram_diamond:*=reskillable:attack|16",
+            "nanonaitors_arsenal:ball_and_chain_diamond:*=reskillable:attack|16",
+            "nanonaitors_arsenal:linked_claw_diamond:*=reskillable:attack|16",
+            "nanonaitors_arsenal:blade_staff_diamond:*=reskillable:attack|16",
+            "nanonaitors_arsenal:morning_star_dragonbone:*=reskillable:attack|24",
+            "nanonaitors_arsenal:scimitar_dragonbone:*=reskillable:attack|24",
+            "nanonaitors_arsenal:claws_dragonbone:*=reskillable:attack|24",
+            "nanonaitors_arsenal:flail_dragonbone:*=reskillable:attack|24",
+            "nanonaitors_arsenal:battering_ram_dragonbone:*=reskillable:attack|24",
+            "nanonaitors_arsenal:ball_and_chain_dragonbone:*=reskillable:attack|24",
+            "nanonaitors_arsenal:linked_claw_dragonbone:*=reskillable:attack|24",
+            "nanonaitors_arsenal:blade_staff_dragonbone:*=reskillable:attack|24",
+            "nanonaitors_arsenal:morning_star_flamed_dragonbone:*=reskillable:attack|24",
+            "nanonaitors_arsenal:scimitar_flamed_dragonbone:*=reskillable:attack|24",
+            "nanonaitors_arsenal:claws_flamed_dragonbone:*=reskillable:attack|24",
+            "nanonaitors_arsenal:flail_flamed_dragonbone:*=reskillable:attack|24",
+            "nanonaitors_arsenal:battering_ram_flamed_dragonbone:*=reskillable:attack|24",
+            "nanonaitors_arsenal:ball_and_chain_flamed_dragonbone:*=reskillable:attack|24",
+            "nanonaitors_arsenal:linked_claw_flamed_dragonbone:*=reskillable:attack|24",
+            "nanonaitors_arsenal:blade_staff_flamed_dragonbone:*=reskillable:attack|24",
+            "nanonaitors_arsenal:morning_star_iced_dragonbone:*=reskillable:attack|24",
+            "nanonaitors_arsenal:scimitar_iced_dragonbone:*=reskillable:attack|24",
+            "nanonaitors_arsenal:claws_iced_dragonbone:*=reskillable:attack|24",
+            "nanonaitors_arsenal:flail_iced_dragonbone:*=reskillable:attack|24",
+            "nanonaitors_arsenal:battering_ram_iced_dragonbone:*=reskillable:attack|24",
+            "nanonaitors_arsenal:ball_and_chain_iced_dragonbone:*=reskillable:attack|24",
+            "nanonaitors_arsenal:linked_claw_iced_dragonbone:*=reskillable:attack|24",
+            "nanonaitors_arsenal:blade_staff_iced_dragonbone:*=reskillable:attack|24",
+            "nanonaitors_arsenal:morning_star_electric_dragonbone:*=reskillable:attack|24",
+            "nanonaitors_arsenal:scimitar_electric_dragonbone:*=reskillable:attack|24",
+            "nanonaitors_arsenal:claws_electric_dragonbone:*=reskillable:attack|24",
+            "nanonaitors_arsenal:flail_electric_dragonbone:*=reskillable:attack|24",
+            "nanonaitors_arsenal:battering_ram_electric_dragonbone:*=reskillable:attack|24",
+            "nanonaitors_arsenal:ball_and_chain_electric_dragonbone:*=reskillable:attack|24",
+            "nanonaitors_arsenal:linked_claw_electric_dragonbone:*=reskillable:attack|24",
+            "nanonaitors_arsenal:blade_staff_electric_dragonbone:*=reskillable:attack|24",
+            "nanonaitors_arsenal:morning_star_jungle_myrmex:*=reskillable:attack|12",
+            "nanonaitors_arsenal:scimitar_jungle_myrmex:*=reskillable:attack|12",
+            "nanonaitors_arsenal:claws_jungle_myrmex:*=reskillable:attack|12",
+            "nanonaitors_arsenal:flail_jungle_myrmex:*=reskillable:attack|12",
+            "nanonaitors_arsenal:battering_ram_jungle_myrmex:*=reskillable:attack|12",
+            "nanonaitors_arsenal:ball_and_chain_jungle_myrmex:*=reskillable:attack|12",
+            "nanonaitors_arsenal:linked_claw_jungle_myrmex:*=reskillable:attack|12",
+            "nanonaitors_arsenal:blade_staff_jungle_myrmex:*=reskillable:attack|12",
+            "nanonaitors_arsenal:morning_star_desert_myrmex:*=reskillable:attack|12",
+            "nanonaitors_arsenal:scimitar_desert_myrmex:*=reskillable:attack|12",
+            "nanonaitors_arsenal:claws_desert_myrmex:*=reskillable:attack|12",
+            "nanonaitors_arsenal:flail_desert_myrmex:*=reskillable:attack|12",
+            "nanonaitors_arsenal:battering_ram_desert_myrmex:*=reskillable:attack|12",
+            "nanonaitors_arsenal:ball_and_chain_desert_myrmex:*=reskillable:attack|12",
+            "nanonaitors_arsenal:linked_claw_desert_myrmex:*=reskillable:attack|12",
+            "nanonaitors_arsenal:blade_staff_desert_myrmex:*=reskillable:attack|12",
+            "nanonaitors_arsenal:morning_star_jungle_venom:*=reskillable:attack|12",
+            "nanonaitors_arsenal:scimitar_jungle_venom:*=reskillable:attack|12",
+            "nanonaitors_arsenal:claws_jungle_venom:*=reskillable:attack|12",
+            "nanonaitors_arsenal:flail_jungle_venom:*=reskillable:attack|12",
+            "nanonaitors_arsenal:battering_ram_jungle_venom:*=reskillable:attack|12",
+            "nanonaitors_arsenal:ball_and_chain_jungle_venom:*=reskillable:attack|12",
+            "nanonaitors_arsenal:linked_claw_jungle_venom:*=reskillable:attack|12",
+            "nanonaitors_arsenal:blade_staff_jungle_venom:*=reskillable:attack|12",
+            "nanonaitors_arsenal:morning_star_desert_venom:*=reskillable:attack|12",
+            "nanonaitors_arsenal:scimitar_desert_venom:*=reskillable:attack|12",
+            "nanonaitors_arsenal:claws_desert_venom:*=reskillable:attack|12",
+            "nanonaitors_arsenal:flail_desert_venom:*=reskillable:attack|12",
+            "nanonaitors_arsenal:battering_ram_desert_venom:*=reskillable:attack|12",
+            "nanonaitors_arsenal:ball_and_chain_desert_venom:*=reskillable:attack|12",
+            "nanonaitors_arsenal:linked_claw_desert_venom:*=reskillable:attack|12",
+            "nanonaitors_arsenal:blade_staff_desert_venom:*=reskillable:attack|12",
+            "nanonaitors_arsenal:tartsy_shield:*=reskillable:defense|8,reskillable:attack|4",
+            "nanonaitors_arsenal:sun_war_bulwark:*=reskillable:defense|16"
+        };
     }
 
     public static final class Enchantments {

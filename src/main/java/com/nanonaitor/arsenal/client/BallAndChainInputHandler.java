@@ -251,6 +251,7 @@ public final class BallAndChainInputHandler {
 
     @SubscribeEvent(priority = EventPriority.HIGHEST, receiveCanceled = true)
     public static void onAttackEntity(AttackEntityEvent event) {
+        if (com.nanonaitor.arsenal.combat.AttackProbe.isAreaProbe(event)) return; // e.g. Callable Horses' area check
         EntityPlayer player = event.getEntityPlayer();
         if (player.world.isRemote && player.getHeldItemMainhand().getItem()
             instanceof ItemBallAndChain) {

@@ -89,6 +89,7 @@ public final class BallAndChainCombat {
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void cancelVanillaAttack(AttackEntityEvent event) {
+        if (com.nanonaitor.arsenal.combat.AttackProbe.isAreaProbe(event)) return; // e.g. Callable Horses' area check
         if (event.getEntityPlayer().getHeldItemMainhand().getItem()
             instanceof ItemBallAndChain) {
             event.setCanceled(true);

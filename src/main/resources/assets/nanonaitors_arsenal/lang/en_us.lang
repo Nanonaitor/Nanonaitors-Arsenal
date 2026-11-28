@@ -199,3 +199,4 @@ config.nanonaitors_arsenal.sunWarBulwark=Sun-War Bulwark
 config.nanonaitors_arsenal.shields=All Arsenal Shields
 config.nanonaitors_arsenal.enchantments=Enchantments
 config.nanonaitors_arsenal.customMaterials=Custom Materials
+config.nanonaitors_arsenal.reskillable=Reskillable Requirements

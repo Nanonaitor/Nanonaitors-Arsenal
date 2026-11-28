@@ -324,6 +324,7 @@ public final class DoubleBladedScimitarCombat {
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void stopEntityAttack(AttackEntityEvent event) {
+        if (com.nanonaitor.arsenal.combat.AttackProbe.isAreaProbe(event)) return; // e.g. Callable Horses' area check
         if (isReflecting(event.getEntityPlayer())) event.setCanceled(true);
     }
 

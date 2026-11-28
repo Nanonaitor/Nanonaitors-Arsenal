@@ -25,7 +25,7 @@ import net.minecraftforge.fml.common.event.FMLServerStartedEvent;
 public final class NanonaitorsArsenal {
     public static final String MOD_ID = "nanonaitors_arsenal";
     public static final String NAME = "Nanonaitor's Arsenal";
-    public static final String VERSION = "2.0.28";
+    public static final String VERSION = "2.0.29";
     public static final Logger LOGGER = LogManager.getLogger(NAME);
     public static final CreativeTabs CREATIVE_TAB = new ArsenalCreativeTab();
 
@@ -45,6 +45,12 @@ public final class NanonaitorsArsenal {
         ModSmeltingRecipes.register();
         com.nanonaitor.arsenal.compat.ParasiteDurabilityCompat.register();
         DragonForgeCompat.register();
+    }
+
+    /** After every mod's post-init, so Reskillable has read the pack's own locks first. */
+    @Mod.EventHandler
+    public void loadComplete(net.minecraftforge.fml.common.event.FMLLoadCompleteEvent event) {
+        com.nanonaitor.arsenal.compat.ReskillableLocks.register();
     }
 
     @Mod.EventHandler

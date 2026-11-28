@@ -76,6 +76,7 @@ public final class ModernBackportCombat {
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void cancelMorningVanillaAttack(AttackEntityEvent event) {
+        if (com.nanonaitor.arsenal.combat.AttackProbe.isAreaProbe(event)) return; // e.g. Callable Horses' area check
         if (com.nanonaitor.arsenal.compat.ScimitarAttackBridge.isControlledOffhandAttack()) return;
         if (event.getEntityPlayer().getHeldItemMainhand().getItem() instanceof ItemMorningStar)
             event.setCanceled(true);
@@ -358,6 +359,7 @@ public final class ModernBackportCombat {
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void exclusiveScimitarInput(AttackEntityEvent event) {
+        if (com.nanonaitor.arsenal.combat.AttackProbe.isAreaProbe(event)) return; // e.g. Callable Horses' area check
         EntityPlayer player = event.getEntityPlayer();
         if (player.isHandActive() && player.getActiveItemStack().getItem() instanceof ItemShield
             && player.getHeldItemMainhand().getItem() instanceof ItemScimitar) {

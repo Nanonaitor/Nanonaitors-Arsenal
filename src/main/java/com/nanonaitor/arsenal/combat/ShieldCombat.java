@@ -218,6 +218,7 @@ public final class ShieldCombat {
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public static void preventDisabledBulwarkAttack(AttackEntityEvent event) {
+        if (com.nanonaitor.arsenal.combat.AttackProbe.isAreaProbe(event)) return; // e.g. Callable Horses' area check
         EntityPlayer player = event.getEntityPlayer();
         if (!(player.getHeldItemMainhand().getItem() instanceof ItemSunWarBulwark)) return;
         if (!player.world.isRemote && event.getTarget() instanceof EntityLivingBase) {

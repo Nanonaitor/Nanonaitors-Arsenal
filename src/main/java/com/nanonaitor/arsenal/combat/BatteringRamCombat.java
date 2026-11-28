@@ -169,6 +169,7 @@ public final class BatteringRamCombat {
      */
     @SubscribeEvent(priority = net.minecraftforge.fml.common.eventhandler.EventPriority.LOW)
     public static void onRamAttack(net.minecraftforge.event.entity.player.AttackEntityEvent event) {
+        if (com.nanonaitor.arsenal.combat.AttackProbe.isAreaProbe(event)) return; // e.g. Callable Horses' area check
         EntityPlayer player = event.getEntityPlayer();
         if (event.isCanceled() || player.world.isRemote || CHARGES.containsKey(player)
             || !(player.getHeldItemMainhand().getItem() instanceof ItemBatteringRam)) return;

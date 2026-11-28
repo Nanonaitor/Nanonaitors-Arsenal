@@ -1,4 +1,4 @@
-# Arsenal 1.12.2 configuration (2.0.28)
+# Arsenal 1.12.2 configuration (2.0.29)
 
 File: `<Minecraft profile>/config/nanonaitors_arsenal.cfg`.
 In game: **Mods → Nanonaitor's Arsenal → Config**. Settings are grouped by
@@ -137,6 +137,27 @@ custommaterials {
 
 Invalid lines are skipped with a log warning naming the problem. Removing a line
 later leaves that material's items unknown in worlds that have them.
+
+## Reskillable requirements
+
+With Reskillable installed, Arsenal adds level requirements for its weapons itself.
+They are in **reskillable → requirements** (in game: Config → Reskillable
+Requirements), one per line in Reskillable's own format, and can be switched off
+with **reskillable → enabled**.
+
+```text
+nanonaitors_arsenal:scimitar_dragonbone:*=reskillable:attack|24
+```
+
+- Defaults: 122 lines covering every material from gold and iron up to the
+  dragon-blooded tiers (attack 2 to 24; Myrmex and Venom also need magic), plus
+  the Tartsy Shield (defense 8, attack 4) and Sun-War Bulwark (defense 16). Wood,
+  stone, Living and Sentient have none.
+- If the pack's own `reskillable.cfg` already locks an item, the pack's lock is
+  kept and Arsenal's line for that item is skipped.
+- Lines for items that don't exist (a disabled weapon, a custom material that is
+  not configured) are skipped. Custom materials can be added here too.
+- Without Reskillable, this section does nothing.
 
 ## Enchantments
 
