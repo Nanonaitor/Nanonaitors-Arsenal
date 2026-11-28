@@ -69,6 +69,10 @@ public final class CombatEvents {
     private static final Map<UUID, ItemStack> ACTIVE_FLAIL_SPRITES = new HashMap<>();
     private static final Map<UUID, BallState> BALLS = new HashMap<>();
     private static final Map<UUID, RamState> RAMS = new HashMap<>();
+    /** Normal ram hits: {target id, extra Knockback levels, tick}. */
+    private static final Map<UUID, long[]> RAM_KNOCKBACK = new HashMap<>();
+    /** After crashing into a wall, use must be let go before the ram charges again. */
+    private static final Map<UUID, Long> RAM_CRASHED = new HashMap<>();
     private static final Map<UUID, MorningStarState> MORNING_STARS = new HashMap<>();
     private static final Map<UUID, Long> LAST_CLAW_OFFHAND = new HashMap<>();
     private static final Map<UUID, Long> LAST_SCIMITAR_ATTACK = new HashMap<>();
@@ -308,11 +312,34 @@ public final class CombatEvents {
     /** Paired claws trade crowd control for combo consistency. */
     public static void onLivingKnockBack(LivingKnockBackEvent event) {
         if (event.getEntity().getLastDamageSource() != null
+            && event.getEntity().getLastDamageSource().getEntity() instanceof Player rammer) {
+            long[] pending = RAM_KNOCKBACK.remove(rammer.getUUID());
+            // Vanilla's Knockback enchantment adds 0.5 strength per level; this stacks with it.
+            if (pending != null && pending[0] == event.getEntity().getId()
+                && rammer.level().getGameTime() - pending[2] <= 1L)
+                event.setStrength(event.getStrength() + 0.5F * pending[1]);
+        }
+        if (event.getEntity().getLastDamageSource() != null
             && event.getEntity().getLastDamageSource().getEntity() instanceof Player player
             && hasMatchingClaws(player)) event.setStrength(event.getStrength() * 0.5F);
     }
 
+    /**
+     * True for a made-up attack: the target stands exactly where the player is.
+     * Some mods ask "may this player act here?" by posting a fake attack and
+     * seeing whether anything cancels it (Callable Horses moves the horse onto the
+     * player first). Arsenal cancels vanilla attacks for weapons that make their
+     * own hits, which those mods read as a protected area; such checks are ignored.
+     */
+    public static boolean isAreaProbe(AttackEntityEvent event) {
+        var target = event.getTarget();
+        Player player = event.getEntity();
+        return player != null && target != null && target != player
+            && target.distanceToSqr(player.getX(), player.getY(), player.getZ()) < 1.0E-4D;
+    }
+
     public static boolean onAttackEntity(AttackEntityEvent event) {
+        if (isAreaProbe(event)) return false;
         Player player = event.getEntity();
         if(!com.nanonaitor.arsenal.compat.LevelRequirements.canUse(player,player.getMainHandItem(),true))return true;
         if (hasDualScimitars(player)) return true;
@@ -327,6 +354,11 @@ public final class CombatEvents {
         }
         if (!(player.getMainHandItem().getItem() instanceof ArsenalWeaponItem weapon)) return false;
         if (weapon.kind()==WeaponKind.BATTERING_RAM && RAMS.containsKey(player.getUUID())) return true;
+        if (weapon.kind()==WeaponKind.BATTERING_RAM && !player.level().isClientSide) {
+            // Normal ram hits push like Knockback II at full strength, Knockback I otherwise.
+            RAM_KNOCKBACK.put(player.getUUID(), new long[] {event.getTarget().getId(),
+                player.getAttackStrengthScale(0.5F) >= 0.95F ? 2 : 1, player.level().getGameTime()});
+        }
         if (weapon.kind() == WeaponKind.BLADE_STAFF
             && BLADE_STAFF_REFLECT_UNTIL.getOrDefault(player.getUUID(), Long.MIN_VALUE) >= player.level().getGameTime()) return true;
         if (weapon.kind() == WeaponKind.FLAIL || weapon.kind() == WeaponKind.BALL_AND_CHAIN
@@ -1159,8 +1191,12 @@ public final class CombatEvents {
         active = active && player.getOffhandItem().isEmpty();
         state.windBoost = active;
         player.getMainHandItem().getOrCreateTag().putBoolean("ArsenalBallBoost", active);
-        if (active) state.nextSwing = Math.min(state.nextSwing, player.level().getGameTime()
-            + ChainWeaponStats.swingIntervalTicks(player, player.getMainHandItem(), true));
+        // Keep the spin's progress: the time left to the next turn scales to the new speed.
+        long now = player.level().getGameTime();
+        int interval = ChainWeaponStats.swingIntervalTicks(player, player.getMainHandItem(), active);
+        if (state.interval > 0 && interval != state.interval && now < state.nextSwing)
+            state.nextSwing = now + Math.max(1L, Math.round((state.nextSwing - now) * interval / (double)state.interval));
+        state.interval = interval;
     }
 
     private static void updateBall(ServerPlayer player) {
@@ -1182,8 +1218,8 @@ public final class CombatEvents {
         if (now >= state.nextSwing) {
             int maxCharges = TierEffects.maxBallCharges(player, weapon.tier());
             int previousCharge = state.charge;
-            state.nextSwing = now + ChainWeaponStats.swingIntervalTicks(player,
-                player.getMainHandItem(), state.windBoost);
+            state.interval = ChainWeaponStats.swingIntervalTicks(player, player.getMainHandItem(), state.windBoost);
+            state.nextSwing = now + state.interval;
             state.charge = Math.min(maxCharges, state.charge + 1);
             lineAttack(player, ChainWeaponStats.ballWindupReach(player, player.getMainHandItem()), 0.5F,
                 0.3F, false, true, weapon.tier());
@@ -1303,6 +1339,7 @@ public final class CombatEvents {
             if (full && !returning) {
                 fractureArmor(target, tier);
                 armorCrack(player, target);
+                if (!state.shook) { state.shook = true; ModNetwork.fx(player, ModNetwork.FX_SHAKE, player.getId(), 60); }
             }
             level.playSound(null, target.blockPosition(), SoundEvents.PLAYER_ATTACK_STRONG,
                 SoundSource.PLAYERS, 1.0F, 0.78F);
@@ -1486,9 +1523,17 @@ public final class CombatEvents {
         }
         if (!(player.getMainHandItem().getItem() instanceof ArsenalWeaponItem weapon) || weapon.kind() != WeaponKind.BATTERING_RAM
             || !player.getOffhandItem().isEmpty() || (!player.isCreative() && player.getFoodData().getFoodLevel() <= 6)) return;
+        long tick = player.level().getGameTime();
+        Long crashed = RAM_CRASHED.get(player.getUUID());
+        if (crashed != null) {
+            // Still holding use after a crash: keep refusing until the heartbeats stop.
+            if (tick - crashed <= 3L) { RAM_CRASHED.put(player.getUUID(), tick); return; }
+            RAM_CRASHED.remove(player.getUUID());
+        }
         RamState state = RAMS.get(player.getUUID());
         if (state == null) {
             state = new RamState(player.getYRot(), player.getXRot(), attackChargeMultiplier(player));
+            state.startTick = tick;
             RAMS.put(player.getUUID(), state);
             // A held ram is one continuous attack. Snapshot its strength first,
             // then consume the cooldown exactly once when that ram begins.
@@ -1516,18 +1561,41 @@ public final class CombatEvents {
         int broken = breakRamBlocks(player, weapon.tier(), forward);
         long now = player.level().getGameTime();
         if (broken > 0) ramImpact(player, state, now, 1.2F, 0.75F);
-        // Ramming a wall it cannot break: a heavy bash, not repeated every tick.
-        else if (player.horizontalCollision) ramImpact(player, state, now, 0.9F, 0.85F);
+        else if (player.horizontalCollision && now - state.startTick >= 3L) {
+            // Ramming a wall it cannot break: a thump, a short bounce back and a camera
+            // jolt. The charge ends until use is let go.
+            ramCrash(player, forward);
+            return;
+        }
         for (LivingEntity target : ((ServerLevel)player.level()).getEntitiesOfClass(LivingEntity.class,
                 player.getBoundingBox().move(forward.scale(0.8D)).inflate(0.7D, 0.4D, 0.7D), target -> validTarget(player, target))) {
             boolean magicLog=ModEnchantments.level(player,player.getMainHandItem(),ModEnchantments.MAGIC_LOG)>0;
             DamageSource ramSource=magicLog?player.damageSources().magic():player.damageSources().playerAttack(player);
             if (state.hit.add(target.getId()) && target.hurt(ramSource,
                     (float)player.getAttributeValue(Attributes.ATTACK_DAMAGE) * state.damageMultiplier)) {
+                // Charge hits shove hard; Knockback adds its usual 0.5 per level.
+                target.knockback(1.5D + 0.5D * EnchantmentHelper.getItemEnchantmentLevel(
+                    net.minecraft.world.item.enchantment.Enchantments.KNOCKBACK, player.getMainHandItem()),
+                    -forward.x, -forward.z);
                 damage(player.getMainHandItem(), player, 1); player.causeFoodExhaustion(magicLog?0.25F:0.5F);
                 ramImpact(player, state, player.level().getGameTime(), 1.0F, 0.9F);
             }
         }
+    }
+
+    private static void ramCrash(ServerPlayer player, Vec3 forward) {
+        player.level().playSound(null, player.blockPosition(), ModSounds.RAM_THUMP.get(), SoundSource.PLAYERS,
+            1.0F, 0.75F + player.getRandom().nextFloat() * 0.1F);
+        player.level().playSound(null, player.blockPosition(), ModSounds.RAM_IMPACT.get(), SoundSource.PLAYERS,
+            0.6F, 0.6F + player.getRandom().nextFloat() * 0.1F);
+        player.swing(InteractionHand.MAIN_HAND, true);
+        player.setDeltaMovement(-forward.x * 0.55D, player.onGround() ? 0.22D : player.getDeltaMovement().y,
+            -forward.z * 0.55D);
+        player.hurtMarked = true;
+        RAMS.remove(player.getUUID());
+        RAM_CRASHED.put(player.getUUID(), player.level().getGameTime());
+        stopWeaponUse(player, WeaponKind.BATTERING_RAM);
+        ModNetwork.fx(player, ModNetwork.FX_RAM_CRASH, player.getId(), 100);
     }
 
     /** Bash sound and a recoil swing (the arms kick back), at most every 8 ticks. */
@@ -1563,7 +1631,7 @@ public final class CombatEvents {
     }
 
     private static boolean ramCanBreak(BlockState state, WeaponTier tier) {
-        return state.is(switch (tier) {
+        return state.is(switch (tier.baseline()) {
             case WOOD -> RAM_WOOD;
             case STONE, COPPER, GOLD -> RAM_STONE;
             default -> tier.ramBreakLevel >= 3 ? RAM_DIAMOND : RAM_IRON;
@@ -1728,8 +1796,16 @@ public final class CombatEvents {
             && !player.isAlliedTo(target) && (!(target instanceof Player other)
                 || player.canHarmPlayer(other) && (player.getServer()==null || player.getServer().isPvpAllowed()));
     }
+    /** Drops a leaving player's weapon state, so a rejoin starts clean (no stale wind-up or charge). */
+    public static void onLoggedOut(net.minecraftforge.event.entity.player.PlayerEvent.PlayerLoggedOutEvent event) {
+        UUID id = event.getEntity().getUUID();
+        for (Map<UUID, ?> map : java.util.List.<Map<UUID, ?>>of(LAST_FLAIL, ACTIVE_FLAIL_SPRITES, BALLS, RAMS, RAM_KNOCKBACK,
+            RAM_CRASHED, MORNING_STARS, LAST_CLAW_OFFHAND, LAST_SCIMITAR_ATTACK, PENDING_MELEE, PENDING_BULWARK,
+            TARTSY_DASH_UNTIL, TARTSY_DASH_HITS, BLADE_STAFF_REFLECT_UNTIL, BLADE_STAFF_EFFECT_BASELINE,
+            PENDING_BLADE_STAFF_EFFECTS)) map.remove(id);
+    }
     private static float bladeStaffReflection(Player player, WeaponTier tier, LivingEntity attacker, float incoming) {
-        if(tier==WeaponTier.WOOD)return 1.0F;
+        if(tier.baseline()==WeaponTier.WOOD)return 1.0F;
         if(tier==WeaponTier.SILVER && attacker.getMobType()==net.minecraft.world.entity.MobType.UNDEAD)return incoming*2.0F;
         if(tier==WeaponTier.GOLD && TierEffects.matchingArmor(player,tier))return incoming;
         return incoming*tier.reflectionMultiplier();
@@ -1770,7 +1846,7 @@ public final class CombatEvents {
     public static final class BallState {
         final WeaponTier tier;
         long started, lastHeartbeat, nextSwing, releaseTick; int charge, releaseDuration = 16;
-        boolean releasing, returned, windBoost, cutShort; double distance; Vec3 direction, lastBall;
+        boolean releasing, returned, windBoost, cutShort, shook; int interval; double distance; Vec3 direction, lastBall;
         final Set<Integer> hitOutbound = new HashSet<>(), hitReturning = new HashSet<>();
         BallState(long tick, WeaponTier tier) { started = lastHeartbeat = nextSwing = tick; this.tier = tier; }
         public int charge() { return charge; }
@@ -1778,7 +1854,7 @@ public final class CombatEvents {
     }
     private record AttackImpact(Vec3 position) {}
     private static final class RamState {
-        final float yaw, pitch, damageMultiplier; long lastHeartbeat, lastImpact = Long.MIN_VALUE / 2;
+        final float yaw, pitch, damageMultiplier; long lastHeartbeat, startTick, lastImpact = Long.MIN_VALUE / 2;
         final Set<Integer> hit = new HashSet<>();
         RamState(float yaw, float pitch, float damageMultiplier) {
             this.yaw = yaw;

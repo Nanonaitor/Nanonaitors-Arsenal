@@ -30,7 +30,7 @@ public final class LevelRequirementGameTests {
         h.assertTrue(!LevelRequirements.enabledFor(false,true),"Absent mod means no skill dependency");
         h.assertTrue(!LevelRequirements.enabledFor(true,false),"Config disables integration");
         h.assertTrue(LevelRequirements.enabledFor(true,true),"Installed and enabled means active");
-        for(var tier:WeaponTier.values()) {
+        for(var tier:WeaponTier.activeValues()) {
             int level=LevelRequirements.defaultLevel(tier);
             h.assertTrue(!LevelRequirements.meets(level-1,level),"Below level blocked: "+tier);
             h.assertTrue(LevelRequirements.meets(level,level),"Exact level accepted: "+tier);

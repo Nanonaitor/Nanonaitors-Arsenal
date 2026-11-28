@@ -30,8 +30,11 @@ public final class ClawSlashTrails {
         PoseStack pose = event.getPoseStack();
         Matrix4f m = pose.last().pose();
         for (Player player : mc.level.players()) {
-            for (boolean offHand : new boolean[] {false, true}) {
-                double[][] trail = WeaponPoses.clawTrail(player, partial, offHand);
+            // Two claw hands, then a scimitar's tip and mid-blade streaks.
+            double[][][] swords = WeaponPoses.scimitarTrail(player, partial);
+            for (int t = 0; t < 2 + (swords == null ? 0 : swords.length); t++) {
+                boolean claw = t < 2;
+                double[][] trail = claw ? WeaponPoses.clawTrail(player, partial, t == 1) : swords[t - 2];
                 if (trail == null) continue;
                 if (buffer == null) buffer = buffers.getBuffer(RenderType.lightning());
                 double fx = Mth.lerp(partial, player.xOld, player.getX()) - camera.x;
@@ -46,6 +49,13 @@ public final class ClawSlashTrails {
                     double[] thick = normalize(cross(dir, across));
                     float alphaA = 0.75F * (1.0F - i / (float)(trail.length - 1));
                     float alphaB = 0.75F * (1.0F - (i + 1) / (float)(trail.length - 1));
+                    if (!claw) {
+                        // A scimitar leaves one streak at its tip and a fainter one mid-blade.
+                        float k = t == 2 ? 0.8F : 0.45F;
+                        quad(buffer, m, a, b, across, alphaA * k, alphaB * k);
+                        quad(buffer, m, a, b, thick, alphaA * k, alphaB * k);
+                        continue;
+                    }
                     // Three streaks, one per blade, side by side across the sweep.
                     for (int blade = -1; blade <= 1; blade++) {
                         double o = blade * SPACING;

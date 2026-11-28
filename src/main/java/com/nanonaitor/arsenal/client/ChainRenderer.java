@@ -36,6 +36,22 @@ public final class ChainRenderer {
     private static final float[] FULL = {1.0F, 1.0F, 1.0F};
     private static final ResourceLocation IRON_BLOCK = new ResourceLocation("minecraft", "block/iron_block");
 
+    /** The weapon being drawn is enchanted: its chain, head and handle glint. Set per weapon drawn. */
+    static boolean glint;
+
+    /** A render-only copy of a part that glints like the enchanted weapon it belongs to. */
+    static ItemStack glinting(ItemStack part) {
+        if (!glint) return part;
+        ItemStack copy = part.copy();
+        var list = new net.minecraft.nbt.ListTag();
+        var entry = new net.minecraft.nbt.CompoundTag();
+        entry.putString("id", "minecraft:unbreaking");
+        entry.putShort("lvl", (short)1);
+        list.add(entry);
+        copy.getOrCreateTag().put("Enchantments", list);
+        return copy;
+    }
+
     /** How one chain or ghost is drawn. */
     private record Style(VertexConsumer buffer, TextureAtlasSprite sprite, float[] tint, float alpha, int light, double density) {}
 
@@ -60,7 +76,9 @@ public final class ChainRenderer {
                 net.minecraftforge.client.model.data.ModelData.EMPTY);
             tint = MATERIAL;
         } else { sprite = blockSprite(IRON_BLOCK); tint = IRON; }
-        Style style = new Style(buffers.getBuffer(RenderType.entityCutoutNoCull(InventoryMenu.BLOCK_ATLAS)),
+        // Enchanted weapons glint on their links too.
+        Style style = new Style(net.minecraft.client.renderer.entity.ItemRenderer.getFoilBufferDirect(buffers,
+                RenderType.entityCutoutNoCull(InventoryMenu.BLOCK_ATLAS), false, glint),
             sprite, tint, 1.0F, light, TEXEL_DENSITY);
         double travelled = STEP * 0.5D;
         int index = 0;

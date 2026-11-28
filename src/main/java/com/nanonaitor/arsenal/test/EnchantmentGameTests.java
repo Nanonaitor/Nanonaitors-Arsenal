@@ -13,7 +13,7 @@ import net.minecraftforge.gametest.*;
 public final class EnchantmentGameTests {
     @GameTest(template="empty",templateNamespace="forge")
     public static void ordinaryWeaponEnchantments(GameTestHelper h) {
-        for (WeaponTier tier : WeaponTier.values()) for (WeaponKind kind : WeaponKind.values()) {
+        for (WeaponTier tier : WeaponTier.activeValues()) for (WeaponKind kind : WeaponKind.values()) {
             ItemStack stack = new ItemStack(ModItems.get(kind,tier).get());
             for (var enchantment : new net.minecraft.world.item.enchantment.Enchantment[]{
                 Enchantments.SHARPNESS, Enchantments.UNBREAKING, Enchantments.MENDING,

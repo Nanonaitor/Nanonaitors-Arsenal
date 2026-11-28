@@ -24,7 +24,8 @@
             0.0,
             16.0,
             16.0
-          ]
+          ],
+          "tintindex": 1
         },
         "south": {
           "texture": "#material",
@@ -33,7 +34,8 @@
             0.0,
             16.0,
             16.0
-          ]
+          ],
+          "tintindex": 1
         },
         "east": {
           "texture": "#material",
@@ -42,7 +44,8 @@
             0.0,
             16.0,
             16.0
-          ]
+          ],
+          "tintindex": 1
         },
         "west": {
           "texture": "#material",
@@ -51,7 +54,8 @@
             0.0,
             16.0,
             16.0
-          ]
+          ],
+          "tintindex": 1
         },
         "up": {
           "texture": "#material",
@@ -60,7 +64,8 @@
             0.0,
             16.0,
             16.0
-          ]
+          ],
+          "tintindex": 1
         },
         "down": {
           "texture": "#material",
@@ -69,7 +74,8 @@
             0.0,
             16.0,
             16.0
-          ]
+          ],
+          "tintindex": 1
         }
       },
       "name": "core"
@@ -93,7 +99,8 @@
             3.2,
             16.0,
             12.8
-          ]
+          ],
+          "tintindex": 1
         },
         "south": {
           "texture": "#material",
@@ -102,7 +109,8 @@
             3.2,
             16.0,
             12.8
-          ]
+          ],
+          "tintindex": 1
         },
         "east": {
           "texture": "#material",
@@ -111,7 +119,8 @@
             2.0,
             14.0,
             14.0
-          ]
+          ],
+          "tintindex": 1
         },
         "west": {
           "texture": "#material",
@@ -120,7 +129,8 @@
             2.0,
             14.0,
             14.0
-          ]
+          ],
+          "tintindex": 1
         },
         "up": {
           "texture": "#material",
@@ -129,7 +139,8 @@
             3.2,
             16.0,
             12.8
-          ]
+          ],
+          "tintindex": 1
         },
         "down": {
           "texture": "#material",
@@ -138,7 +149,8 @@
             3.2,
             16.0,
             12.8
-          ]
+          ],
+          "tintindex": 1
         }
       },
       "name": "bulge_x"
@@ -162,7 +174,8 @@
             0.0,
             12.8,
             16.0
-          ]
+          ],
+          "tintindex": 1
         },
         "south": {
           "texture": "#material",
@@ -171,7 +184,8 @@
             0.0,
             12.8,
             16.0
-          ]
+          ],
+          "tintindex": 1
         },
         "east": {
           "texture": "#material",
@@ -180,7 +194,8 @@
             0.0,
             12.8,
             16.0
-          ]
+          ],
+          "tintindex": 1
         },
         "west": {
           "texture": "#material",
@@ -189,7 +204,8 @@
             0.0,
             12.8,
             16.0
-          ]
+          ],
+          "tintindex": 1
         },
         "up": {
           "texture": "#material",
@@ -198,7 +214,8 @@
             2.0,
             14.0,
             14.0
-          ]
+          ],
+          "tintindex": 1
         },
         "down": {
           "texture": "#material",
@@ -207,7 +224,8 @@
             2.0,
             14.0,
             14.0
-          ]
+          ],
+          "tintindex": 1
         }
       },
       "name": "bulge_y"
@@ -231,7 +249,8 @@
             2.0,
             14.0,
             14.0
-          ]
+          ],
+          "tintindex": 1
         },
         "south": {
           "texture": "#material",
@@ -240,7 +259,8 @@
             2.0,
             14.0,
             14.0
-          ]
+          ],
+          "tintindex": 1
         },
         "east": {
           "texture": "#material",
@@ -249,7 +269,8 @@
             3.2,
             16.0,
             12.8
-          ]
+          ],
+          "tintindex": 1
         },
         "west": {
           "texture": "#material",
@@ -258,7 +279,8 @@
             3.2,
             16.0,
             12.8
-          ]
+          ],
+          "tintindex": 1
         },
         "up": {
           "texture": "#material",
@@ -267,7 +289,8 @@
             0.0,
             12.8,
             16.0
-          ]
+          ],
+          "tintindex": 1
         },
         "down": {
           "texture": "#material",
@@ -276,7 +299,8 @@
             0.0,
             12.8,
             16.0
-          ]
+          ],
+          "tintindex": 1
         }
       },
       "name": "bulge_z"

@@ -30,7 +30,7 @@ public final class ModItems {
     public static final RegistryObject<Item> SUN_WAR = registerShield("sun_war_bulwark", ArsenalShieldItem.Type.SUN_WAR, new Item.Properties().durability(4096));
     public static final RegistryObject<Item> TARTSY_SHIELD = registerShield("tartsy_shield", ArsenalShieldItem.Type.TARTSY, new Item.Properties().durability(768));
     static {
-        for (WeaponTier tier : WeaponTier.values()) {
+        for (WeaponTier tier : WeaponTier.activeValues()) {
             BALL_VISUALS.put(tier, visualItem("ball_visual_" + tier.id));
             FLAIL_SPIKE_VISUALS.put(tier, visualItem("flail_spikeball_visual_" + tier.id));
             FLAIL_SPIKE_TRAIL_NEAR.put(tier, visualItem("flail_spikeball_visual_" + tier.id + "_trail_near"));
@@ -39,7 +39,7 @@ public final class ModItems {
         for (WeaponKind kind : WeaponKind.values()) {
             Map<WeaponTier, RegistryObject<Item>> tiers = new EnumMap<>(WeaponTier.class);
             WEAPONS.put(kind, tiers);
-            for (WeaponTier tier : WeaponTier.values()) {
+            for (WeaponTier tier : WeaponTier.activeValues()) {
                 String id = kind.id + "_" + tier.id;
                 RegistryObject<Item> object = ITEMS.register(id, () -> {
                     float damage = kind == WeaponKind.CLAWS || kind == WeaponKind.LINKED_CLAWS

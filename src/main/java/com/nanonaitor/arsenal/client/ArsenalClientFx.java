@@ -24,11 +24,36 @@ public final class ArsenalClientFx {
     /** Entity id -> {first tick, last tick}. */
     private static final Map<Integer, long[]> ICONS = new HashMap<>();
 
-    public static void receive(byte type, int entityId, int ticks) {
+    private static final int SHAKE_TICKS = 8;
+    private static long shakeStart = Long.MIN_VALUE;
+    private static float shakeStrength;
+
+    public static void receive(byte type, int entityId, int value) {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.level == null || type != ModNetwork.FX_ARMOR_BREAK) return;
+        if (mc.level == null) return;
         long now = mc.level.getGameTime();
-        ICONS.put(entityId, new long[] {now, now + Math.max(1, ticks)});
+        if (type == ModNetwork.FX_ARMOR_BREAK) ICONS.put(entityId, new long[] {now, now + Math.max(1, value)});
+        if (type == ModNetwork.FX_RAM_CRASH) ClientControls.ramCrashed();
+        if (type == ModNetwork.FX_SHAKE || type == ModNetwork.FX_RAM_CRASH) {
+            shakeStart = now;
+            shakeStrength = value / 100.0F;
+        }
+    }
+
+    /** Screen shake: a quick decaying jolt of the camera's pitch, yaw and roll. */
+    static void shake(net.minecraftforge.client.event.ViewportEvent.ComputeCameraAngles event) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level == null || shakeStart == Long.MIN_VALUE) return;
+        float t = (float)(mc.level.getGameTime() - shakeStart + event.getPartialTick());
+        if (t < 0.0F || t >= SHAKE_TICKS) {
+            if (t >= SHAKE_TICKS) shakeStart = Long.MIN_VALUE;
+            return;
+        }
+        float decay = 1.0F - t / SHAKE_TICKS;
+        float k = shakeStrength * decay * decay;
+        event.setPitch(event.getPitch() + Mth.sin(t * 2.9F) * 2.2F * k);
+        event.setYaw(event.getYaw() + Mth.sin(t * 2.3F + 1.0F) * 1.6F * k);
+        event.setRoll(event.getRoll() + Mth.sin(t * 3.7F + 2.0F) * 2.8F * k);
     }
 
     /** Whether this entity is showing the icon right now (tests and the capture tool). */

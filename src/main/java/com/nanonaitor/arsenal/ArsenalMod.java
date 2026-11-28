@@ -26,7 +26,10 @@ import net.minecraftforge.fml.loading.FMLEnvironment;
 public final class ArsenalMod {
     public static final String MOD_ID = "nanonaitors_arsenal";
     public ArsenalMod() {
+        // Custom materials decide which items exist, so they are read before anything registers.
+        com.nanonaitor.arsenal.config.CustomMaterials.loadEarly();
         var group = FMLJavaModLoadingContext.get().getModEventBus();
+        group.addListener(com.nanonaitor.arsenal.config.CustomMaterials::addPack);
         ModItems.ITEMS.register(group);
         ModEffects.EFFECTS.register(group);
         com.nanonaitor.arsenal.registry.ModSounds.SOUNDS.register(group);
@@ -34,6 +37,8 @@ public final class ArsenalMod {
         com.nanonaitor.arsenal.registry.ModRecipes.SERIALIZERS.register(group);
         com.nanonaitor.arsenal.enchantment.ModEnchantments.ENCHANTMENTS.register(group);
         net.minecraftforge.fml.ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, ArsenalConfig.SPEC);
+        net.minecraftforge.fml.ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON,
+            com.nanonaitor.arsenal.config.CustomMaterials.SPEC, com.nanonaitor.arsenal.config.CustomMaterials.FILE);
         net.minecraftforge.fml.ModLoadingContext.get().registerConfig(ModConfig.Type.CLIENT,
             com.nanonaitor.arsenal.config.ArsenalClientConfig.SPEC);
         net.minecraftforge.fml.ModLoadingContext.get().registerConfig(ModConfig.Type.SERVER,
@@ -48,6 +53,7 @@ public final class ArsenalMod {
         bus.addListener(net.minecraftforge.eventbus.api.EventPriority.HIGHEST, CombatEvents::prepareBulwarkDamage);
         bus.addListener(net.minecraftforge.eventbus.api.EventPriority.LOWEST, CombatEvents::protectStaffAtHurt);
         bus.addListener(CombatEvents::onLivingKnockBack);
+        bus.addListener(CombatEvents::onLoggedOut);
         bus.addListener(StunnedEffect::onLivingTick);
         bus.addListener((AttackEntityEvent e) -> { if (CombatEvents.onAttackEntity(e)) e.setCanceled(true); });
         bus.addListener((PlayerInteractEvent.LeftClickBlock e) -> { if (CombatEvents.onLeftClickBlock(e)) e.setCanceled(true); });

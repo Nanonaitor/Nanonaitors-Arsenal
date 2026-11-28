@@ -50,6 +50,8 @@ public final class ClientControls {
 
     public static void register() {
         net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(ClientTooltip::requirements);
+        net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(net.minecraftforge.eventbus.api.EventPriority.LOW,
+            ClientTooltip::explainEnchantments);
         net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext.get().getModEventBus().addListener(
             (net.minecraftforge.client.event.RegisterItemDecorationsEvent event) -> event.register(
                 com.nanonaitor.arsenal.registry.ModItems.SUN_WAR.get(), (graphics,font,stack,x,y) -> {
@@ -60,6 +62,10 @@ public final class ClientControls {
                     }
                     return false;
                 }));
+        var modBus=net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext.get().getModEventBus();
+        modBus.addListener(CustomMaterialClient::registerModels);
+        modBus.addListener(CustomMaterialClient::useSharedModels);
+        modBus.addListener(CustomMaterialClient::registerColors);
         // Register every extensible enum before any humanoid switch table is built.
         WeaponClientExtensions.bootstrap();
         ShieldClientExtensions.bootstrap();
@@ -69,6 +75,7 @@ public final class ClientControls {
         net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener((InputEvent.InteractionKeyMappingTriggered e) -> { if(interaction(e)) e.setCanceled(true); });
         net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(net.minecraftforge.eventbus.api.EventPriority.LOW,
             ArsenalSoundVolume::onPlay);
+        net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(ArsenalClientFx::shake);
         // Leaving a server drops its combat settings; the next one sends its own.
         net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(
             (net.minecraftforge.client.event.ClientPlayerNetworkEvent.LoggingOut e) ->
@@ -221,8 +228,11 @@ public final class ClientControls {
             boolean windBoost = down && emptyOffhand && minecraft.options.keyUse.isDown();
             if (windBoost != ballWindBoostWasDown) {
                 ModNetwork.send(ModNetwork.BALL_WIND_BOOST, windBoost);
-                if (windBoost) nextBallSwing = Math.min(nextBallSwing, now
-                    + ChainWeaponStats.swingIntervalTicks(player, player.getMainHandItem(), true));
+                // Keep the spin's progress: the time left to the next turn scales to the new speed.
+                int from = ChainWeaponStats.swingIntervalTicks(player, player.getMainHandItem(), ballWindBoostWasDown);
+                int to = ChainWeaponStats.swingIntervalTicks(player, player.getMainHandItem(), windBoost);
+                if (nextBallSwing != Long.MIN_VALUE && now < nextBallSwing && from > 0)
+                    nextBallSwing = now + Math.max(1L, Math.round((nextBallSwing - now) * to / (double)from));
                 ballWindBoostWasDown = windBoost;
             }
             if (down && !ballWasDown) {
@@ -269,7 +279,8 @@ public final class ClientControls {
             ballWindBoostWasDown = false; clearBallSprite();
         }
         if (weapon.kind() == WeaponKind.BATTERING_RAM) {
-            boolean charging = minecraft.screen == null && minecraft.options.keyUse.isDown()
+            if (ramCrashLock && !minecraft.options.keyUse.isDown()) ramCrashLock = false;
+            boolean charging = minecraft.screen == null && minecraft.options.keyUse.isDown() && !ramCrashLock
                 && emptyOffhand && (player.isCreative() || player.getFoodData().getFoodLevel() > 6);
             if (charging) {
                 if (!ramLocked) {
@@ -636,6 +647,17 @@ public final class ClientControls {
     public static boolean flailVisual(long now) { return now <= flailVisualUntil; }
     public static boolean flailActive() { return flailWasDown; }
     public static boolean ramActive() { return ramLocked; }
+
+    /** Crashed into a wall: no charge until use is let go. */
+    private static boolean ramCrashLock;
+
+    /** The server ended the charge against a wall. */
+    static void ramCrashed() {
+        ramCrashLock = true;
+        ramLocked = false;
+        var player = Minecraft.getInstance().player;
+        if (player != null) stopUsing(player, WeaponKind.BATTERING_RAM);
+    }
     public static boolean morningStarCharging() { return morningStarCharging || debugMorningCharge >= 0.0F; }
     /** Capture tool only: a fixed charge (-1 = off). */
     public static float debugMorningCharge = -1.0F;

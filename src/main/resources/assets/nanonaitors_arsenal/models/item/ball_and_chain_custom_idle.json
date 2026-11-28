@@ -1,0 +1,7 @@
+{
+  "parent": "nanonaitors_arsenal:item/ball_and_chain_held_sprite",
+  "textures": {
+    "layer0": "nanonaitors_arsenal:item/ball_and_chain_custom_sprite_base",
+    "layer1": "nanonaitors_arsenal:item/ball_and_chain_custom_sprite_metal"
+  }
+}

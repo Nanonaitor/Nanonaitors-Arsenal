@@ -1,0 +1,15 @@
+{
+  "parent": "item/handheld",
+  "textures": {
+    "layer0": "nanonaitors_arsenal:item/flail_custom_base",
+    "layer1": "nanonaitors_arsenal:item/flail_custom_metal"
+  },
+  "overrides": [
+    {
+      "predicate": {
+        "nanonaitors_arsenal:active": 1
+      },
+      "model": "nanonaitors_arsenal:item/flail_custom_active_port"
+    }
+  ]
+}

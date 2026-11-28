@@ -57,7 +57,7 @@ public final class WorldEquipmentCompat {
     private static WeaponTier tierFor(ItemStack stack){
         if(!(stack.getItem() instanceof SwordItem || stack.getItem() instanceof AxeItem))return null;
         String path=BuiltInRegistries.ITEM.getKey(stack.getItem()).getPath();
-        for(WeaponTier tier:WeaponTier.values())if(path.startsWith(tier.id+"_") || path.startsWith((tier==WeaponTier.WOOD?"wooden":tier==WeaponTier.GOLD?"golden":tier.id)+"_"))return tier;
+        for(WeaponTier tier:WeaponTier.activeValues())if(!tier.custom() && path.startsWith(tier.id+"_") || path.startsWith((tier==WeaponTier.WOOD?"wooden":tier==WeaponTier.GOLD?"golden":tier.id)+"_"))return tier;
         return null;
     }
     private WorldEquipmentCompat(){}

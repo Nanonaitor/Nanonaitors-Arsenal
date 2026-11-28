@@ -1,0 +1,40 @@
+{
+  "loader": "forge:separate_transforms",
+  "gui_light": "front",
+  "base": {
+    "parent": "nanonaitors_arsenal:item/ball_and_chain_custom_idle"
+  },
+  "perspectives": {
+    "gui": {
+      "parent": "minecraft:item/generated",
+      "textures": {
+        "layer0": "nanonaitors_arsenal:item/ball_and_chain_custom_active_sprite_base",
+        "layer1": "nanonaitors_arsenal:item/ball_and_chain_custom_active_sprite_metal"
+      }
+    },
+    "firstperson_righthand": {
+      "textures": {
+        "particle": "nanonaitors_arsenal:item/ball_and_chain_iron"
+      },
+      "elements": []
+    },
+    "firstperson_lefthand": {
+      "textures": {
+        "particle": "nanonaitors_arsenal:item/ball_and_chain_iron"
+      },
+      "elements": []
+    },
+    "thirdperson_righthand": {
+      "textures": {
+        "particle": "nanonaitors_arsenal:item/ball_and_chain_iron"
+      },
+      "elements": []
+    },
+    "thirdperson_lefthand": {
+      "textures": {
+        "particle": "nanonaitors_arsenal:item/ball_and_chain_iron"
+      },
+      "elements": []
+    }
+  }
+}

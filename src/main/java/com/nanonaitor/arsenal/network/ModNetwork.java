@@ -9,7 +9,7 @@ public final class ModNetwork {
  public static final byte FLAIL=1, BALL_CHAIN=2, RAM=3, BULWARK_BASH=4, CLAW=5, CLAW_MAIN=6, MORNING_STAR=7, BULWARK_ATTACK=8, BULWARK_MENU_GUARD=9, SCIMITAR_ATTACK=10, BALL_WIND_BOOST=11, TARTSY_BASH=12, BLADE_STAFF_ATTACK=13, BLADE_STAFF_REFLECT=14;
  public static final byte CANCEL_WEAPON_INPUTS=15;
  public static final byte SCIMITAR_BASH=16;
- private static final String VERSION="5";
+ private static final String VERSION="6";
  private static final SimpleChannel CHANNEL=NetworkRegistry.newSimpleChannel(new ResourceLocation(ArsenalMod.MOD_ID,"controls"),()->VERSION,VERSION::equals,VERSION::equals);
  public static void init(){
   CHANNEL.messageBuilder(ControlPacket.class,0,NetworkDirection.PLAY_TO_SERVER)
@@ -28,7 +28,11 @@ public final class ModNetwork {
    .decoder(b->new ConfigPacket(b.readMap(buf->buf.readUtf(),buf->buf.readDouble())))
    .consumerMainThread((m,c)->{com.nanonaitor.arsenal.config.SyncedConfig.receive(m.values);c.get().setPacketHandled(true);}).add();
  }
- public static final byte FX_ARMOR_BREAK=1;
+ public static final byte FX_ARMOR_BREAK=1, FX_SHAKE=2, FX_RAM_CRASH=3;
+ /** An effect for one player only (camera shake, ram crash). */
+ public static void fx(net.minecraft.server.level.ServerPlayer player,byte type,int entityId,int value){
+  CHANNEL.send(net.minecraftforge.network.PacketDistributor.PLAYER.with(()->player),new FxPacket(type,entityId,value));
+ }
  /** Sends the server's combat settings to one player (on join) or to everyone (after a reload). */
  public static void syncConfig(net.minecraft.server.level.ServerPlayer player){
   var packet=new ConfigPacket(com.nanonaitor.arsenal.config.SyncedConfig.snapshot());

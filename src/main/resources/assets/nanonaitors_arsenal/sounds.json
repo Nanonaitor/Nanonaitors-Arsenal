@@ -74,5 +74,14 @@
       "nanonaitors_arsenal:ball_chain_armor_pierce3",
       "nanonaitors_arsenal:ball_chain_armor_pierce4"
     ]
+  },
+  "battering_ram.thump": {
+    "subtitle": "subtitles.nanonaitors_arsenal.battering_ram.thump",
+    "sounds": [
+      {
+        "name": "minecraft:entity.generic.big_fall",
+        "type": "event"
+      }
+    ]
   }
 }

@@ -52,7 +52,28 @@ public final class WeaponVisualState {
             if (!activeTag(stack) || stack.getTag().getBoolean("ArsenalBallThrown")) return Double.NaN;
             started = stack.getTag().getLong("ArsenalBallStarted");
         }
-        return (now - started + partial) / ballSwingTicks(player) * Math.PI * 2.0D;
+        return rotations(player, started, ballSwingTicks(player), now, partial) * Math.PI * 2.0D;
+    }
+
+    /** Per player: {wind-up start, spin interval, tick the interval last changed, turns done by then}. */
+    private static final java.util.Map<Player, double[]> SPINS = new java.util.WeakHashMap<>();
+
+    /**
+     * Turns since the wind-up began. When the spin speeds up or slows down, the
+     * turns already done are kept and only the rest runs at the new speed, so the
+     * ball never jumps to another point of its circle.
+     */
+    private static double rotations(Player player, long started, int interval, long now, float partial) {
+        double[] s = SPINS.get(player);
+        if (s == null || s[0] != started) {
+            s = new double[] {started, interval, started, 0.0D};
+            SPINS.put(player, s);
+        } else if (interval != (int)s[1]) {
+            s[3] += (now - s[2]) / s[1];
+            s[2] = now;
+            s[1] = interval;
+        }
+        return s[3] + (now - s[2] + partial) / s[1];
     }
 
     /** Throw progress 0..1 (out until 0.5, back after), or -1 when no throw is playing. */

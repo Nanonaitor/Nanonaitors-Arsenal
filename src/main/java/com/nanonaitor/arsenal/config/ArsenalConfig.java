@@ -21,10 +21,20 @@ public final class ArsenalConfig {
     public static final java.util.Map<String,ForgeConfigSpec.ConfigValue<java.util.List<? extends String>>> EFFECTS=new java.util.LinkedHashMap<>();
     public static final ForgeConfigSpec SPEC;
 
+    private static final java.util.Map<String,String> ENCHANT_INFO=java.util.Map.of(
+        "long_chain","Long Chain: +1 block of Flail and Ball and Chain reach per level.",
+        "rotation_force","Rotation Force: +0.2 Flail and Ball and Chain attack speed per level.",
+        "recovery","Recovery: halves the ability cooldown of the Tartsy Shield, Sun-War Bulwark and Blade Staffs.",
+        "breeched","Breeched (curse): doubles Tartsy Shield and Sun-War Bulwark ability cooldowns.",
+        "reverso","Reverso: Blade Staff reflection heals you instead and repairs the staff.",
+        "luna","Luna: +25% Morning Star area and -25% charge time per level.",
+        "magic_log","Magic Log: halves Battering Ram hunger use and turns its damage into magic.",
+        "endure","Endure: Scimitars resist guard breaks and recover from a failed resistance faster.");
+
     static {
         BUILDER.push("enchantments");
         ENABLE_CUSTOM_ENCHANTMENTS=BUILDER.comment("Master switch for every Nanonaitor's Arsenal enchantment.").define("enabled",true);
-        for(String id:new String[]{"long_chain","rotation_force","recovery","breeched","reverso","luna","magic_log","endure"}) ENCHANTMENTS.put(id,BUILDER.define(id,true));
+        for(String id:new String[]{"long_chain","rotation_force","recovery","breeched","reverso","luna","magic_log","endure"}) ENCHANTMENTS.put(id,BUILDER.comment(ENCHANT_INFO.get(id)+" False removes it from enchanting tables and books; enchantments already on items stop working.").define(id,true));
         LONG_CHAIN_MAX_LEVEL = BUILDER.comment(
             "Maximum effective Long Chain level. Natural enchanting is capped at level 2; this also caps higher levels supplied by commands or other mods.")
             .defineInRange("longChainMaxLevel", 2, 1, 100);
@@ -50,15 +60,15 @@ public final class ArsenalConfig {
         BUILDER.pop();
         BUILDER.push("worldEquipment");
         MOB_EQUIPMENT=BUILDER.comment("Allow newly spawned vanilla humanoids already carrying a vanilla melee weapon to use a same-tier Arsenal weapon. Named mobs and named, lore, attribute or otherwise customized gear are never replaced.").define("mobEquipment",true);
-        MOB_REPLACEMENT_CHANCE=BUILDER.defineInRange("mobReplacementChance",.25D,0D,1D);
+        MOB_REPLACEMENT_CHANCE=BUILDER.comment("Chance (0-1) that an eligible mob swaps its weapon for the Arsenal one.").defineInRange("mobReplacementChance",.25D,0D,1D);
         BUILDER.pop();
         BUILDER.push("reach");
-        FLAIL_REACH=BUILDER.defineInRange("flail",4D,0.5D,32D);
-        BALL_WINDUP_REACH=BUILDER.defineInRange("ballWindup",3D,0.5D,32D);
-        BALL_THROW_REACH=BUILDER.defineInRange("ballThrowPerCharge",4D,0.5D,32D);
+        FLAIL_REACH=BUILDER.comment("Blocks the Flail's spinning head reaches while swung.").defineInRange("flail",4D,0.5D,32D);
+        BALL_WINDUP_REACH=BUILDER.comment("Blocks the Ball and Chain hits while it spins around you (wind-up).").defineInRange("ballWindup",3D,0.5D,32D);
+        BALL_THROW_REACH=BUILDER.comment("Blocks a Ball and Chain throw travels per full spin of charge; more spins throw farther.").defineInRange("ballThrowPerCharge",4D,0.5D,32D);
         BUILDER.pop();
         BUILDER.push("compatibility");
-        SHIELD_ENCHANTMENTS=BUILDER.define("allowShieldEnchantments",true);
+        SHIELD_ENCHANTMENTS=BUILDER.comment("Let the Sun War Bulwark and Tartsy Shield take shield enchantments from other mods.").define("allowShieldEnchantments",true);
         MATCHING_ARMOR_BONUSES=BUILDER.comment("Rebuild the 1.12.2 gold/silver full-set bonuses using armor items/tags; no SetBonus mod required.").define("matchingArmorBonuses",true);
         STUN_BLACKLIST=BUILDER.comment("Exact entity IDs that cannot receive Stunned.").defineListAllowEmpty("stunnedEntityBlacklist",java.util.List.of(),v->v instanceof String);
         CHAIN_LIGHTNING=BUILDER.comment("Electric Dragonbone hits arc chain lightning to nearby enemies, as Ice & Fire's 1.12.2 lightning weapons did.").define("electricChainLightning",true);

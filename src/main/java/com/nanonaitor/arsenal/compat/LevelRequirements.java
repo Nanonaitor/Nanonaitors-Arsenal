@@ -23,11 +23,12 @@ public final class LevelRequirements {
             "False disables only Arsenal's added requirements; it does not erase independent locks configured by other mods.")
             .define("enabled",true);
         b.push("strengthByTier");
-        for(var tier:WeaponTier.values()) LEVELS.put(tier,b.comment(reference(tier))
+        for(var tier:WeaponTier.activeValues()) LEVELS.put(tier,b.comment(reference(tier))
             .defineInRange(tier.id,defaultLevel(tier),0,1000));
         b.pop();b.pop();SPEC=b.build();
     }
     public static int defaultLevel(WeaponTier tier) {
+        if(tier.custom())return defaultLevel(tier.baseline());
         return switch(tier) {
             case WOOD,STONE->1;
             case COPPER,GOLD->3;
@@ -42,6 +43,7 @@ public final class LevelRequirements {
         };
     }
     public static String reference(WeaponTier tier) {
+        if(tier.custom())return "Custom material: defaults to the built-in tier of its harvest level.";
         return switch(tier) {
             case COPPER,SILVER,BRONZE->"Matches Restless Horizons' Spartan Weaponry "+tier.id+" weapons.";
             case STEEL->"No exact configured steel weapon: default 12 interpolates iron 8 and diamond 16.";

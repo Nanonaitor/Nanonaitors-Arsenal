@@ -1,0 +1,21 @@
+{
+  "parent": "nanonaitors_arsenal:item/ball_and_chain_held_sprite",
+  "textures": {
+    "layer0": "nanonaitors_arsenal:item/ball_and_chain_custom_sprite_base",
+    "layer1": "nanonaitors_arsenal:item/ball_and_chain_custom_sprite_metal"
+  },
+  "overrides": [
+    {
+      "predicate": {
+        "nanonaitors_arsenal:guarding": 1
+      },
+      "model": "nanonaitors_arsenal:item/ball_and_chain_custom_guard"
+    },
+    {
+      "predicate": {
+        "nanonaitors_arsenal:active": 1
+      },
+      "model": "nanonaitors_arsenal:item/ball_and_chain_custom_active_port"
+    }
+  ]
+}

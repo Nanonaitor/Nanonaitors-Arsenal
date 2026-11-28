@@ -373,5 +373,28 @@ public final class PortedRulesGameTests {
         h.succeed();
     }
 
+    @GameTest(template = "empty", templateNamespace = "forge")
+    public static void customMaterialsRegisterAndCraft(GameTestHelper h) {
+        var custom = WeaponTier.activeValues().stream().filter(WeaponTier::custom).toList();
+        if (custom.isEmpty()) { h.succeed(); return; } // only when a materials file lists some
+        for (WeaponTier tier : custom) {
+            for (WeaponKind kind : WeaponKind.values()) {
+                var item = (ArsenalWeaponItem)ModItems.get(kind, tier).get();
+                h.assertTrue(item.tier() == tier && item.kind() == kind, "Registered " + kind + " " + tier.id);
+                if (kind == WeaponKind.LINKED_CLAWS) continue;
+                var stack = new ItemStack(item);
+                h.assertTrue(stack.getHoverName().getString().contains(tier.displayName()), "Named after the material: " + stack.getHoverName().getString());
+                h.assertTrue(stack.getMaxDamage() == tier.material.getUses(), "Durability from the entry");
+                var recipe = h.getLevel().getRecipeManager().byKey(new net.minecraft.resources.ResourceLocation(
+                    ArsenalMod.MOD_ID, "custom/" + kind.id + "_" + tier.id));
+                h.assertTrue(recipe.isPresent(), "Generated recipe for " + kind.id + "_" + tier.id);
+                h.assertTrue(recipe.get().getResultItem(h.getLevel().registryAccess()).getItem() == item, "Recipe makes the custom weapon");
+                h.assertTrue(recipe.get().getIngredients().stream().noneMatch(i -> i.test(new ItemStack(Items.IRON_INGOT))
+                    || i.test(new ItemStack(Items.IRON_BLOCK))), "Iron is swapped for the custom ingredient");
+            }
+        }
+        h.succeed();
+    }
+
     private PortedRulesGameTests() {}
 }

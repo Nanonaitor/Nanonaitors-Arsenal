@@ -34,7 +34,7 @@ Controls below use the default attack/use bindings (left/right mouse).
 | Scimitar | Blocking an attack while holding a scimitar (cross-guard or any shield) makes the next scimitar hit or bash deal x1.3 for 5 seconds. Paired blades alternate attacks; hold Use to cross-guard; Attack while guarding to bash. A lone offhand Scimitar can attack with Use. |
 | Claws | Empty offhand creates a linked matching claw. Attack/Use drive each hand; fully charged paired hits bypass normal hit immunity with a shared four-tick minimum per player/target. No guaranteed combo critical. |
 | Flail | Hold Attack for timed area strikes and the rendered chain/spike-ball orbit. |
-| Battering Ram | Hold Use with an empty offhand to charge forward and crush eligible blocks. Attack normally for extra knockback. Hunger must exceed three bars; charge direction is locked. |
+| Battering Ram | Hold Use with an empty offhand to charge forward and crush eligible blocks. Attack normally for extra knockback (Knockback adds to it). Ramming into a wall you can't break stops the charge with a thump and a bounce; release Use to charge again. Hunger must exceed three bars; charge direction is locked. |
 | Ball & Chain | Hold Attack to wind, release to throw/return. Hold Use while winding for faster rotation. Crouch + Use with an empty offhand to guard; Knockback shoves blocked melee attackers. A raised Defender keeps the wind-up and throw going. |
 | Blade Staff | Normal attack controls; hits splash nearby enemies. Use for a one-second combat reflection window. Does not block environmental damage. |
 | Tartsy Shield | Use to guard; Attack while guarding to dash. A confirmed dash hit primes a critical hit. |
@@ -101,6 +101,15 @@ Client options (`config/nanonaitors_arsenal-client.toml`, each player sets their
 applied immediately): `animations.weaponPoses`, `animations.attackSpeedSwings`,
 `animations.chainMaterialColors` (off: iron chains, red for Living/Sentient) and
 `sounds.volume` (0 to 2) for Arsenal's own sounds.
+
+Custom materials (`config/nanonaitors_arsenal-materials.toml`): up to eight of your
+own weapon materials, one per line:
+`id, Display Name, #RRGGBB, ingredient, harvest level, durability, attack damage, enchantability`,
+for example `"amethyst, Amethyst, #9A5CC6, minecraft:amethyst_shard, 2, 300, 2.0, 18"`.
+Each adds every weapon in that material, named after it ("Amethyst Flail"), crafted like
+the iron one with the ingredient (an item or `#tag`), with its metal tinted the colour.
+The harvest level (0-4) picks which built-in tier its special rules follow. Restart after
+changes; the server and every client need the same list. Keep an id once worlds use it.
 
 Restart after changing the common options. Recipe toggles can also take effect on a
 datapack reload. Connected clients receive the server's combat settings automatically,

@@ -1,0 +1,40 @@
+{
+  "loader": "forge:separate_transforms",
+  "gui_light": "front",
+  "base": {
+    "parent": "nanonaitors_arsenal:item/flail_custom_idle"
+  },
+  "perspectives": {
+    "gui": {
+      "parent": "minecraft:item/generated",
+      "textures": {
+        "layer0": "nanonaitors_arsenal:item/flail_swinging_custom_base",
+        "layer1": "nanonaitors_arsenal:item/flail_swinging_custom_metal"
+      }
+    },
+    "firstperson_righthand": {
+      "textures": {
+        "particle": "nanonaitors_arsenal:item/flail_custom_metal"
+      },
+      "elements": []
+    },
+    "firstperson_lefthand": {
+      "textures": {
+        "particle": "nanonaitors_arsenal:item/flail_custom_metal"
+      },
+      "elements": []
+    },
+    "thirdperson_righthand": {
+      "textures": {
+        "particle": "nanonaitors_arsenal:item/flail_custom_metal"
+      },
+      "elements": []
+    },
+    "thirdperson_lefthand": {
+      "textures": {
+        "particle": "nanonaitors_arsenal:item/flail_custom_metal"
+      },
+      "elements": []
+    }
+  }
+}

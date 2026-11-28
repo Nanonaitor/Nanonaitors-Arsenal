@@ -72,7 +72,7 @@ public final class PortGameTests {
  @GameTest(template="empty",templateNamespace="forge")
  public static void armorPiercingCurve(GameTestHelper h){
   var mob=h.spawn(EntityType.ZOMBIE,1,2,1);
-  for(float armor:new float[]{0,10,20,40}) for(float tough:new float[]{0,8,16}) for(float damage:new float[]{4,10,30}) for(var tier:WeaponTier.values()){
+  for(float armor:new float[]{0,10,20,40}) for(float tough:new float[]{0,8,16}) for(float damage:new float[]{4,10,30}) for(var tier:WeaponTier.activeValues()){
    mob.getAttribute(Attributes.ARMOR).setBaseValue(armor);
    mob.getAttribute(Attributes.ARMOR_TOUGHNESS).setBaseValue(tough);
    float corrected=com.nanonaitor.arsenal.combat.CombatEvents.compensateForArmor(mob,damage,tier.armorPiercePercent()/100F);
@@ -122,7 +122,7 @@ public final class PortGameTests {
  }
  @GameTest(template="empty",templateNamespace="forge")
  public static void registrationAndStats(GameTestHelper h){
-  for(var kind:WeaponKind.values()) for(var tier:WeaponTier.values()){
+  for(var kind:WeaponKind.values()) for(var tier:WeaponTier.activeValues()){
    var item=(ArsenalWeaponItem)ModItems.get(kind,tier).get();
    h.assertTrue(item.tier()==tier && item.kind()==kind,"Registry identity "+kind+"/"+tier);
    h.assertTrue(item.getDefaultInstance().getMaxStackSize()==1,"Weapon must not stack");

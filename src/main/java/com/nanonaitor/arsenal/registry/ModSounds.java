@@ -31,6 +31,9 @@ public final class ModSounds {
     /** Ball and Chain: armour cracking on a full-charge hit, and a projectile smashed by a thrown ball. */
     public static final RegistryObject<SoundEvent> BALL_CHAIN_ARMOR_PIERCE = SOUNDS.register("ball_chain.armor_pierce",
         () -> SoundEvent.createVariableRangeEvent(new ResourceLocation(ArsenalMod.MOD_ID, "ball_chain.armor_pierce")));
+    /** Battering Ram: a heavy thump when a charge crashes into a wall it cannot break. */
+    public static final RegistryObject<SoundEvent> RAM_THUMP = SOUNDS.register("battering_ram.thump",
+        () -> SoundEvent.createVariableRangeEvent(new ResourceLocation(ArsenalMod.MOD_ID, "battering_ram.thump")));
     /** Claws: a high metal slash on every hit. */
     public static final RegistryObject<SoundEvent> CLAWS_SLASH = SOUNDS.register("claws.slash",
         () -> SoundEvent.createVariableRangeEvent(new ResourceLocation(ArsenalMod.MOD_ID, "claws.slash")));

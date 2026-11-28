@@ -50,7 +50,7 @@ public final class PoseCapture {
         final String sheet, label, main, off;
         final Consumer<WeaponPoses.Input> override;
         Runnable setup = () -> {};
-        boolean firstPerson, crouch;
+        boolean firstPerson, crouch, enchanted;
         Shot(String sheet, String label, String main, String off, Consumer<WeaponPoses.Input> override) {
             this.sheet = sheet; this.label = label; this.main = main; this.off = off; this.override = override;
         }
@@ -70,6 +70,7 @@ public final class PoseCapture {
         add("battering_ram", "ramming, impact recoil", ram, null, in -> { in.active = true; in.attackPhase = 0.5F; })
             .setup = () -> WeaponPoses.debugSegmentAge = 12;
         add("battering_ram", "attack lunge 25%", ram, null, in -> { in.active = false; in.attackPhase = 0.25F; });
+        add("battering_ram", "attack swing 60%", ram, null, in -> { in.active = false; in.attackPhase = 0.6F; });
         add("battering_ram", "one hand, hip", ram, torch, in -> in.attackPhase = -1);
         add("battering_ram", "one hand, lunge 25%", ram, torch, in -> in.attackPhase = 0.25F);
 
@@ -138,6 +139,15 @@ public final class PoseCapture {
             fp.setup = () -> ClientControls.debugScimitarBash = phase < 0 ? 0.0F : phase; fp.firstPerson = true;
         }
 
+        // A single scimitar's ordinary swing leaves a faint streak in the air.
+        for (float phase : new float[] {0.3F, 0.5F})
+            add("scimitars", "single swing streak " + Math.round(phase * 100) + "%", scim, null, in -> {}).setup = () -> {
+                var p = Minecraft.getInstance().player;
+                AttackTiming.debugPhase = phase;
+                p.swinging = true; p.swingingArm = net.minecraft.world.InteractionHand.MAIN_HAND;
+                p.swingTime = 2; p.attackAnim = p.oAttackAnim = phase;
+            };
+
         String star = ID + "morning_star_iron";
         add("morning_star", "idle", star, null, in -> {});
         for (float k : new float[] {0.0F, 0.25F, 0.5F, 0.75F, 1.0F}) {
@@ -155,6 +165,26 @@ public final class PoseCapture {
             if (!p.isUsingItem()) p.startUsingItem(net.minecraft.world.InteractionHand.MAIN_HAND);
         };
         add("bulwark", "one hand, carry", bulwark, torch, in -> {});
+
+        // Enchanted: the glint runs along the chain and ball too.
+        add("glint", "enchanted ball wind-up", ball, null, in -> {}).setup = () -> WeaponVisualState.debugWindupAngle = Math.PI / 2.0D;
+        SHOTS.get(SHOTS.size() - 1).enchanted = true;
+        add("glint", "enchanted flail whirl", flail, null, in -> {}).setup = () -> WeaponVisualState.debugFlailAngle = -Math.PI / 2.0D;
+        SHOTS.get(SHOTS.size() - 1).enchanted = true;
+
+        // Custom materials from run/config/nanonaitors_arsenal-materials.toml (skipped when none are set).
+        for (var tier : com.nanonaitor.arsenal.item.WeaponTier.activeValues()) {
+            if (!tier.custom()) continue;
+            String t = tier.id;
+            add("custom_" + t, "morning star", ID + "morning_star_" + t, null, in -> {});
+            add("custom_" + t, "scimitars guard", ID + "scimitar_" + t, ID + "scimitar_" + t,
+                in -> { in.kind = WeaponPoses.Kind.SCIMITARS; in.active = true; in.attackPhase = -1; });
+            add("custom_" + t, "blade staff", ID + "blade_staff_" + t, null, in -> { in.active = false; in.attackPhase = -1; });
+            add("custom_" + t, "claws", ID + "claws_" + t, null, in -> { in.attackPhase = -1; in.offAttackPhase = -1; });
+            add("custom_" + t, "battering ram", ID + "battering_ram_" + t, null, in -> in.active = false);
+            add("custom_" + t, "flail whirl", ID + "flail_" + t, null, in -> {}).setup = () -> WeaponVisualState.debugFlailAngle = -Math.PI / 2.0D;
+            add("custom_" + t, "ball wind-up", ID + "ball_and_chain_" + t, null, in -> {}).setup = () -> WeaponVisualState.debugWindupAngle = Math.PI / 2.0D;
+        }
     }
 
     private static void reset() {
@@ -253,7 +283,9 @@ public final class PoseCapture {
     private static void begin(Minecraft mc, net.minecraft.server.level.ServerPlayer server) {
         reset();
         Shot shot = SHOTS.get(shotIndex);
-        server.setItemSlot(EquipmentSlot.MAINHAND, stack(shot.main));
+        ItemStack main = stack(shot.main);
+        if (shot.enchanted) main.enchant(net.minecraft.world.item.enchantment.Enchantments.UNBREAKING, 1);
+        server.setItemSlot(EquipmentSlot.MAINHAND, main);
         server.setItemSlot(EquipmentSlot.OFFHAND, stack(shot.off));
         server.teleportTo(0.5D, -60.0D, 0.5D);
         server.setYRot(0.0F); server.setXRot(0.0F); server.setYHeadRot(0.0F); server.setYBodyRot(0.0F);

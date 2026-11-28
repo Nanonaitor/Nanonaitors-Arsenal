@@ -379,8 +379,14 @@ public final class WeaponPoses {
     /** A point on an arm with these (model) angles, as a world offset from the feet. */
     private static double[] modelPoint(Player player, float partial, float[] arm, float twist, boolean crouch,
                                        boolean left, double reach) {
+        return modelPoint(player, partial, arm, twist, crouch, left, reach, 0.0D);
+    }
+
+    /** As above, plus forward model pixels in the arm's frame (where a held blade points). */
+    private static double[] modelPoint(Player player, float partial, float[] arm, float twist, boolean crouch,
+                                       boolean left, double reach, double forward) {
         float side = left ? 1.0F : -1.0F;
-        double[] hand = GripMath.rotate(arm[0], arm[1], arm[2], new double[] {side, reach, 0.0D});
+        double[] hand = GripMath.rotate(arm[0], arm[1], arm[2], new double[] {side, reach, -forward});
         double px = hand[0] + side * 5.0D * Math.cos(twist);
         double py = hand[1] + (crouch ? 5.2D : 2.0D);
         double pz = hand[2] - side * 5.0D * Math.sin(twist);
@@ -421,6 +427,43 @@ public final class WeaponPoses {
         return points;
     }
 
+    /** Blade points (model px down the arm, forward of it): tip, then mid-blade. */
+    private static final double[][] SCIMITAR_BLADE = {{23.0D, -1.5D}, {17.0D, -0.5D}};
+
+    /**
+     * Air-slash streaks behind an ordinary scimitar swing: the blade's tip and
+     * middle at the last few sampled moments of the swing, as world offsets from
+     * the feet (newest first), or null when no streak shows.
+     */
+    public static double[][][] scimitarTrail(Player player, float partial) {
+        if (!enabled() || firstPerson(player)) return null;
+        // A full weapon pose (guard, bash, claws...) owns the arms.
+        if (compute(player, player.tickCount + partial, partial) != null) return null;
+        InteractionHand hand = AttackTiming.hand(player);
+        if (!kind(player.getItemInHand(hand), WeaponKind.SCIMITAR)) return null;
+        float a = ArsenalClientConfig.get(ArsenalClientConfig.ATTACK_SPEED_SWINGS) ? AttackTiming.phase(player, partial)
+            : player.swinging ? player.getAttackAnim(partial) : -1.0F;
+        if (a < 0.04F || a > 0.75F) return null;
+        boolean left = (hand == InteractionHand.MAIN_HAND) == (player.getMainArm() == HumanoidArm.LEFT);
+        float pitch = Mth.lerp(partial, player.xRotO, player.getXRot()) * Mth.DEG_TO_RAD;
+        boolean crouch = player.isCrouching();
+        double[][][] trails = new double[SCIMITAR_BLADE.length][7][];
+        for (int i = 0; i < 7; i++) {
+            float p = Math.max(0.0F, a - i * 0.05F);
+            // HumanoidModel's swing for a held item at progress p (the swinging arm only).
+            float bodyY = Mth.sin(Mth.sqrt(p) * Mth.TWO_PI) * 0.2F * (left ? -1.0F : 1.0F);
+            float f = 1.0F - p;
+            f = 1.0F - f * f * f * f;
+            float lift = Mth.sin(f * Mth.PI) * 1.2F + Mth.sin(p * Mth.PI) * -(pitch - 0.7F) * 0.75F;
+            float zRot = Mth.sin(p * Mth.PI) * -0.4F;
+            // Held-item rest -pi/10; the arm turns by 3x the body twist (twice its own, plus the body's).
+            float[] arm = {-0.31415927F - lift + (crouch ? 0.4F : 0.0F), bodyY * 3.0F, left ? -zRot : zRot};
+            for (int b = 0; b < SCIMITAR_BLADE.length; b++)
+                trails[b][i] = modelPoint(player, partial, arm, bodyY, crouch, left, SCIMITAR_BLADE[b][0], SCIMITAR_BLADE[b][1]);
+        }
+        return trails;
+    }
+
     // ---- Motions ---------------------------------------------------------------
 
     /** Claw rake (right arm): from the side, sweeping in to the front of the body. */
@@ -450,10 +493,29 @@ public final class WeaponPoses {
         return (count % 3 == 0 ? 0.50F : 0.32F) * (float)Math.sin(a * Math.PI);
     }
 
-    /** Battering Ram attack: a quick thrust forward in the first part of the swing, then back. */
-    private static float ramLunge(float a) {
+    /**
+     * Battering Ram attack: a small swing from back to front. The log draws back
+     * past the hip, swings forward through the hit, then settles at the hip.
+     * Returns the arm's X angle (rest is -0.30).
+     */
+    private static float ramSwing(float a) {
+        if (a < 0.0F || !ArsenalClientConfig.get(ArsenalClientConfig.ATTACK_SPEED_SWINGS)) return -0.30F;
+        if (a < 0.30F) return lerp(-0.30F, 0.12F, smooth(a / 0.30F));
+        if (a < 0.55F) return lerp(0.12F, -0.80F, smooth((a - 0.30F) / 0.25F));
+        return lerp(-0.80F, -0.30F, smooth((a - 0.55F) / 0.45F));
+    }
+
+    /** The torso turns back on the draw and forward on the hit. */
+    private static float ramSwingTwist(float a) {
         if (a < 0.0F || !ArsenalClientConfig.get(ArsenalClientConfig.ATTACK_SPEED_SWINGS)) return 0.0F;
-        return a < 0.25F ? 0.55F * a / 0.25F : 0.55F * Math.max(0.0F, 1.0F - (a - 0.25F) / 0.45F);
+        if (a < 0.30F) return lerp(0.0F, 0.16F, smooth(a / 0.30F));
+        if (a < 0.55F) return lerp(0.16F, -0.12F, smooth((a - 0.30F) / 0.25F));
+        return lerp(-0.12F, 0.0F, smooth((a - 0.55F) / 0.45F));
+    }
+
+    private static float smooth(float t) {
+        t = t < 0.0F ? 0.0F : t > 1.0F ? 1.0F : t;
+        return t * t * (3.0F - 2.0F * t);
     }
 
     private static float[] mixArm(float[] from, float[] to, float t) {
@@ -482,7 +544,9 @@ public final class WeaponPoses {
                 // Carried at the hip, the log pointing forward like a heavy gun (the
                 // "hip" held model). Two-handed, the other hand grips the forward
                 // handle. A normal attack is a short, quick lunge.
-                float x = -0.30F - ramLunge(in.attackPhase) * 0.5F;
+                // A normal attack is a small swing from back to front, the torso leaning into it.
+                float x = ramSwing(in.attackPhase);
+                float swingTwist = in.active ? 0.0F : ramSwingTwist(in.attackPhase);
                 if (in.active) {
                     // Charge: pull back for two ticks, drive forward, then bob with the stride.
                     float t = in.segmentAge;
@@ -497,6 +561,7 @@ public final class WeaponPoses {
                 float[] right = {x, in.twoHanded ? -0.45F : 0.0F, 0.05F};
                 Pose pose = new Pose().right(right[0], right[1], right[2]);
                 if (in.twoHanded) pose.left(GripMath.leftGrip(right, RAM_HANDLES, RAM_HIP_AXIS, -4.0D, 8.0D));
+                if (swingTwist != 0.0F) pose.bodyY(swingTwist);
                 return pose;
             }
             case STAFF: {

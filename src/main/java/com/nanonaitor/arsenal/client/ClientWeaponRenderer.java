@@ -34,10 +34,15 @@ public final class ClientWeaponRenderer {
     private static final ItemStack STICK = new ItemStack(Items.STICK);
 
     public static void render(RenderLivingEvent.Post<?, ?> event) {
+        try { renderPlayer(event); } finally { ChainRenderer.glint = false; }
+    }
+
+    private static void renderPlayer(RenderLivingEvent.Post<?, ?> event) {
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.player == null || minecraft.level == null) return;
         if (!(event.getEntity() instanceof Player player)) return;
         if (!(player.getMainHandItem().getItem() instanceof ArsenalWeaponItem weapon)) return;
+        ChainRenderer.glint = player.getMainHandItem().hasFoil();
         long now = minecraft.level.getGameTime();
         float partial = minecraft.getFrameTime();
         var pose = event.getPoseStack();
@@ -116,8 +121,10 @@ public final class ClientWeaponRenderer {
             pose.translate(Mth.lerp(frame, player.xOld, player.getX()) - camera.x,
                 Mth.lerp(frame, player.yOld, player.getY()) - camera.y,
                 Mth.lerp(frame, player.zOld, player.getZ()) - camera.z);
+            ChainRenderer.glint = player.getMainHandItem().hasFoil();
             renderBall(pose, buffers, minecraft.getEntityRenderDispatcher().getPackedLightCoords(player, frame),
                 player, weapon.tier(), frame);
+            ChainRenderer.glint = false;
             pose.popPose();
         }
         buffers.endBatch();
@@ -244,7 +251,7 @@ public final class ClientWeaponRenderer {
         pose.mulPose(Axis.XP.rotationDegrees(pitch));
         pose.mulPose(Axis.ZP.rotationDegrees(45.0F));
         pose.scale(scale, scale, scale);
-        submitItem(pose, buffers, light, STICK);
+        submitItem(pose, buffers, light, ChainRenderer.glinting(STICK));
         pose.popPose();
     }
 
@@ -252,6 +259,7 @@ public final class ClientWeaponRenderer {
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.player == null || minecraft.level == null) return;
         Player player = minecraft.player;
+        ChainRenderer.glint = player.getMainHandItem().hasFoil();
         float bash = ClientControls.scimitarBashPhase(event.getPartialTick());
         boolean dual = isScimitar(player.getMainHandItem()) && isScimitar(player.getOffhandItem());
         if (dual && isScimitar(event.getItemStack()) && (bash >= 0.0F || isDualScimitarGuard(minecraft))) {
@@ -435,11 +443,11 @@ public final class ClientWeaponRenderer {
     }
 
     private static ItemStack ballVisualStack(WeaponTier tier) {
-        return new ItemStack(ModItems.BALL_VISUALS.get(tier).get());
+        return ChainRenderer.glinting(new ItemStack(ModItems.BALL_VISUALS.get(tier).get()));
     }
 
     private static ItemStack flailSpikeStack(WeaponTier tier) {
-        return new ItemStack(ModItems.FLAIL_SPIKE_VISUALS.get(tier).get());
+        return ChainRenderer.glinting(new ItemStack(ModItems.FLAIL_SPIKE_VISUALS.get(tier).get()));
     }
 
     private static ItemStack flailTrailStack(WeaponTier tier, boolean near) {

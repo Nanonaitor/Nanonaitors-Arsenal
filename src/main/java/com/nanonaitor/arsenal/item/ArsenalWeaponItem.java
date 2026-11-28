@@ -40,6 +40,18 @@ public class ArsenalWeaponItem extends net.minecraft.world.item.SwordItem {
     }
 
     public WeaponTier tier() { return tier; }
+
+    /** Custom materials have no lang entry: take the iron name and swap in the material. */
+    @Override public Component getName(ItemStack stack) {
+        if (!tier.custom()) return super.getName(stack);
+        String key = "item.nanonaitors_arsenal." + kind.id + "_iron";
+        String iron = net.minecraft.locale.Language.getInstance().getOrDefault(key);
+        if (!iron.equals(key)) return Component.literal(iron.replace("Iron", tier.displayName()));
+        // No lang file (dedicated server): "Amethyst Ball And Chain".
+        StringBuilder name = new StringBuilder(tier.displayName());
+        for (String word : kind.id.split("_")) name.append(' ').append(Character.toUpperCase(word.charAt(0))).append(word.substring(1));
+        return Component.literal(name.toString());
+    }
     public WeaponKind kind() { return kind; }
     @Override public int getMaxDamage(ItemStack stack) {
         return com.nanonaitor.arsenal.compat.ParasiteWeaponCompat.maxDamage(tier, super.getMaxDamage(stack));
@@ -131,11 +143,6 @@ public class ArsenalWeaponItem extends net.minecraft.world.item.SwordItem {
             com.nanonaitor.arsenal.combat.CombatEvents.confirmClawHit(player,target);
             com.nanonaitor.arsenal.combat.ClawSounds.slash(player);
         }
-        if (kind == WeaponKind.BATTERING_RAM && !attacker.level().isClientSide) {
-            target.knockback(.5D, Math.sin(Math.toRadians(attacker.getYRot())),
-                -Math.cos(Math.toRadians(attacker.getYRot())));
-            target.hurtMarked = true;
-        }
         stack.hurtAndBreak(1, attacker, entity -> entity.broadcastBreakEvent(EquipmentSlot.MAINHAND));
         return true;
     }
@@ -184,7 +191,7 @@ public class ArsenalWeaponItem extends net.minecraft.world.item.SwordItem {
             }
             case BATTERING_RAM -> {
                 lines.add(Component.literal("Entity damage uses the attack charge present when the ram begins.").withStyle(ChatFormatting.YELLOW));
-                lines.add(Component.literal(switch (tier) {
+                lines.add(Component.literal(switch (tier.baseline()) {
                     case WOOD -> "Breaks soft terrain, foliage, wool and glass.";
                     case STONE, COPPER, GOLD -> "Also breaks planks and constructed wooden blocks.";
                     case IRON -> "Also breaks logs, cobble, clay, concrete and brickwork.";
@@ -197,14 +204,9 @@ public class ArsenalWeaponItem extends net.minecraft.world.item.SwordItem {
                 lines.add(Component.literal("Full charge with " + charges
                     + " swings: " + tier.armorPiercePercent() + "% armor piercing.")
                     .withStyle(ChatFormatting.GOLD));
-                lines.add(Component.literal("Crouch + use to guard. Hold use while winding up to spin faster.")
-                    .withStyle(ChatFormatting.AQUA));
-                lines.add(Component.literal("With an empty offhand, the wind-up also blocks attacks from the front.")
-                    .withStyle(ChatFormatting.AQUA));
-                lines.add(Component.literal("Knockback also shoves back melee attackers you guard against.")
-                    .withStyle(ChatFormatting.GRAY));
-                lines.add(Component.literal("A thrown ball smashes projectiles in its path.")
-                    .withStyle(ChatFormatting.GRAY));
+                lines.add(Component.literal("More spins: farther, harder throws.").withStyle(ChatFormatting.GRAY));
+                lines.add(Component.literal("Crouch + use to guard; hold use to spin faster.").withStyle(ChatFormatting.AQUA));
+                lines.add(Component.literal("Smashes projectiles in its path.").withStyle(ChatFormatting.GRAY));
                 lines.add(Component.literal("An occupied offhand halves rotation speed.")
                     .withStyle(ChatFormatting.DARK_RED));
             }
