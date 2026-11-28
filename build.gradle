@@ -21,16 +21,29 @@ minecraft {
         }
         server { args '--nogui' }
         gameTestServer { property 'forge.enabledGameTestNamespaces', 'nanonaitors_arsenal,forge' }
-        if (project.hasProperty('iafDev')) configureEach {
+        if (project.hasProperty('iafDev') || project.hasProperty('talentsDev')) configureEach {
             property 'mixin.env.remapRefMap', 'true'
             property 'mixin.env.refMapRemappingFile', "${projectDir}/build/createSrgToMcp/output.srg"
         }
     }
 }
+// JEI is optional: compiled against its API, and only present at runtime in dev runs.
+repositories { maven { url 'https://maven.blamejared.com' } }
+// Dev-only Talents run (-PtalentsDev): talents, pml and yacl jars copied into the git-ignored tmp/talents-dev folder.
+if (project.hasProperty('talentsDev')) repositories { flatDir { dirs 'tmp/talents-dev' } }
 // Dev-only Ice & Fire run (-PiafDev): jars copied into the git-ignored tmp/iaf-dev folder.
 if (project.hasProperty('iafDev')) repositories { flatDir { dirs 'tmp/iaf-dev' } }
 dependencies {
     minecraft 'net.minecraftforge:forge:1.20.1-47.4.18'
+    compileOnly fg.deobf("mezz.jei:jei-1.20.1-common-api:${jei_version}")
+    compileOnly fg.deobf("mezz.jei:jei-1.20.1-forge-api:${jei_version}")
+    // -PjeiDev adds the full JEI to dev runs so the plugin can be checked in game.
+    if (project.hasProperty('jeiDev')) runtimeOnly fg.deobf("mezz.jei:jei-1.20.1-forge:${jei_version}")
+    if (project.hasProperty('talentsDev')) {
+        runtimeOnly fg.deobf('local:talents:1.2.3')
+        runtimeOnly fg.deobf('local:pml:1.0.5b')
+        runtimeOnly fg.deobf('local:yacl:3.4.2')
+    }
     if (project.hasProperty('iafDev')) {
         runtimeOnly fg.deobf('local:iceandfire:2.1.13')
         runtimeOnly fg.deobf('local:citadel:2.6.3')

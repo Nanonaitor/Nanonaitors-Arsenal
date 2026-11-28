@@ -5,7 +5,7 @@ the Forge version installed in Restless Horizons. Core mechanics are based on
 Arsenal 1.12.2, with fixes reviewed through 2.0.6. See [PARITY-0.1.1.md](PARITY-0.1.1.md) for changes, tests and compatibility limits.
 
 This release does not claim complete 1.12.2 parity or full modpack certification.
-Optional JustLevelingFork Strength requirements, tier defaults and the config switch
+Optional JustLevelingFork Strength (or Talents Attack) requirements, tier defaults and the config switch
 are documented in [LEVEL-REQUIREMENTS-0.1.2.md](LEVEL-REQUIREMENTS-0.1.2.md).
 This branch is independent of the 1.12.2 and 26.1.2 source trees.
 

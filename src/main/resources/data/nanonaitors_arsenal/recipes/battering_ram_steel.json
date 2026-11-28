@@ -3,7 +3,7 @@
   "category": "equipment",
   "key": {
     "M": {
-      "item": "minecraft:iron_block"
+      "tag": "forge:storage_blocks/steel"
     },
     "L": {
       "tag": "minecraft:logs"
@@ -25,7 +25,7 @@
       "type": "forge:not",
       "value": {
         "type": "forge:tag_empty",
-        "tag": "forge:ingots/steel"
+        "tag": "forge:storage_blocks/steel"
       }
     },
     {

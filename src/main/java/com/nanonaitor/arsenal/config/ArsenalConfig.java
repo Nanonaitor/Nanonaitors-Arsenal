@@ -8,8 +8,8 @@ public final class ArsenalConfig {
     public static final ForgeConfigSpec.IntValue ROTATION_FORCE_MAX_LEVEL;
     public static final ForgeConfigSpec.DoubleValue MORNING_STAR_CHARGE_SECONDS;
     public static final ForgeConfigSpec.DoubleValue FLAIL_REACH, BALL_WINDUP_REACH, BALL_THROW_REACH;
-    public static final ForgeConfigSpec.BooleanValue SHIELD_ENCHANTMENTS, MATCHING_ARMOR_BONUSES, ENABLE_CUSTOM_ENCHANTMENTS, MOB_EQUIPMENT;
-    public static final ForgeConfigSpec.DoubleValue MOB_REPLACEMENT_CHANCE;
+    public static final ForgeConfigSpec.BooleanValue SHIELD_ENCHANTMENTS, MATCHING_ARMOR_BONUSES, ENABLE_CUSTOM_ENCHANTMENTS, MOB_EQUIPMENT, LOOT_INTEGRATION;
+    public static final ForgeConfigSpec.DoubleValue MOB_REPLACEMENT_CHANCE, LOOT_REPLACEMENT_CHANCE;
     public static final ForgeConfigSpec.ConfigValue<java.util.List<? extends String>> STUN_BLACKLIST;
     public static final ForgeConfigSpec.IntValue EVOLUTION_THRESHOLD;
     public static final ForgeConfigSpec.BooleanValue CHAIN_LIGHTNING;
@@ -59,6 +59,8 @@ public final class ArsenalConfig {
             WEAPONS.put(id,BUILDER.comment("False disables crafting only; existing items remain usable.").define(id,true));
         BUILDER.pop();
         BUILDER.push("worldEquipment");
+        LOOT_INTEGRATION=BUILDER.comment("Let plain swords and axes rolled by loot tables (chests and other loot) become a same-tier Arsenal weapon. Named, lore, attribute or otherwise customized loot items are never replaced.").define("lootIntegration",true);
+        LOOT_REPLACEMENT_CHANCE=BUILDER.comment("Chance (0-1) that an eligible loot weapon becomes the Arsenal one.").defineInRange("lootReplacementChance",.25D,0D,1D);
         MOB_EQUIPMENT=BUILDER.comment("Allow newly spawned vanilla humanoids already carrying a vanilla melee weapon to use a same-tier Arsenal weapon. Named mobs and named, lore, attribute or otherwise customized gear are never replaced.").define("mobEquipment",true);
         MOB_REPLACEMENT_CHANCE=BUILDER.comment("Chance (0-1) that an eligible mob swaps its weapon for the Arsenal one.").defineInRange("mobReplacementChance",.25D,0D,1D);
         BUILDER.pop();

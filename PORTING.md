@@ -32,5 +32,10 @@ scimitar block counter, Ball and Chain guard/throw rules (`BallPath`), Defender
 hand-off, ram/claw/chain sounds with a client volume option, the new Blade Staff
 art and pole recipes, and the world-equipment rule for designed gear.
 Not applicable here: the Mo' Bends skeleton path (a 1.12.2-specific hook; here poses
-run after any animation mod's own pass) and the loot-table swap (this build only re-equips
-spawning mobs, it never edits loot tables). See CURSEFORGE-0.1.8.md.
+run after any animation mod's own pass). See CURSEFORGE-0.1.8.md.
+The loot-table swap is ported as a global loot modifier (`LootAlternativesModifier`,
+`worldEquipment.lootIntegration` / `lootReplacementChance`): it changes rolled stacks and
+never edits loot tables. Also ported: furnace recycling for the Silver, Bronze, Steel and
+Umbrium tiers and the Blade Staff (`nanonaitors_arsenal:tag_smelting` takes a tag result,
+as 1.12.2 used the ore dictionary), the JEI hiding rules (`compat/jei`), and Talents as a
+second level-requirement backend.
