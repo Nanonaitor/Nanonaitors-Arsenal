@@ -1,0 +1,29 @@
+{
+  "type": "nanonaitors_arsenal:tag_smelting",
+  "category": "misc",
+  "cookingtime": 200,
+  "experience": 0.1,
+  "ingredient": {
+    "item": "nanonaitors_arsenal:ball_and_chain_umbrium"
+  },
+  "result": {
+    "tag": "nanonaitors_arsenal:materials/umbrium",
+    "count": 3
+  },
+  "conditions": [
+    {
+      "type": "forge:not",
+      "value": {
+        "type": "forge:tag_empty",
+        "tag": "nanonaitors_arsenal:materials/umbrium"
+      }
+    },
+    {
+      "type": "forge:not",
+      "value": {
+        "type": "forge:tag_empty",
+        "tag": "nanonaitors_arsenal:materials/umbrium_block"
+      }
+    }
+  ]
+}

@@ -3,7 +3,7 @@
   "category": "equipment",
   "key": {
     "B": {
-      "item": "minecraft:iron_block"
+      "tag": "nanonaitors_arsenal:materials/jungle_myrmex_block"
     },
     "C": {
       "item": "minecraft:chain"
@@ -22,7 +22,7 @@
       "type": "forge:not",
       "value": {
         "type": "forge:tag_empty",
-        "tag": "nanonaitors_arsenal:materials/jungle_myrmex"
+        "tag": "nanonaitors_arsenal:materials/jungle_myrmex_block"
       }
     },
     {

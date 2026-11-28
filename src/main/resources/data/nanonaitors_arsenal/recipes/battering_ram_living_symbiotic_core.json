@@ -1,0 +1,24 @@
+{
+  "type": "nanonaitors_arsenal:upgrade",
+  "ingredients": [
+    {
+      "item": "nanonaitors_arsenal:battering_ram_diamond"
+    },
+    {
+      "item": "spore:symbiotic_core"
+    }
+  ],
+  "result": {
+    "item": "nanonaitors_arsenal:battering_ram_living"
+  },
+  "conditions": [
+    {
+      "type": "forge:item_exists",
+      "item": "spore:symbiotic_core"
+    },
+    {
+      "type": "nanonaitors_arsenal:weapon_enabled",
+      "weapon": "battering_ram"
+    }
+  ]
+}

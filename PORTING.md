@@ -31,6 +31,22 @@ new ball head (`ChainRenderer`, `ClientWeaponRenderer`), claw slash streaks, the
 scimitar block counter, Ball and Chain guard/throw rules (`BallPath`), Defender
 hand-off, ram/claw/chain sounds with a client volume option, the new Blade Staff
 art and pole recipes, and the world-equipment rule for designed gear.
-Not applicable here: the Mo' Bends skeleton path (a 1.12.2-specific hook; here poses
-run after any animation mod's own pass) and the loot-table swap (this build only re-equips
-spawning mobs, it never edits loot tables). See CURSEFORGE-0.1.8.md.
+Mo' Bends: its skeleton replaced every Arsenal pose. `MoBendsPoseMixin` (optional, skipped
+without Mo' Bends) hands Arsenal's pose to Mo' Bends the way Mo' Bends adopts other animation
+mods' poses, while Arsenal poses the arms (`client/MoBendsCompat`). See CURSEFORGE-0.1.8.md.
+RLCombat: it attacks with the off-hand weapon on right-click, so a lone off-hand Scimitar hit
+twice. With RLCombat installed that strike is left to RLCombat (`compat/RLCombatCompat`), as
+1.12.2 sent it through RLCombat's attack; Arsenal keeps it when it already owns the click.
+Fungal Infection: Spore (mod id `spore`) works as a parasite mod for Living and Sentient
+weapons: its mobs evolve Living weapons (`compatibility.parasiteMods`), Living weapons are made
+from the diamond weapon and a Symbiotic Core, and Living Morning Star and Claws inflict Spore's
+Corrosion and Hemorrhage.
+Dev runs: `-PdevMods=talents,rlcombat,mobends,spore` adds the jars in `tmp/dev-mods/<name>/`;
+`-PcombatProbe` presses the real attack keys against a dummy and logs each weapon's hit count;
+`-PposeSheets=scimitars,...` limits `-PposeCapture`.
+The loot-table swap is ported as a global loot modifier (`LootAlternativesModifier`,
+`worldEquipment.lootIntegration` / `lootReplacementChance`): it changes rolled stacks and
+never edits loot tables. Also ported: furnace recycling for the Silver, Bronze, Steel and
+Umbrium tiers and the Blade Staff (`nanonaitors_arsenal:tag_smelting` takes a tag result,
+as 1.12.2 used the ore dictionary), the JEI hiding rules (`compat/jei`), and Talents as a
+second level-requirement backend.

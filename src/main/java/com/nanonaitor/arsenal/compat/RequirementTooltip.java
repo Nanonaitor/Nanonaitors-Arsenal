@@ -10,7 +10,7 @@ public final class RequirementTooltip {
         if(required<=0)return;
         lines.add(Component.empty());
         lines.add(Component.literal("Requirements:").withStyle(ChatFormatting.DARK_PURPLE));
-        lines.add(Component.literal(" - Strength: ").withStyle(ChatFormatting.WHITE)
+        lines.add(Component.literal(" - "+LevelRequirements.aptitudeName()+": ").withStyle(ChatFormatting.WHITE)
             .append(Component.literal(Integer.toString(required)).withStyle(
                 LevelRequirements.meets(current,required)?ChatFormatting.GREEN:ChatFormatting.RED)));
     }

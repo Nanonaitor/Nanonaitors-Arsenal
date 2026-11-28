@@ -1,0 +1,64 @@
+{
+  "type": "forge:conditional",
+  "recipes": [
+    {
+      "conditions": [
+        {
+          "type": "forge:not",
+          "value": {
+            "type": "forge:tag_empty",
+            "tag": "forge:ingots/bronze"
+          }
+        },
+        {
+          "type": "forge:not",
+          "value": {
+            "type": "forge:tag_empty",
+            "tag": "forge:storage_blocks/bronze"
+          }
+        }
+      ],
+      "recipe": {
+        "type": "nanonaitors_arsenal:tag_smelting",
+        "category": "misc",
+        "cookingtime": 200,
+        "experience": 0.1,
+        "ingredient": {
+          "item": "nanonaitors_arsenal:ball_and_chain_bronze"
+        },
+        "result": {
+          "tag": "forge:ingots/bronze",
+          "count": 3
+        }
+      }
+    },
+    {
+      "conditions": [
+        {
+          "type": "forge:not",
+          "value": {
+            "type": "forge:tag_empty",
+            "tag": "forge:nuggets/bronze"
+          }
+        },
+        {
+          "type": "forge:tag_empty",
+          "tag": "forge:storage_blocks/bronze"
+        }
+      ],
+      "recipe": {
+        "type": "nanonaitors_arsenal:tag_smelting",
+        "category": "misc",
+        "cookingtime": 200,
+        "experience": 0.1,
+        "ingredient": {
+          "item": "nanonaitors_arsenal:ball_and_chain_bronze"
+        },
+        "result": {
+          "tag": "forge:nuggets/bronze",
+          "count": 3
+        }
+      }
+    }
+  ]
+}

@@ -3,7 +3,7 @@
   "category": "equipment",
   "key": {
     "B": {
-      "item": "minecraft:iron_block"
+      "tag": "nanonaitors_arsenal:materials/living"
     },
     "C": {
       "item": "minecraft:chain"

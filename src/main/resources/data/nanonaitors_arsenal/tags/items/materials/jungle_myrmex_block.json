@@ -1,0 +1,9 @@
+{
+  "replace": false,
+  "values": [
+    {
+      "id": "iceandfire:myrmex_jungle_resin_block",
+      "required": false
+    }
+  ]
+}

@@ -93,7 +93,8 @@ public final class TierEffects {
    ConfiguredEffects.apply(target,effect,200,t==WeaponTier.SENTIENT?1:0);
   }
  }
- private static boolean isParasite(LivingEntity e){return ForgeRegistries.ENTITY_TYPES.getKey(e.getType()).getNamespace().equals("srparasites");}
+ /** A mob from one of the configured parasite mods (compatibility.parasiteMods). */
+ public static boolean isParasite(LivingEntity e){var id=ForgeRegistries.ENTITY_TYPES.getKey(e.getType());return id!=null && ArsenalConfig.PARASITE_MODS.get().contains(id.getNamespace());}
  private static void evolution(LivingDeathEvent e){
   var w=weapon(e.getSource());if(w==null || w.tier()!=WeaponTier.LIVING || !isParasite(e.getEntity()))return;
   Player player=(Player)e.getSource().getEntity();ItemStack old=attackingStack(player);

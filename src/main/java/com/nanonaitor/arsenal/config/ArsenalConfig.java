@@ -8,9 +8,9 @@ public final class ArsenalConfig {
     public static final ForgeConfigSpec.IntValue ROTATION_FORCE_MAX_LEVEL;
     public static final ForgeConfigSpec.DoubleValue MORNING_STAR_CHARGE_SECONDS;
     public static final ForgeConfigSpec.DoubleValue FLAIL_REACH, BALL_WINDUP_REACH, BALL_THROW_REACH;
-    public static final ForgeConfigSpec.BooleanValue SHIELD_ENCHANTMENTS, MATCHING_ARMOR_BONUSES, ENABLE_CUSTOM_ENCHANTMENTS, MOB_EQUIPMENT;
-    public static final ForgeConfigSpec.DoubleValue MOB_REPLACEMENT_CHANCE;
-    public static final ForgeConfigSpec.ConfigValue<java.util.List<? extends String>> STUN_BLACKLIST;
+    public static final ForgeConfigSpec.BooleanValue SHIELD_ENCHANTMENTS, MATCHING_ARMOR_BONUSES, ENABLE_CUSTOM_ENCHANTMENTS, MOB_EQUIPMENT, LOOT_INTEGRATION;
+    public static final ForgeConfigSpec.DoubleValue MOB_REPLACEMENT_CHANCE, LOOT_REPLACEMENT_CHANCE;
+    public static final ForgeConfigSpec.ConfigValue<java.util.List<? extends String>> STUN_BLACKLIST, PARASITE_MODS;
     public static final ForgeConfigSpec.IntValue EVOLUTION_THRESHOLD;
     public static final ForgeConfigSpec.BooleanValue CHAIN_LIGHTNING;
     public static final ForgeConfigSpec.IntValue CHAIN_LIGHTNING_RANGE;
@@ -59,6 +59,8 @@ public final class ArsenalConfig {
             WEAPONS.put(id,BUILDER.comment("False disables crafting only; existing items remain usable.").define(id,true));
         BUILDER.pop();
         BUILDER.push("worldEquipment");
+        LOOT_INTEGRATION=BUILDER.comment("Let plain swords and axes rolled by loot tables (chests and other loot) become a same-tier Arsenal weapon. Named, lore, attribute or otherwise customized loot items are never replaced.").define("lootIntegration",true);
+        LOOT_REPLACEMENT_CHANCE=BUILDER.comment("Chance (0-1) that an eligible loot weapon becomes the Arsenal one.").defineInRange("lootReplacementChance",.25D,0D,1D);
         MOB_EQUIPMENT=BUILDER.comment("Allow newly spawned vanilla humanoids already carrying a vanilla melee weapon to use a same-tier Arsenal weapon. Named mobs and named, lore, attribute or otherwise customized gear are never replaced.").define("mobEquipment",true);
         MOB_REPLACEMENT_CHANCE=BUILDER.comment("Chance (0-1) that an eligible mob swaps its weapon for the Arsenal one.").defineInRange("mobReplacementChance",.25D,0D,1D);
         BUILDER.pop();
@@ -75,7 +77,9 @@ public final class ArsenalConfig {
         CHAIN_LIGHTNING_RANGE=BUILDER.comment("Blocks the chain lightning can jump between enemies.").defineInRange("chainLightningRange",8,1,32);
         CHAIN_LIGHTNING_DAMAGE=BUILDER.comment("Armor-bypassing lightning damage per hop, starting with the struck target; one entry per hop.")
             .defineListAllowEmpty("chainLightningDamage",java.util.List.of(5.0D,4.0D,3.0D,2.0D,1.0D),v->v instanceof Number n && n.doubleValue()>=0);
-        EVOLUTION_THRESHOLD=BUILDER.comment("Living weapons evolve after accumulating more than this much slain srparasites mob maximum health. No evolution occurs without parasite entities.").defineInRange("livingEvolutionHealth",1000,1,10000000);
+        EVOLUTION_THRESHOLD=BUILDER.comment("Living weapons evolve after accumulating more than this much slain parasite mob maximum health (see parasiteMods). No evolution occurs without parasite entities.").defineInRange("livingEvolutionHealth",1000,1,10000000);
+        PARASITE_MODS=BUILDER.comment("Mod ids whose mobs count as parasites for Living and Sentient weapons: their kills evolve Living weapons, and the Living Ball and Chain's effect only hits them. srparasites is Scape and Run: Parasites, spore is Fungal Infection: Spore.")
+            .defineListAllowEmpty("parasiteMods",java.util.List.of("srparasites","spore"),v->v instanceof String);
         BUILDER.pop();
         BUILDER.push("effects");
         // Optional effects on each scimitar hit. Empty by default: the scimitar's ability is the
@@ -88,8 +92,9 @@ public final class ArsenalConfig {
         effect("tartsyDash","nanonaitors_arsenal:stunned@1@1");
         effect("venomHit","minecraft:poison@3@10");
         effect("icedDragonboneHit","minecraft:slowness@3@5","minecraft:mining_fatigue@3@5");
-        effect("livingMorningStar","srparasites:corrosive@tier@10");
-        effect("livingClaws","srparasites:bleed@tier@10");
+        // Each list may name effects from several mods; effects whose mod is absent are skipped.
+        effect("livingMorningStar","srparasites:corrosive@tier@10","spore:corrosion@tier@10");
+        effect("livingClaws","srparasites:bleed@tier@10","spore:hemorrhage@tier@10");
         effect("livingFlail","srparasites:antimall@tier@10");
         effect("livingBallAndChain","srparasites:debar@tier@10");
         for(String id:new String[]{"morning_star","scimitar","blade_staff","claws","flail","battering_ram","ball_and_chain"}) effect(id+"Extra");

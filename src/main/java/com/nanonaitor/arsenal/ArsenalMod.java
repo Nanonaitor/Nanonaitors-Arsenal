@@ -36,6 +36,7 @@ public final class ArsenalMod {
         ModTabs.TABS.register(group);
         com.nanonaitor.arsenal.registry.ModRecipes.SERIALIZERS.register(group);
         com.nanonaitor.arsenal.enchantment.ModEnchantments.ENCHANTMENTS.register(group);
+        com.nanonaitor.arsenal.compat.LootAlternativesModifier.SERIALIZERS.register(group);
         net.minecraftforge.fml.ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON, ArsenalConfig.SPEC);
         net.minecraftforge.fml.ModLoadingContext.get().registerConfig(ModConfig.Type.COMMON,
             com.nanonaitor.arsenal.config.CustomMaterials.SPEC, com.nanonaitor.arsenal.config.CustomMaterials.FILE);

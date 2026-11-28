@@ -3,7 +3,7 @@
   "category": "equipment",
   "key": {
     "B": {
-      "item": "minecraft:iron_block"
+      "tag": "forge:storage_blocks/steel"
     },
     "C": {
       "item": "minecraft:chain"
@@ -22,7 +22,7 @@
       "type": "forge:not",
       "value": {
         "type": "forge:tag_empty",
-        "tag": "forge:ingots/steel"
+        "tag": "forge:storage_blocks/steel"
       }
     },
     {

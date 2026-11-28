@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Set;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.item.AxeItem;
@@ -24,21 +25,39 @@ public final class WorldEquipmentCompat {
 
     public static void onEntityJoin(EntityJoinLevelEvent event){
         if(event.getLevel().isClientSide || !ArsenalConfig.MOB_EQUIPMENT.get() || !(event.getEntity() instanceof Mob mob))return;
+        equip(mob,ArsenalConfig.MOB_REPLACEMENT_CHANCE.get());
+    }
+
+    /** Gives an eligible vanilla humanoid a same-tier Arsenal weapon with this chance. */
+    public static void equip(Mob mob,double chance){
         ResourceLocation entityId=BuiltInRegistries.ENTITY_TYPE.getKey(mob.getType());
         if(!"minecraft".equals(entityId.getNamespace()) || !HUMANOIDS.contains(entityId.getPath()))return;
         ItemStack held=mob.getMainHandItem();
         // Named mobs and designed gear (names, lore, attributes, unbreakable, other data) keep their weapons.
-        if(held.isEmpty() || mob.hasCustomName() || isSpecialStack(held))return;
+        if(held.isEmpty() || mob.hasCustomName())return;
+        ItemStack replacement=alternativeFor(held,mob.getRandom(),chance);
+        if(replacement==null)return;
+        mob.setItemSlot(EquipmentSlot.MAINHAND,replacement);
+    }
+
+    /**
+     * Rolls a same-tier Arsenal weapon for a plain vanilla-style sword or axe,
+     * shared by mob equipment and chest loot. Returns null when the stack is not
+     * eligible, no weapon of its tier is enabled, or the chance roll fails. The
+     * replacement keeps the original's enchantments and proportional wear.
+     */
+    public static ItemStack alternativeFor(ItemStack held,RandomSource random,double chance){
+        if(held.isEmpty() || isSpecialStack(held))return null;
         WeaponTier tier=tierFor(held);
-        if(tier==null || mob.getRandom().nextDouble()>=ArsenalConfig.MOB_REPLACEMENT_CHANCE.get())return;
+        if(tier==null || random.nextDouble()>=chance)return null;
         List<ItemStack> choices=new ArrayList<>();
         for(WeaponKind kind:PRIMARY)if(ArsenalConfig.WEAPONS.get(kind.id).get())choices.add(new ItemStack(ModItems.get(kind,tier).get()));
-        if(choices.isEmpty())return;
-        ItemStack replacement=choices.get(mob.getRandom().nextInt(choices.size()));
+        if(choices.isEmpty())return null;
+        ItemStack replacement=choices.get(random.nextInt(choices.size()));
         if(held.hasTag())replacement.setTag(held.getTag().copy());
         if(replacement.isDamageableItem() && held.isDamageableItem())replacement.setDamageValue(Math.min(replacement.getMaxDamage()-1,
             Math.round((float)held.getDamageValue()/Math.max(1,held.getMaxDamage())*replacement.getMaxDamage())));
-        mob.setItemSlot(EquipmentSlot.MAINHAND,replacement);
+        return replacement;
     }
 
     /**
@@ -54,7 +73,7 @@ public final class WorldEquipmentCompat {
         return false;
     }
 
-    private static WeaponTier tierFor(ItemStack stack){
+    public static WeaponTier tierFor(ItemStack stack){
         if(!(stack.getItem() instanceof SwordItem || stack.getItem() instanceof AxeItem))return null;
         String path=BuiltInRegistries.ITEM.getKey(stack.getItem()).getPath();
         for(WeaponTier tier:WeaponTier.activeValues())if(!tier.custom() && path.startsWith(tier.id+"_") || path.startsWith((tier==WeaponTier.WOOD?"wooden":tier==WeaponTier.GOLD?"golden":tier.id)+"_"))return tier;

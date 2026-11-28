@@ -1,33 +1,75 @@
 {
-  "type": "minecraft:crafting_shaped",
-  "category": "equipment",
-  "key": {
-    "B": {
-      "item": "minecraft:iron_block"
-    },
-    "C": {
-      "item": "minecraft:chain"
-    }
-  },
-  "pattern": [
-    "  B",
-    " C ",
-    "C  "
-  ],
-  "result": {
-    "item": "nanonaitors_arsenal:ball_and_chain_bronze"
-  },
-  "conditions": [
+  "type": "forge:conditional",
+  "recipes": [
     {
-      "type": "forge:not",
-      "value": {
-        "type": "forge:tag_empty",
-        "tag": "forge:ingots/bronze"
+      "conditions": [
+        {
+          "type": "forge:not",
+          "value": {
+            "type": "forge:tag_empty",
+            "tag": "forge:storage_blocks/bronze"
+          }
+        },
+        {
+          "type": "nanonaitors_arsenal:weapon_enabled",
+          "weapon": "ball_and_chain"
+        }
+      ],
+      "recipe": {
+        "type": "minecraft:crafting_shaped",
+        "category": "equipment",
+        "key": {
+          "B": {
+            "tag": "forge:storage_blocks/bronze"
+          },
+          "C": {
+            "item": "minecraft:chain"
+          }
+        },
+        "pattern": [
+          "  B",
+          " C ",
+          "C  "
+        ],
+        "result": {
+          "item": "nanonaitors_arsenal:ball_and_chain_bronze"
+        }
       }
     },
     {
-      "type": "nanonaitors_arsenal:weapon_enabled",
-      "weapon": "ball_and_chain"
+      "conditions": [
+        {
+          "type": "forge:not",
+          "value": {
+            "type": "forge:tag_empty",
+            "tag": "forge:ingots/bronze"
+          }
+        },
+        {
+          "type": "nanonaitors_arsenal:weapon_enabled",
+          "weapon": "ball_and_chain"
+        }
+      ],
+      "recipe": {
+        "type": "minecraft:crafting_shaped",
+        "category": "equipment",
+        "key": {
+          "B": {
+            "tag": "forge:ingots/bronze"
+          },
+          "C": {
+            "item": "minecraft:chain"
+          }
+        },
+        "pattern": [
+          "  B",
+          " C ",
+          "C  "
+        ],
+        "result": {
+          "item": "nanonaitors_arsenal:ball_and_chain_bronze"
+        }
+      }
     }
   ]
 }
