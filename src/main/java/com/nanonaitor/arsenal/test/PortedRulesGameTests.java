@@ -226,21 +226,17 @@ public final class PortedRulesGameTests {
         attributes.addAttributeModifier(Attributes.ATTACK_DAMAGE, new net.minecraft.world.entity.ai.attributes.AttributeModifier(
             "legendary", 10, net.minecraft.world.entity.ai.attributes.AttributeModifier.Operation.ADDITION), EquipmentSlot.MAINHAND);
         h.assertTrue(WorldEquipmentCompat.isSpecialStack(attributes), "Attribute gear is kept");
-        double chance = ArsenalConfig.MOB_REPLACEMENT_CHANCE.get();
-        ArsenalConfig.MOB_REPLACEMENT_CHANCE.set(1.0D);
-        try {
-            var namedMob = h.spawn(EntityType.ZOMBIE, new BlockPos(1, 1, 1));
-            namedMob.setCustomName(Component.literal("Bob"));
-            namedMob.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.IRON_SWORD));
-            WorldEquipmentCompat.onEntityJoin(new net.minecraftforge.event.entity.EntityJoinLevelEvent(namedMob, h.getLevel()));
-            h.assertTrue(namedMob.getMainHandItem().is(Items.IRON_SWORD), "Named mobs keep their weapon");
-            var mob = h.spawn(EntityType.ZOMBIE, new BlockPos(2, 1, 1));
-            mob.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.IRON_SWORD));
-            WorldEquipmentCompat.onEntityJoin(new net.minecraftforge.event.entity.EntityJoinLevelEvent(mob, h.getLevel()));
-            h.assertTrue(mob.getMainHandItem().getItem() instanceof ArsenalWeaponItem, "Plain mob gear still becomes Arsenal");
-        } finally {
-            ArsenalConfig.MOB_REPLACEMENT_CHANCE.set(chance);
-        }
+        // Rolls at chance 1 directly: changing the config value here raced Forge's config file
+        // watcher, which could reload the old value mid-test or keep the test value afterwards.
+        var namedMob = h.spawn(EntityType.ZOMBIE, new BlockPos(1, 1, 1));
+        namedMob.setCustomName(Component.literal("Bob"));
+        namedMob.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.IRON_SWORD));
+        WorldEquipmentCompat.equip(namedMob, 1.0D);
+        h.assertTrue(namedMob.getMainHandItem().is(Items.IRON_SWORD), "Named mobs keep their weapon");
+        var mob = h.spawn(EntityType.ZOMBIE, new BlockPos(2, 1, 1));
+        mob.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.IRON_SWORD));
+        WorldEquipmentCompat.equip(mob, 1.0D);
+        h.assertTrue(mob.getMainHandItem().getItem() instanceof ArsenalWeaponItem, "Plain mob gear still becomes Arsenal");
         h.succeed();
     }
 

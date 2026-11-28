@@ -25,12 +25,17 @@ public final class WorldEquipmentCompat {
 
     public static void onEntityJoin(EntityJoinLevelEvent event){
         if(event.getLevel().isClientSide || !ArsenalConfig.MOB_EQUIPMENT.get() || !(event.getEntity() instanceof Mob mob))return;
+        equip(mob,ArsenalConfig.MOB_REPLACEMENT_CHANCE.get());
+    }
+
+    /** Gives an eligible vanilla humanoid a same-tier Arsenal weapon with this chance. */
+    public static void equip(Mob mob,double chance){
         ResourceLocation entityId=BuiltInRegistries.ENTITY_TYPE.getKey(mob.getType());
         if(!"minecraft".equals(entityId.getNamespace()) || !HUMANOIDS.contains(entityId.getPath()))return;
         ItemStack held=mob.getMainHandItem();
         // Named mobs and designed gear (names, lore, attributes, unbreakable, other data) keep their weapons.
         if(held.isEmpty() || mob.hasCustomName())return;
-        ItemStack replacement=alternativeFor(held,mob.getRandom(),ArsenalConfig.MOB_REPLACEMENT_CHANCE.get());
+        ItemStack replacement=alternativeFor(held,mob.getRandom(),chance);
         if(replacement==null)return;
         mob.setItemSlot(EquipmentSlot.MAINHAND,replacement);
     }

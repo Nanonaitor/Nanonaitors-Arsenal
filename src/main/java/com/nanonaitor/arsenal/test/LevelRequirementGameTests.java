@@ -44,7 +44,7 @@ public final class LevelRequirementGameTests {
     }
     /**
      * Reads a real player's level from Talents (a renamed JustLevelingFork whose melee
-     * aptitude is "attack"). Only meaningful in a -PtalentsDev run; passes trivially otherwise.
+     * aptitude is "attack"). Only meaningful in a -PdevMods=talents run; passes trivially otherwise.
      */
     @GameTest(template="empty",templateNamespace="forge")
     public static void talentsAttackLevelIsRead(GameTestHelper h) {

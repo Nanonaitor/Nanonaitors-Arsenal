@@ -8,6 +8,10 @@
     {
       "id": "srp_spartans:infectious_long_blade_fragment",
       "required": false
+    },
+    {
+      "id": "spore:symbiotic_core",
+      "required": false
     }
   ]
 }

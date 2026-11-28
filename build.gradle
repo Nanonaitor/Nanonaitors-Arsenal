@@ -18,10 +18,13 @@ minecraft {
         client {
             if (project.hasProperty('clientSmokeTest')) property 'arsenal.clientSmokeTest', 'true'
             if (project.hasProperty('poseCapture')) property 'arsenal.poseCapture', 'true'
+            if (project.hasProperty('combatProbe')) property 'arsenal.combatProbe', 'true'
+            // -PposeSheets=scimitars,claws limits the capture to those sheets.
+            if (project.hasProperty('poseSheets')) property 'arsenal.poseCapture.sheets', project.property('poseSheets')
         }
         server { args '--nogui' }
         gameTestServer { property 'forge.enabledGameTestNamespaces', 'nanonaitors_arsenal,forge' }
-        if (project.hasProperty('iafDev') || project.hasProperty('talentsDev')) configureEach {
+        if (project.hasProperty('iafDev') || project.hasProperty('devMods')) configureEach {
             property 'mixin.env.remapRefMap', 'true'
             property 'mixin.env.refMapRemappingFile', "${projectDir}/build/createSrgToMcp/output.srg"
         }
@@ -29,8 +32,12 @@ minecraft {
 }
 // JEI is optional: compiled against its API, and only present at runtime in dev runs.
 repositories { maven { url 'https://maven.blamejared.com' } }
-// Dev-only Talents run (-PtalentsDev): talents, pml and yacl jars copied into the git-ignored tmp/talents-dev folder.
-if (project.hasProperty('talentsDev')) repositories { flatDir { dirs 'tmp/talents-dev' } }
+// Dev-only optional-mod runs (-PdevMods=talents,rlcombat,mobends): each name is a folder in the
+// git-ignored tmp/dev-mods holding that mod's jar and its dependencies, named <name>-<version>.jar.
+def devModSets = project.hasProperty('devMods') ? project.property('devMods').toString().split(',')*.trim() : []
+def devModJars = devModSets.collectMany { set -> (file("tmp/dev-mods/${set}").listFiles() ?: []) as List }
+    .findAll { it.name.endsWith('.jar') }.unique { it.name }
+if (devModJars) repositories { flatDir { dirs devModJars*.parentFile.unique() } }
 // Dev-only Ice & Fire run (-PiafDev): jars copied into the git-ignored tmp/iaf-dev folder.
 if (project.hasProperty('iafDev')) repositories { flatDir { dirs 'tmp/iaf-dev' } }
 dependencies {
@@ -39,10 +46,9 @@ dependencies {
     compileOnly fg.deobf("mezz.jei:jei-1.20.1-forge-api:${jei_version}")
     // -PjeiDev adds the full JEI to dev runs so the plugin can be checked in game.
     if (project.hasProperty('jeiDev')) runtimeOnly fg.deobf("mezz.jei:jei-1.20.1-forge:${jei_version}")
-    if (project.hasProperty('talentsDev')) {
-        runtimeOnly fg.deobf('local:talents:1.2.3')
-        runtimeOnly fg.deobf('local:pml:1.0.5b')
-        runtimeOnly fg.deobf('local:yacl:3.4.2')
+    devModJars.each { jar ->
+        def base = jar.name - '.jar'; int dash = base.lastIndexOf('-')
+        runtimeOnly fg.deobf("local:${base.substring(0, dash)}:${base.substring(dash + 1)}")
     }
     if (project.hasProperty('iafDev')) {
         runtimeOnly fg.deobf('local:iceandfire:2.1.13')

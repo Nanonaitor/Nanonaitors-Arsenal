@@ -70,7 +70,9 @@ public final class ClientControls {
         WeaponClientExtensions.bootstrap();
         ShieldClientExtensions.bootstrap();
         net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext.get().getModEventBus().addListener(
-            (net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent event) -> event.enqueueWork(ClientModels::register));
+            (net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent event) -> event.enqueueWork(() -> {
+                ClientModels.register();
+            }));
         net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener((TickEvent.ClientTickEvent e) -> { if(e.phase==TickEvent.Phase.END) tick(e); });
         net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener((InputEvent.InteractionKeyMappingTriggered e) -> { if(interaction(e)) e.setCanceled(true); });
         net.minecraftforge.common.MinecraftForge.EVENT_BUS.addListener(net.minecraftforge.eventbus.api.EventPriority.LOW,
@@ -313,9 +315,11 @@ public final class ClientControls {
 
     /** Development-only pose capture; its classes are absent from release jars. */
     private static void devCapture() {
-        if (!Boolean.getBoolean("arsenal.poseCapture")) return;
+        boolean probe = Boolean.getBoolean("arsenal.combatProbe");
+        if (!Boolean.getBoolean("arsenal.poseCapture") && !probe) return;
         try {
-            if (devCapture == null) devCapture = Class.forName("com.nanonaitor.arsenal.dev.PoseCapture").getMethod("tick");
+            if (devCapture == null) devCapture = Class.forName(probe ? "com.nanonaitor.arsenal.dev.CombatProbe"
+                : "com.nanonaitor.arsenal.dev.PoseCapture").getMethod("tick");
             devCapture.invoke(null);
         } catch (ReflectiveOperationException error) {
             throw new IllegalStateException("Pose capture failed", error);
@@ -497,7 +501,7 @@ public final class ClientControls {
             || com.nanonaitor.arsenal.combat.ParityRules.disabled(player))) return;
         // A lone off-hand Scimitar is a complete weapon regardless of what the
         // main hand contains. Dual Scimitars retain their shared guard/alternation.
-        boolean offhandOnly = !dual && isScimitar(off);
+        boolean offhandOnly = !dual && isScimitar(off) && !com.nanonaitor.arsenal.compat.RLCombatCompat.ownsOffhandStrike(player);
         boolean offhandButton = minecraft.options.keyUse.isDown();
         boolean request = dual ? attack : offhandOnly && offhandButton && !offhandScimitarWasDown;
         // A lone off-hand Scimitar owns its cooldown. It must remain usable

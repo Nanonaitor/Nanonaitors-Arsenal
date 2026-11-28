@@ -216,6 +216,12 @@ public final class PoseCapture {
             if (!(mc.screen instanceof TitleScreen)) return;
             launched = true;
             build();
+            // -Darsenal.poseCapture.sheets=a,b keeps only those sheets.
+            String only = System.getProperty("arsenal.poseCapture.sheets", "");
+            if (!only.isBlank()) {
+                var keep = java.util.Set.of(only.split(","));
+                SHOTS.removeIf(shot -> !keep.contains(shot.sheet));
+            }
             out = new File(mc.gameDirectory, "arsenal-pose-capture");
             out.mkdirs();
             for (File old : out.listFiles()) old.delete();
